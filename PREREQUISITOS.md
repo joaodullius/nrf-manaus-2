@@ -61,14 +61,69 @@ west flash
 
 ## Módulo Edge AI (`edge_ai/`)
 
-> 🚧 **Em preparação** — instruções de instalação do Edge AI Add-on e ferramentas associadas serão adicionadas.
+### 1. Conta no Nordic Edge AI Lab
 
-Itens previstos:
+Crie uma conta em [ai.lab.nordicsemi.com](https://ai.lab.nordicsemi.com/) — é onde geramos modelos Neuton (CPU) e compilamos modelos TFLite para a Axon NPU.
 
-- **Conta no Nordic Edge AI Lab** — criar em [ai.lab.nordicsemi.com](https://ai.lab.nordicsemi.com) (geração de modelos Neuton e LiteRT/Axon NPU).
-- **Edge AI Add-on para nRF Connect SDK v1.3.0** (alinhado ao NCS v3.4.0).
-- **Python 3.10+** — ferramenta de coleta de dados (sensor → BLE → CSV).
-- (A confirmar) Toolchain do compilador Axon para desenvolvimento local.
+> Os samples do Add-on rodam com modelos pré-instalados (conta não é obrigatória para eles), mas os labs de criação de modelo próprio exigem a conta.
+
+### 2. Edge AI Add-on v2.3.0 para nRF Connect SDK
+
+O Add-on ([sdk-edge-ai](https://github.com/nrfconnect/sdk-edge-ai), listado no [nRF Connect SDK Add-on Index](https://nrfconnect.github.io/ncs-app-index/)) é distribuído como **workspace west próprio**: o `west.yml` dele fixa o NCS compatível (v2.3.0 → **NCS v3.4.0**) e o `west update` baixa uma cópia do SDK dentro desse workspace (alguns GB — faça em rede boa, antes do curso).
+
+**Método recomendado — VS Code (GUI):**
+
+1. No painel nRF Connect: **Create a new application** → **Browse nRF Connect SDK Add-on Index**.
+2. Selecione **Edge AI Add-on** → versão **v2.3.0** e escolha uma pasta de destino **nova** (ex.: `C:\ncs\edge-ai`).
+3. Aguarde o clone do Add-on + NCS compatível.
+
+**Método alternativo — linha de comando:**
+
+⚠️ O `west init` cria um workspace novo — rode-o dentro de uma **pasta nova e vazia** (ex.: `C:\ncs\edge-ai`). **Não** rode dentro de `C:\ncs\v3.4.0` (já é um workspace west; o comando falha) nem dentro deste repositório.
+
+```bash
+# 1. entrar no ambiente do toolchain
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 --terminal
+
+# 2. criar e entrar na pasta do workspace
+mkdir C:\ncs\edge-ai && cd C:\ncs\edge-ai
+
+# 3. inicializar e popular o workspace
+west init -m https://github.com/nrfconnect/sdk-edge-ai --mr v2.3.0
+west update
+```
+
+Resultado: `C:\ncs\edge-ai\sdk-edge-ai` (Add-on: samples, aplicações, compilador Axon) + `C:\ncs\edge-ai\nrf`, `zephyr` etc. (NCS v3.4.0 do workspace).
+
+> Método avançado (economiza o download do NCS): `git clone --branch v2.3.0 https://github.com/nrfconnect/sdk-edge-ai` e apontar `EXTRA_ZEPHYR_MODULES` para o clone, usando o `C:\ncs\v3.4.0` existente. Fica por conta do usuário manter as versões sincronizadas.
+
+### 3. Compilador Axon local (opcional)
+
+Para compilar modelos TFLite → Axon **na nuvem**, use o próprio Edge AI Lab ("Compile your own model") — não precisa de nada local. Para compilar **localmente** (`sdk-edge-ai/tools/axon/compiler/scripts`):
+
+- **Python 3.11** em ambiente virtual (recomendado Miniforge/Conda):
+
+  ```bash
+  conda create -n axon python=3.11
+  conda activate axon
+  cd <workspace>/sdk-edge-ai/tools/axon/compiler/scripts
+  pip install -r requirements.txt
+  ```
+
+- Alternativa: **Docker** (imagem pronta do compilador).
+
+### 4. Hardware específico dos labs
+
+| Item | Uso |
+|------|-----|
+| **Sensor Evaluation Board (PCA63568)** no conector **EXP** do nRF54LM20-DK | IMU BMI270 para o app de gesture recognition no DK (alternativa: usar o nRF54L15-TAG, que já tem IMU) |
+| **Microfone PDM MEMS** (testado: Adafruit 3492) | Lab wake word/KWS — fiação: `3V→VDD:IO`, `GND→GND`, `SEL→GND` (canal esquerdo), `CLK→P1.4`, `DAT→P1.5` |
+| nRF54LM20-DK variante **nRF54LM20B** | A Axon NPU só existe no **B** (o app WW/KWS só tem target `nrf54lm20dk/nrf54lm20b/cpuapp`). Confirmar variante dos kits! |
+
+### Documentação
+
+- [Edge AI Add-on — docs](https://nrfconnectdocs.nordicsemi.com/addons/addon-edge-ai/latest/index.html)
+- [Axon NPU](https://www.nordicsemi.com/Products/Technologies/Edge-AI/Axon-NPU) · [Neuton models](https://www.nordicsemi.com/Products/Technologies/Edge-AI/Neuton-models) · [Edge AI Software](https://www.nordicsemi.com/Products/Technologies/Edge-AI/Software) · [Edge AI Lab](https://www.nordicsemi.com/Products/Technologies/Edge-AI/Edge-AI-Lab)
 
 ---
 
