@@ -1,0 +1,16 @@
+# Material de apoio (ppts, PDFs) - nao versionado
+doc/
+
+# Build artifacts
+build*/
+*.hex
+*.zip
+
+# IDE / editor
+.vscode/
+*.code-workspace
+
+# Python
+__pycache__/
+*.pyc
+.venv/
