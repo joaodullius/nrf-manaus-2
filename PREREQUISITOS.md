@@ -71,6 +71,15 @@ Crie uma conta em [ai.lab.nordicsemi.com](https://ai.lab.nordicsemi.com/) — é
 
 O Add-on ([sdk-edge-ai](https://github.com/nrfconnect/sdk-edge-ai), listado no [nRF Connect SDK Add-on Index](https://nrfconnect.github.io/ncs-app-index/)) é distribuído como **workspace west próprio**: o `west.yml` dele fixa o NCS compatível (v2.3.0 → **NCS v3.4.0**) e o `west update` baixa uma cópia do SDK dentro desse workspace (alguns GB — faça em rede boa, antes do curso).
 
+> **Sugestão de local:** instale o workspace **dentro de `C:\ncs\`, no mesmo nível das versões do SDK** — ou seja, `C:\ncs\sdk-edge-ai` ao lado de `C:\ncs\v3.4.0`. Assim todos os SDKs e workspaces ficam num lugar só e o caminho é o mesmo para toda a turma.
+
+```
+C:\ncs\
+├── v3.4.0\          (NCS "normal" — labs dos demais módulos)
+├── sdk-edge-ai\     (workspace do Edge AI Add-on — labs de Edge AI)
+└── toolchains\
+```
+
 **Método recomendado — VS Code (GUI):**
 
 1. No painel nRF Connect: **Create a new application** → **Browse nRF Connect SDK Add-on Index**.
