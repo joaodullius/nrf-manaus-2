@@ -1,6 +1,9 @@
 # Material de apoio (ppts, PDFs) - nao versionado
 doc/
 
+# Referencias de material para preparo do curso - nao versionado
+referencias/
+
 # Build artifacts
 build*/
 *.hex

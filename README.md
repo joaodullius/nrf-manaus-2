@@ -11,6 +11,7 @@ Repositório de exemplos do treinamento avançado com a plataforma Nordic Semico
 |------|--------|-------|-------|
 | 1–2 | Inteligência Artificial Embarcada (Edge AI) | 10h | [`edge_ai/`](edge_ai/) |
 | 3–4 | Tecnologias de Comunicação Avançada | 10h | [`comms/`](comms/) |
+| 3–4 | GNSS e Localização de Precisão | (parte dos dias 3–4) | [`gnss/`](gnss/) |
 | 5 | Segurança Embarcada | 4h | [`security/`](security/) |
 
 Cada pasta de módulo tem um `README.md` com a lista de labs e instruções de build/flash.
@@ -38,4 +39,4 @@ O board target de cada lab está indicado no `README.md` do próprio lab.
 
 ## Material de apoio
 
-Slides e material complementar ficam na pasta local `doc/` (não versionada) e são distribuídos separadamente durante o treinamento.
+Slides e material complementar ficam na pasta local `doc/` (não versionada) e são distribuídos separadamente durante o treinamento. A pasta local `referencias/` (também não versionada) guarda material de referência usado no preparo do curso.
