@@ -74,26 +74,37 @@ O Add-on ([sdk-edge-ai](https://github.com/nrfconnect/sdk-edge-ai), listado no [
 **Método recomendado — VS Code (GUI):**
 
 1. No painel nRF Connect: **Create a new application** → **Browse nRF Connect SDK Add-on Index**.
-2. Selecione **Edge AI Add-on** → versão **v2.3.0** e escolha uma pasta de destino **nova** (ex.: `C:\ncs\edge-ai`).
-3. Aguarde o clone do Add-on + NCS compatível.
+2. Selecione **Edge AI Add-on** → versão **v2.3.0** e escolha uma pasta de destino **nova** (sugerido: `C:\ncs\sdk-edge-ai`).
+3. Aguarde o clone do Add-on + NCS compatível — o `west update` continua em segundo plano por vários minutos após o primeiro clone; espere concluir antes de compilar.
+
+Layout resultante (o VS Code clona o Add-on na subpasta `edge-ai/`):
+
+```
+C:\ncs\sdk-edge-ai\
+├── .west\          (marca o workspace)
+├── edge-ai\        (o Add-on: applications/, samples/, tools/axon/...)
+├── nrf\            (NCS v3.4.0 do workspace)
+├── zephyr\
+└── modules\, nrfxlib\, ...
+```
 
 **Método alternativo — linha de comando:**
 
-⚠️ O `west init` cria um workspace novo — rode-o dentro de uma **pasta nova e vazia** (ex.: `C:\ncs\edge-ai`). **Não** rode dentro de `C:\ncs\v3.4.0` (já é um workspace west; o comando falha) nem dentro deste repositório.
+⚠️ O `west init` cria um workspace novo — rode-o dentro de uma **pasta nova e vazia** (ex.: `C:\ncs\sdk-edge-ai`). **Não** rode dentro de `C:\ncs\v3.4.0` (já é um workspace west; o comando falha) nem dentro deste repositório.
 
 ```bash
 # 1. entrar no ambiente do toolchain
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 --terminal
 
 # 2. criar e entrar na pasta do workspace
-mkdir C:\ncs\edge-ai && cd C:\ncs\edge-ai
+mkdir C:\ncs\sdk-edge-ai && cd C:\ncs\sdk-edge-ai
 
 # 3. inicializar e popular o workspace
 west init -m https://github.com/nrfconnect/sdk-edge-ai --mr v2.3.0
 west update
 ```
 
-Resultado: `C:\ncs\edge-ai\sdk-edge-ai` (Add-on: samples, aplicações, compilador Axon) + `C:\ncs\edge-ai\nrf`, `zephyr` etc. (NCS v3.4.0 do workspace).
+Resultado equivalente ao método GUI (pela CLI o Add-on fica em `sdk-edge-ai/` em vez de `edge-ai/`).
 
 > Método avançado (economiza o download do NCS): `git clone --branch v2.3.0 https://github.com/nrfconnect/sdk-edge-ai` e apontar `EXTRA_ZEPHYR_MODULES` para o clone, usando o `C:\ncs\v3.4.0` existente. Fica por conta do usuário manter as versões sincronizadas.
 
