@@ -16,6 +16,8 @@ Repositório de exemplos do treinamento avançado com a plataforma Nordic Semico
 
 Cada pasta de módulo tem um `README.md` com a lista de labs e instruções de build/flash.
 
+> **Antes do curso:** siga o [`PREREQUISITOS.md`](PREREQUISITOS.md) para instalar o toolchain e as ferramentas de cada módulo.
+
 ## Kits utilizados
 
 | Qtd | Item | Papel no treinamento |
