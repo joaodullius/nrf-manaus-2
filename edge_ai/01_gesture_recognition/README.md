@@ -173,6 +173,164 @@ Sem `FILE_SUFFIX`, vale o `prj.conf` — e ele já traz as três escolhas do cur
 ⚠️ Não use `prj_release.conf` nesta aula: ele **desliga** o `CONFIG_BLE_MITM_AUTH`.
 
 Consumo do build de referência: **FLASH 285.052 B (40,0%)** · **RAM 54.152 B (20,7%)**.
+Com o fragmento `rtt_log.conf` (ver abaixo): **FLASH 320.460 B (45,0%)** ·
+**RAM 59.313 B (22,6%)** — o shell custa ~35 kB de flash e ~5 kB de RAM.
+
+## Console e terminal por RTT
+
+A TAG **não tem UART de console**: o `nrf54l15tag_nrf54l15_cpuapp.dts` não declara
+`zephyr,console` nem `zephyr,shell-uart`, e não há USB-serial na placa. Todo o texto sai
+pelo **RTT** (buffer em RAM lido pelo debugger J-Link do DK em que a TAG está encaixada).
+
+O `prj.conf` do upstream já liga `CONFIG_USE_SEGGER_RTT` + `CONFIG_LOG` — ou seja, os
+`LOG_INF()` já saíam. O que faltava era o **console** (`printk`) e o **shell**.
+
+Isso fica num **fragmento opcional**, não no `prj.conf`: assim o
+[`prj.conf`](configuration/nrf54l15tag_nrf54l15_cpuapp/prj.conf) continua **byte a byte
+igual ao do SDK** e o aluno vê exatamente o que o curso acrescenta.
+
+[`configuration/nrf54l15tag_nrf54l15_cpuapp/rtt_log.conf`](configuration/nrf54l15tag_nrf54l15_cpuapp/rtt_log.conf):
+
+```conf
+CONFIG_RTT_CONSOLE=y
+CONFIG_SHELL=y
+CONFIG_SHELL_BACKEND_RTT=y
+CONFIG_SHELL_BACKEND_SERIAL=n
+CONFIG_SHELL_PROMPT_RTT="tag:~$ "
+```
+
+Como aplicar:
+
+```bash
+west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild ^
+  -d C:\work\nrf-manaus-2\edge_ai\01_gesture_recognition\build_tag ^
+  C:\work\nrf-manaus-2\edge_ai\01_gesture_recognition ^
+  -- -DEXTRA_CONF_FILE=rtt_log.conf
+```
+
+No VS Code, campo *Kconfig fragments* da build configuration: `rtt_log.conf`.
+
+O caminho **relativo** funciona porque o `CMakeLists.txt` aponta `APPLICATION_CONFIG_DIR`
+para `configuration/<board>`, e o Zephyr resolve `EXTRA_CONF_FILE` relativo contra esse
+diretório (`zephyr/cmake/modules/kconfig.cmake`, `merge_config_files`). Sem o
+`-DEXTRA_CONF_FILE`, o build é o do SDK, sem alteração nenhuma.
+
+| Kconfig | O que habilita |
+|---|---|
+| `CONFIG_RTT_CONSOLE` | `printk()` sai por RTT — é o que imprime o CSV do modo de coleta (`src/main.c:436`) e a passkey do pareamento |
+| `CONFIG_SHELL` + `CONFIG_SHELL_BACKEND_RTT` | terminal interativo por RTT (`kernel version`, `kernel uptime`, `device list`, …) |
+| `CONFIG_SHELL_BACKEND_SERIAL=n` | explícito porque não há UART de console no DTS |
+
+### Um canal, um escritor
+
+Ao ligar `CONFIG_SHELL`, o Zephyr ativa `CONFIG_SHELL_LOG_BACKEND=y` e o
+`CONFIG_LOG_BACKEND_RTT` passa a `n` sozinho (seu `default y if !SHELL_LOG_BACKEND`).
+Isso é o comportamento desejado: **o log passa a sair pelo shell**, e não há dois
+escritores disputando o buffer RTT 0. Confirme no build:
+
+```bash
+grep -E "LOG_BACKEND_RTT|SHELL_LOG_BACKEND" build_tag/01_gesture_recognition/zephyr/.config
+# CONFIG_LOG_BACKEND_RTT is not set
+# CONFIG_SHELL_LOG_BACKEND=y
+```
+
+### Como abrir o terminal
+
+A TAG é programada e depurada pelo debugger **do DK** em que ela está encaixada
+(header P1 da TAG no header `DEBUG OUT` do nRF54L15 DK) — quando encaixada, ela vira o
+alvo padrão do DK. Alimente a TAG por **bateria CR2032 OU** por `VDD SWD0` no DK,
+**nunca os dois**.
+
+| Ferramenta | Como |
+|---|---|
+| **VS Code (nRF Connect)** | painel *Connected Devices* → dispositivo → ícone **Start RTT terminal** |
+| **west** | `west rtt -d C:\work\nrf-manaus-2\edge_ai\01_gesture_recognition\build_tag` (runner `jlink`; force com `-r jlink` se preciso) |
+| **SEGGER** | `JLinkRTTViewer` (ou `JLinkRTTClient` após um `JLinkExe`), target `nRF54L15` |
+
+Com o shell ativo, o prompt `tag:~$` aparece depois do boot, os logs continuam
+rolando e o terminal aceita digitação ao mesmo tempo.
+
+⚠️ O comando `log` **não existe** neste build (precisaria de `CONFIG_LOG_CMDS=y`), e o
+comando de threads é `kernel thread list`, não `kernel threads`. O nível de log é o de
+compilação (`CONFIG_LOG_DEFAULT_LEVEL=3`, INF) — mensagens `LOG_DBG` não são compiladas
+e nenhum comando de shell as traz de volta.
+
+### Testado na TAG
+
+Gravado com `nrfutil` (MCUboot + `zephyr.signed.hex`, `verify=VERIFY_READ`) numa TAG
+encaixada no `DEBUG OUT` de um nRF54LM20 DK, e lido pelo servidor RTT do J-Link:
+
+```
+*** Booting nRF Connect SDK v3.4.0-99553055607b ***      <- printk (RTT_CONSOLE)
+*** Using Zephyr OS v4.4.0-bf801e4e3d19 ***
+*** Using Edge AI Add-on v2.3.0-1c24f3a94ac9 ***
+[00:00:00.767,529] <inf> ADXL367: ADXL367 passed self-test   <- LOG pelo shell
+[00:00:00.952,959] <inf> fs_nvs: 8 Sectors of 4096 bytes
+
+tag:~$ kernel version
+Zephyr version 4.4.0
+tag:~$ kernel uptime
+Uptime: 22687 ms
+tag:~$ device list
+devices:
+- adxl367@1d (READY)
+- bme688@76 (READY)
+- bmi270@0 (READY)      <- o IMU do exemplo, confirmando que o alvo e a TAG
+```
+
+O `device list` mostrando `bmi270` é a prova de que o debugger do DK está mesmo
+redirecionado para a TAG, e não para o SoC do próprio DK.
+
+### E por BLE, sem debugger? (log via NUS)
+
+Pergunta natural: dá para largar o J-Link e ler o log pelo celular, via NUS? Existem três
+caminhos, e **nenhum deles é o que o sample já faz hoje**:
+
+| Caminho | Origem | O que manda | Estado neste sample |
+|---|---|---|---|
+| `CONFIG_BLE_MODE_NUS` | do próprio sample | **amostras do IMU** em CSV (`ble_nus_send()`), não log | existe, mas `depends on DATA_COLLECTION_MODE` — desliga a inferência |
+| `CONFIG_LOG_BACKEND_BLE` | Zephyr (`subsys/logging/backends/log_backend_ble.c`) | **o log de verdade**, por notificação | não usado; `select EXPERIMENTAL` |
+| `CONFIG_SHELL_BT_NUS` | NCS (`nrf/subsys/shell/shell_bt_nus.c`) | **o shell inteiro** por NUS | não usado; precisa de `shell_bt_nus_enable(conn)` no código |
+
+**O que o sample tem hoje não é logging.** `CONFIG_BLE_MODE_NUS` só é selecionável com
+`CONFIG_DATA_COLLECTION_MODE=y`, e nesse modo o `main` **não roda inferência** — ele
+manda `"<id> ax,ay,az,gx,gy,gz
+"` por NUS para você coletar dataset. É um canal de
+dados, não de log.
+
+**O caminho pronto para log é o do Zephyr**, `CONFIG_LOG_BACKEND_BLE=y`: ele registra
+sozinho (`LOG_BACKEND_DEFINE(..., true)`) um serviço GATT com os **mesmos UUIDs do NUS**
+(`6E400001/2/3`), então o nRF Connect / nRF Toolbox enxerga como um terminal NUS comum.
+Requisitos que este build já satisfaz: `CONFIG_BT=y` e
+`CONFIG_LOG_PROCESS_THREAD_STACK_SIZE>=2048`.
+
+⚠️ **Colisão de UUID:** `CONFIG_BT_NUS` (o do sample) e `CONFIG_LOG_BACKEND_BLE` (o do
+Zephyr) declaram serviços GATT distintos com os **mesmos UUIDs**. Ligar os dois juntos
+faz o dispositivo anunciar dois NUS — escolha um. Na prática: log por BLE combina com o
+modo HID (padrão), não com o modo de coleta.
+
+⚠️ Nos dois casos o **boot inteiro se perde**: o BLE só existe depois que a pilha sobe e
+alguém conecta e assina a notificação. Para ver `*** Booting nRF Connect SDK ***`,
+init do Edge AI e falha de sensor, só RTT. Por isso o RTT continua sendo o canal de
+depuração do lab, e NUS é complemento para uso sem fio.
+
+Nada disso está habilitado — é o mapa do caminho, não configuração aplicada.
+
+**Por que o curso ficou só no RTT.** Chegamos a avaliar um fragmento `ble_log.conf` com
+`CONFIG_LOG_BACKEND_BLE` para depurar sem J-Link. Dois bloqueios no modo HID (o padrão)
+mataram a ideia, e ambos estão no código do sample, não no backend:
+
+- **O tag para de anunciar quando o PC conecta.** `ble_hid.c` chama `start_advertising()`
+  no init e **só de novo no `disconnected()`** — o `connected()` não re-anuncia. Com o
+  host HID conectado não há como o celular entrar, mesmo com `CONFIG_BT_MAX_CONN=2`.
+  Ou seja: ou você usa o teclado BLE, ou você lê o log. Não os dois.
+- **Qualquer central é forçado a `BT_SECURITY_L4`.** O `connected()` chama
+  `bt_conn_set_security()` com L4 quando `CONFIG_BLE_MITM_AUTH=y` e **desconecta** quem
+  falhar. O celular teria que parear com MITM (long press no botão) só para ler log.
+
+Somado a isso, o log por BLE perde todo o boot — o backend só ativa quando alguém
+assina a notificação (`log_notify_changed()` → `log_backend_enable()`). Para um lab de
+40 minutos, RTT entrega mais com menos.
 
 ## Pareamento com MITM
 
