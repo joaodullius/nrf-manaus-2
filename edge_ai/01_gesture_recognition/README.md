@@ -175,6 +175,47 @@ Long press  (> 2000 ms): Confirm pairing
 
 Depois de conectado, o LED muda de vermelho para verde ou azul, conforme a modalidade.
 
+## O que a engine oferece além do que o demo usa
+
+Validado contra a [doc oficial do runtime](https://nrfconnectdocs.nordicsemi.com/addons/addon-edge-ai/latest/libraries/nrf_edgeai/runtime.html):
+
+- **Alimentação em lote**: `feed_inputs()` aceita qualquer quantidade de amostras.
+  O streaming amostra-a-amostra deste demo é uma escolha; os samples oficiais do
+  Add-on entregam a janela inteira de uma vez
+  (`nrf_edgeai_uniq_inputs_num() × nrf_edgeai_input_window_size()` valores) e o
+  `run_inference()` sai na primeira chamada.
+- **API de introspecção** — é o que permite escrever o laço sem números mágicos
+  (sem hardcodar 6, 99 ou int16): `nrf_edgeai_input_type()`,
+  `nrf_edgeai_uniq_inputs_num()`, `nrf_edgeai_input_window_size()`,
+  `nrf_edgeai_input_subwindows_num()`, `nrf_edgeai_model_task()`,
+  `nrf_edgeai_model_outputs_num()`.
+- **Três tarefas, três saídas** (`nrf_edgeai_model_task_t`): classificação
+  (`decoded_output.classif`), regressão (`.regression.p_outputs[]`) e detecção de
+  anomalia (`.anomaly.score` — o limiar é decisão da aplicação). O laço é o mesmo;
+  muda só a união que você lê. Em modelos quantizados, as probabilidades vêm em
+  `probabilities.q8`/`q16` em vez de `p_f32`.
+- **Footprint oficial** (números para citar em aula): runtime ≈ 2 kB de flash +
+  0,5–1 kB de RAM; modelo tipicamente 1–10 kB; solução completa em geral
+  **5–10 kB de flash e 2–5 kB de RAM**. A biblioteca é C portátil, sem malloc,
+  entregue como `.a` pré-compilada por arquitetura e ligada via `CONFIG_NRF_EDGEAI`.
+- **Pipeline DSP dentro do modelo**: o pré-processamento que "não está na
+  aplicação" vive no módulo DSP da biblioteca (FFT, RFHT, Mel-spectrogram,
+  estatísticas) — só os blocos selecionados no Edge AI Lab entram no binário.
+- **Observabilidade**: a `nrf_edgeai_obsv` coleta estatísticas das probabilidades
+  em produção e sobe para o Memfault — fora do escopo do curso, mas bom saber
+  que existe.
+
+### Restrições do Edge AI Lab para o modelo próprio (Ato 3)
+
+Antes de treinar, saiba que o Lab impõe:
+
+- A janela deve capturar o **evento inteiro** — gesto cortado no meio não treina.
+- **Features de frequência** exigem janela em potência de 2, entre **128 e 2048**
+  amostras (o modelo de fábrica usa 99 — só features de tempo).
+- O *data type* do dataset deve englobar o maior tipo presente (int8+float32 → float32).
+- Saída quantizada (8/16 bits) muda o formato da probabilidade que o firmware lê.
+- Target: **Arm Cortex-M33** para a nRF54L15.
+
 ## Próximos passos do módulo
 
 Este mesmo código atende os três atos da sessão de Neuton AI — muda só o Kconfig:
