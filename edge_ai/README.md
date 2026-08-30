@@ -14,8 +14,9 @@ e a licença Nordic preservada em cada pasta.
 | Pasta | Descrição | Kit | Status |
 |-------|-----------|-----|--------|
 | [`01_gesture_recognition/`](01_gesture_recognition/) | Gestos com IMU e modelo Neuton na CPU; vira teclado BLE HID. Base dos três atos da sessão de Neuton AI: demo pronto → modo de coleta → modelo próprio | nRF54L15-TAG | ✅ copiado e compilado |
-| `02_ww_kws/` | Wake word e comandos de voz via microfone PDM (TFLite → compilador → inferência na NPU) | nRF54LM20-DK + mic PDM | ⏳ a copiar |
-| `03_benchmark_npu_vs_cpu/` | Medição comparativa de latência/energia por inferência: NPU vs. CPU | nRF54LM20-DK | ⏳ a montar |
+| [`02_anomaly/`](02_anomaly/) | Detecção de anomalia (saúde de engrenagem por vibração): terceira tarefa da engine, FFT no binário, score + limiar. Sem sensor — vetores embarcados | nRF54LM20-DK | ✅ copiado e compilado |
+| `03_ww_kws/` | Wake word e comandos de voz via microfone PDM (TFLite → compilador → inferência na NPU) | nRF54LM20-DK + mic PDM | ⏳ a copiar |
+| `04_benchmark_npu_vs_cpu/` | Medição comparativa de latência/energia por inferência: NPU vs. CPU | nRF54LM20-DK | ⏳ a montar |
 
 Cada pasta tem seu próprio `README.md` com os comandos de build e o que estudar.
 

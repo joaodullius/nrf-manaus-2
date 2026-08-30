@@ -183,7 +183,9 @@ Validado contra a [doc oficial do runtime](https://nrfconnectdocs.nordicsemi.com
   O streaming amostra-a-amostra deste demo é uma escolha; os samples oficiais do
   Add-on entregam a janela inteira de uma vez
   (`nrf_edgeai_uniq_inputs_num() × nrf_edgeai_input_window_size()` valores) e o
-  `run_inference()` sai na primeira chamada.
+  `run_inference()` sai na primeira chamada. Exemplo real: no `ww_kws` (voz) a
+  janela é 160 = shift 160, e cada bloco DMA de 10 ms do microfone é exatamente
+  uma janela — o app até assevera `num_samples == nrf_edgeai_input_window_size()`.
 - **API de introspecção** — é o que permite escrever o laço sem números mágicos
   (sem hardcodar 6, 99 ou int16): `nrf_edgeai_input_type()`,
   `nrf_edgeai_uniq_inputs_num()`, `nrf_edgeai_input_window_size()`,
