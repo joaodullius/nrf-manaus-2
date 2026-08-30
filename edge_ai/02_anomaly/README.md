@@ -18,7 +18,7 @@ terceira tarefa da engine em minutos de bancada.
   que é só domínio do tempo).
 - **Alimentação em lote**: a janela inteira num único `feed_inputs()`
   (`uniq × window_size` valores) → `SUCCESS` na primeira chamada. É o modo
-  "em blocos" do slide 13 do M1-02.
+  "em blocos" do slide 13 do M1-03.
 - **Saída**: um único `float` — `decoded_output.anomaly.score`. Não há classes.
 - **Veredito**: `score >= threshold` → anomalia. O limiar do sample é `0.000025f`.
 
@@ -68,7 +68,7 @@ Verdict: ANOMALY (score >= threshold)
 ## Classificação + anomalia
 
 Anomalia não nomeia a falha; classificação não reconhece o nunca-visto. Três
-padrões para compor (slide "três padrões" do M1-02):
+padrões para compor (slide "três padrões" do M1-03):
 
 1. **Classe UNKNOWN** no classificador (o `01_gesture` faz) — só pega o que parece
    com o "resto" treinado.
