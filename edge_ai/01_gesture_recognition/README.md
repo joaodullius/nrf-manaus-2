@@ -141,6 +141,25 @@ west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild -d C:\work\nrf-manaus-2\
 west flash -d C:\work\nrf-manaus-2\build\01_gesture
 ```
 
+### Build pelo VS Code (extensão nRF Connect)
+
+Na build configuration (board `nrf54l15tag/nrf54l15/cpuapp`, SDK v3.4.0), preencha:
+
+| Campo | Valor |
+|---|---|
+| *Extra CMake arguments* | `-DEXTRA_ZEPHYR_MODULES=C:/ncs/sdk-edge-ai/edge-ai` |
+| *Kconfig fragments* / `CONF_FILE` | **deixar vazio** |
+
+O módulo extra é obrigatório: o SDK `C:\ncs\v3.4.0` não traz o `edge-ai` — ele vive no
+workspace separado `C:\ncs\sdk-edge-ai` e é quem define `CONFIG_NRF_EDGEAI`. O `CONF_FILE`
+fica vazio porque o [`CMakeLists.txt`](CMakeLists.txt) já aponta o
+`APPLICATION_CONFIG_DIR` para `configuration/<board>`, e o `prj.conf` certo é encontrado
+sozinho.
+
+Alternativa: em *Manage SDKs → Add existing*, registrar `C:\ncs\sdk-edge-ai` como SDK (mesmo
+toolchain v3.4.0) e selecioná-lo na build configuration — aí o módulo já vem no workspace e
+o argumento extra não é necessário.
+
 ### O build padrão já é o que queremos
 
 Sem `FILE_SUFFIX`, vale o `prj.conf` — e ele já traz as três escolhas do curso:
