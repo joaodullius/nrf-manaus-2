@@ -135,7 +135,7 @@ static uint8_t ble_data_received(struct bt_nus_client *nus,
 		 * LF quando o pedaco recebido termina em CR. Isso e o que transforma o
 		 * "\r\n" do CSV do 01_gesture_recognition em linha no terminal.
 		 *
-		 * Com o 04_data_forwarder o fluxo e BINARIO (CBOR dentro de COBS): um
+		 * Com o 05_data_forwarder o fluxo e BINARIO (CBOR dentro de COBS): um
 		 * byte 0x0D no meio de um frame ganharia um 0x0A que nao existia. O CRC
 		 * do protocolo detecta e o frame e DESCARTADO — perda silenciosa.
 		 *

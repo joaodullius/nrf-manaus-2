@@ -33,8 +33,8 @@ treinado — o aluno vê a engine funcionando, e só depois troca pelo modelo de
 
 ```
 west build -p -b nrf54l15tag/nrf54l15/cpuapp ^
-  -d C:\work\nrf-manaus-2\edge_ai\05_classify_led\build_tag ^
-  C:\work\nrf-manaus-2\edge_ai\05_classify_led
+  -d C:\work\nrf-manaus-2\edge_ai\04_classify_led\build_tag ^
+  C:\work\nrf-manaus-2\edge_ai\04_classify_led
 ```
 
 O LED RGB muda de cor a cada mudança de classe; o RTT diz qual e com que confiança.
@@ -88,7 +88,7 @@ valores reais estão no `.c` gerado, como `INPUT_WINDOW_SIZE`, `INPUT_UNIQ_FEATU
 (accel + gyro)? Troque a função por uma que preencha um vetor de 6 e ajuste
 `USER_UNIQ_INPUTS_NUM`. **Na mesma escala em que você capturou**: o
 [`03_central_uart`](../03_central_uart/) entrega mili-unidades; o
-[`04_data_forwarder`](../04_data_forwarder/) no padrão, micro.
+[`05_data_forwarder`](../05_data_forwarder/) no padrão, micro.
 
 ### Mudar o número de classes
 
@@ -138,7 +138,7 @@ hardware: nem o banner de boot aparecia, e a CPU estava executando. Foi preciso 
 
 | | Flash (text+data) | RAM (data+bss) |
 |---|---:|---:|
-| `05_classify_led` (modelo de exemplo) | **87.108 B** | **19.413 B** |
+| `04_classify_led` (modelo de exemplo) | **87.108 B** | **19.413 B** |
 | `01_gesture_recognition` (modo coleta) | 267.264 B | 58.496 B |
 
 **Um terço do flash e um terço da RAM** do lab 01 — por não ter BLE, MCUboot nem mcumgr.

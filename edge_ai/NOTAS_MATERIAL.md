@@ -15,7 +15,7 @@ aparece no build não entra — o aluno resolve sozinho.
 O modelo espera a escala do **dataset com que foi treinado**. Alimentar em outra escala
 não dá erro: compila, roda, e classifica errado.
 
-Medido no `05_classify_led` com o modelo de exemplo da Nordic (espera **mili-g**):
+Medido no `04_classify_led` com o modelo de exemplo da Nordic (espera **mili-g**):
 
 | Alimentado com | TAG parada na mesa reporta |
 |---|---|
@@ -30,7 +30,7 @@ A unidade não estava documentada — foi preciso ler os vetores embarcados do s
 
 **Slide:** o modelo tem contrato, e escala faz parte do contrato.
 
-**Onde morde no curso:** `03_central_uart` entrega mili-unidades, `04_data_forwarder`
+**Onde morde no curso:** `03_central_uart` entrega mili-unidades, `05_data_forwarder`
 entrega micro (fator 1000). O `01_gesture_recognition` alimenta `imu_data.raw`, que é mili.
 
 ### 2. `NCS_SAMPLES_DEFAULTS` mata o log na TAG
@@ -72,7 +72,7 @@ build. Assimetria corrigida com `BUILD_ASSERT`.
 Se o fenômeno dura menos que a janela de inferência, a janela **nunca contém só o
 fenômeno** — e a classe correspondente praticamente não é prevista.
 
-Caso concreto e mensurável no `05_classify_led`: a classe **Free Fall nunca aparece**,
+Caso concreto e mensurável no `04_classify_led`: a classe **Free Fall nunca aparece**,
 por mais que se derrube a TAG.
 
 O modelo tem `INPUT_WINDOW_SIZE = 50` e `INPUT_WINDOW_SHIFT = 50` — janelas de 0,5 s
@@ -157,7 +157,7 @@ OSError: [WinError 123] ... './C:'
 ```
 
 O `CMakeLists.txt` passa caminhos absolutos; o zcbor concatena `"./"` na frente.
-**Reproduzido com o sample intocado** do add-on v2.3.0. Contorno no lab 04: caminhos
+**Reproduzido com o sample intocado** do add-on v2.3.0. Contorno no lab 05: caminhos
 relativos + `WORKING_DIRECTORY`.
 
 **Candidato a reportar no DevZone.**

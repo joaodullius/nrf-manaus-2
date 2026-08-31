@@ -9,7 +9,7 @@ levam amostras do IMU da TAG para o PC; mudam o firmware, o protocolo e a ferram
 
 ## Quando usar qual
 
-| | `03_central_uart` | `04_data_forwarder` (este) |
+| | `03_central_uart` | `05_data_forwarder` (este) |
 |---|---|---|
 | Firmware na TAG | **o mesmo do 01**, com um fragmento | outro firmware |
 | Protocolo | texto: `"<id> ax,...,gz\r\n"` | **CBOR + COBS + CRC-16** |
@@ -27,8 +27,8 @@ um problema.
 
 ```
 west build -p -b nrf54l15tag/nrf54l15/cpuapp ^
-  -d C:\work\nrf-manaus-2\edge_ai\04_data_forwarder\build_tag ^
-  C:\work\nrf-manaus-2\edge_ai\04_data_forwarder ^
+  -d C:\work\nrf-manaus-2\edge_ai\05_data_forwarder\build_tag ^
+  C:\work\nrf-manaus-2\edge_ai\05_data_forwarder ^
   -- -DEXTRA_CONF_FILE=gesture_compat.conf
 ```
 
