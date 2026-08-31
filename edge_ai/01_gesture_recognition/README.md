@@ -234,6 +234,26 @@ grep -E "LOG_BACKEND_RTT|SHELL_LOG_BACKEND" build_tag/01_gesture_recognition/zep
 # CONFIG_SHELL_LOG_BACKEND=y
 ```
 
+### O boot vem truncado (buffers de log)
+
+⚠️ Em regime o RTT entrega tudo, mas a **rajada de boot e truncada**: verificado no
+hardware, o log corta no meio de `<inf> bt_hci_core: HW Platform: Nordi` e some tudo
+depois — incluindo a linha `Identity:` com o endereco BLE do tag.
+
+Os dois buffers envolvidos vem em 1024 bytes e a rajada estoura os dois. Nao adianta
+mexer so no do RTT: com `CONFIG_LOG_MODE_DEFERRED` (ativo por padrao) a mensagem morre
+antes, no ring buffer do subsistema de log.
+
+```conf
+CONFIG_LOG_BUFFER_SIZE=4096
+CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096
+```
+
+O fragmento [`data_collection.conf`](configuration/nrf54l15tag_nrf54l15_cpuapp/data_collection.conf)
+(usado no lab [`03_central_uart`](../03_central_uart/)) ja aplica os dois. Para o demo HID
+deste lab isso nao costuma importar, mas se voce precisar ler o boot inteiro, acrescente
+as duas linhas.
+
 ### Como abrir o terminal
 
 A TAG é programada e depurada pelo debugger **do DK** em que ela está encaixada
