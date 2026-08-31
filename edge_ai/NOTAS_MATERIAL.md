@@ -194,6 +194,65 @@ partir da leitura do código não substitui a medição.
 
 ---
 
+## Quanto o modelo ocupa
+
+Medido com `rom_report` / `ram_report` do Zephyr, que atribui por arquivo no binario
+linkado — não pelo tamanho do `.obj`, que engana com LTO ligado.
+
+```bash
+ninja -C <build>/<imagem> rom_report     # gera rom.json + arvore na tela
+ninja -C <build>/<imagem> ram_report
+```
+
+**O modelo em si** (o `.c` gerado pelo Edge AI Lab):
+
+| Lab | Modelo | Flash | RAM |
+|---|---|---:|---:|
+| `01_gesture_recognition` | 6 entradas · janela 99 · 8 classes | **3.336 B** | **1.818 B** |
+| `04_classify_led` | 1 entrada · janela 50 · 7 classes | **5.794 B** | **760 B** |
+
+**O runtime** (API pública `nrf_edgeai_*`): ~1,1 kB no 01, ~1,0 kB no 04. Praticamente
+constante — o runtime é fino, o custo está no modelo.
+
+### A inversão · ⭐ vale um slide
+
+O modelo do 01 tem **6 entradas e janela de 99**, mas ocupa **menos flash** que o do 04,
+que tem **1 entrada e janela de 50**. E gasta **mais que o dobro de RAM**. Separando as
+duas coisas, faz sentido:
+
+| | O que determina | Dá para prever antes de treinar? |
+|---|---|---|
+| **RAM** | a janela de entrada: `janela × canais` | **sim** — 99×6 contra 50×1 é ~12× mais dado acumulado |
+| **Flash** | a complexidade que o treino encontrou | **não** — só se sabe depois |
+
+Mensagem para o Ato 3, quando o aluno escolhe janela e número de gestos: **RAM você
+calcula, flash você descobre.**
+
+### O denominador engana
+
+| | Imagem | Modelo | % |
+|---|---:|---:|---:|
+| 01 flash | 320.452 B | 3.336 B | **1,0%** |
+| 01 RAM | 59.313 B | 1.818 B | 3,1% |
+| 04 flash | 87.116 B | 5.794 B | **6,7%** |
+| 04 RAM | 19.413 B | 760 B | 3,9% |
+
+O modelo é **~1% do firmware de gestos**. Todo o resto é BLE, MCUboot, HID e criptografia.
+No 04, sem nada disso, o mesmo tipo de modelo salta para 6,7% — parece dez vezes maior só
+porque o denominador mudou.
+
+### Cuidado ao medir: nem todo símbolo ofuscado é Edge AI
+
+O `rom_report` joga o que não tem caminho de debug num bucket `(no paths)`. No 01 esse
+bucket tem **682 símbolos `sym_*` somando 45,7 kB**, que é tentador atribuir ao runtime
+proprietário do Neuton.
+
+**Não é.** O 04 tem Edge AI e **zero** símbolos `sym_*`. A diferença entre os dois é BLE e
+`nrf_security` — ou seja, os 45,7 kB são **criptografia**. Somar isso ao Edge AI inflaria o
+número em 14×.
+
+---
+
 ## Números que valem decorar
 
 | | |
@@ -201,10 +260,13 @@ partir da leitura do código não substitui a medição.
 | Taxa de amostragem do IMU (01 e 04) | 100 Hz |
 | Janela do modelo de gestos | 99 amostras (≈1 s) |
 | Sliding shift para inferência | 33 (3 inferências/s) |
-| Janela do modelo de exemplo (05) | 50 amostras (0,5 s), shift 50 — sem sobreposição |
+| Janela do modelo de exemplo (04) | 50 amostras (0,5 s), shift 50 — sem sobreposição |
 | Queda livre para preencher 0,5 s | ≈1,23 m |
 | Fundo de escala do 01 | ±4 g / ±1000 dps |
 | Fundo de escala do `data_forwarder` | ±2 g / ±500 dps |
 | Coleta recomendada (PoC) | 3–5 min por gesto |
 | Mínimo do Lab | 2 classes, 20 amostras/classe, alvo começando em 0 |
 | Tipos aceitos pelo Lab | INT8, INT16, FLOAT32 |
+| Modelo de gestos (01) | 3.336 B flash · 1.818 B RAM — 1,0% da imagem |
+| Modelo do 04 | 5.794 B flash · 760 B RAM — 6,7% da imagem |
+| Runtime `nrf_edgeai_*` | ~1 kB, praticamente constante |
