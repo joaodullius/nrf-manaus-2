@@ -15,7 +15,7 @@ aparece no build não entra — o aluno resolve sozinho.
 O modelo espera a escala do **dataset com que foi treinado**. Alimentar em outra escala
 não dá erro: compila, roda, e classifica errado.
 
-Medido no `05_gesture_led` com o modelo de exemplo da Nordic (espera **mili-g**):
+Medido no `05_classify_led` com o modelo de exemplo da Nordic (espera **mili-g**):
 
 | Alimentado com | TAG parada na mesa reporta |
 |---|---|
@@ -67,7 +67,47 @@ build. Assimetria corrigida com `BUILD_ASSERT`.
 
 ## As que contradizem a intuição
 
-### 5. MITM só existe no modo HID
+### 5. Janela maior que o evento · ⭐ vale um slide inteiro
+
+Se o fenômeno dura menos que a janela de inferência, a janela **nunca contém só o
+fenômeno** — e a classe correspondente praticamente não é prevista.
+
+Caso concreto e mensurável no `05_classify_led`: a classe **Free Fall nunca aparece**,
+por mais que se derrube a TAG.
+
+O modelo tem `INPUT_WINDOW_SIZE = 50` e `INPUT_WINDOW_SHIFT = 50` — janelas de 0,5 s
+**sem sobreposição**. O vetor de treino da classe mostra o que ela espera:
+
+```c
+CLASS_3_PARCEL_FREE_FALL_ACCEL_DATA[] = {36.87, 32.60, 29.46, 32.69, ...}
+```
+
+~25 a 80 mili-g **sustentados pela janela inteira**. Ou seja, 0,5 s completos em queda:
+
+```
+s = ½ · g · t² = ½ · 9,81 · 0,25 ≈ 1,23 m
+```
+
+De altura de mesa (~75 cm) a queda dura 0,39 s — nem preenche uma janela. E como as
+janelas são disjuntas e não sincronizam com o movimento, mesmo 1,2 m só cai inteiro numa
+janela por sorte.
+
+**A regra:** escolha a janela pela duração do fenômeno.
+
+| Fenômeno | Janela |
+|---|---|
+| gesto de ~1 s | 99 amostras a 100 Hz (o que o lab 01 usa) |
+| impacto de ~50 ms | muito menor, senão dilui no resto |
+| queda livre de mesa | inalcançável a 0,5 s |
+
+**É o mesmo problema da centralização de gestos discretos** (item 13): evento curto dentro
+de janela longa. Lá a solução é centralizar o sinal; aqui, seria encurtar a janela.
+
+**Para a aula:** dá para exercitar `Idle`, `Shaking`, `Carrying` e provavelmente `Placed`
+com a TAG na mão. `Free Fall`, `Impact` e `in Car` não — e explicar *por que* vale mais
+que a demo funcionar.
+
+### 6. MITM só existe no modo HID
 
 `CONFIG_BLE_MITM_AUTH` tem `depends on BLE_MODE_HID`. Em `DATA_COLLECTION_MODE` ele **não é
 selecionável**, e o `ble_nus.c` **não chama `bt_conn_set_security()`** — conecta sem parear,
@@ -75,7 +115,7 @@ sem confirmação de botão.
 
 Ou seja: "desabilitar o MITM para a coleta" é trabalho desnecessário. Já está desligado.
 
-### 6. No modo HID o tag para de anunciar quando conecta
+### 7. No modo HID o tag para de anunciar quando conecta
 
 `ble_hid.c` chama `start_advertising()` no init e **só de novo no `disconnected()`**. Com o
 host HID conectado, nenhum outro central entra — mesmo com `CONFIG_BT_MAX_CONN=2`.
@@ -83,14 +123,14 @@ host HID conectado, nenhum outro central entra — mesmo com `CONFIG_BT_MAX_CONN
 Consequência: log por BLE (`LOG_BACKEND_BLE`) é inviável no modo HID. E qualquer central é
 forçado a `BT_SECURITY_L4`, sendo desconectado se falhar.
 
-### 7. FPROTECT bloqueia a regravação
+### 8. FPROTECT bloqueia a regravação
 
 Depois do primeiro boot com MCUboot, `nrfutil device program` falha com
 *"Memory access error at 0x5004e400"*. Não é cabo, não é firmware corrompido.
 
 Saída: `nrfutil device recover` antes de gravar.
 
-### 8. A TAG precisa estar alimentada para o DEBUG OUT redirecionar
+### 9. A TAG precisa estar alimentada para o DEBUG OUT redirecionar
 
 Sem bateria CR2032 ou `VDD SWD0`, o DK **não detecta a TAG** e o debugger fica apontando
 para o SoC do próprio DK. Tudo "funciona" — grava, conecta — só que no chip errado.
@@ -100,7 +140,7 @@ Diagnóstico rápido: `nrfutil device device-info` deve dizer `nRF54L15`. Se dis
 
 ⚠️ Bateria **ou** alimentação externa, nunca as duas.
 
-### 9. `LOG_BACKEND_BLE` e `BT_NUS` colidem de UUID
+### 10. `LOG_BACKEND_BLE` e `BT_NUS` colidem de UUID
 
 Os dois registram serviços GATT distintos com os **mesmos** UUIDs (`6E400001/2/3`). Um
 cliente que descobre por UUID pode se ligar ao errado.
@@ -109,7 +149,7 @@ cliente que descobre por UUID pode se ligar ao errado.
 
 ## Bugs de ferramenta (reportar / contornar)
 
-### 10. `samples/data_forwarder` não compila no Windows
+### 11. `samples/data_forwarder` não compila no Windows
 
 ```
 makedirs("./" + path.dirname(saida))        zcbor.py:2793
@@ -122,12 +162,12 @@ relativos + `WORKING_DIRECTORY`.
 
 **Candidato a reportar no DevZone.**
 
-### 11. Data Forwarder Host é **GUI pura**
+### 12. Data Forwarder Host é **GUI pura**
 
 O README dele: *"The application is a pure GUI — there is no command-line interface."*
 Não há modo headless. Se o roteiro previa automação por CLI, não vem daí.
 
-### 12. O script de centralização da Nordic não é CLI
+### 13. O script de centralização da Nordic não é CLI
 
 `nordicsemi-neuton/segment-center-signal` — você **edita constantes no fim do .py** e roda.
 Abre janelas do matplotlib e bloqueia. `work_axis` e `threshold_coef` são chutes iniciais
@@ -161,6 +201,8 @@ partir da leitura do código não substitui a medição.
 | Taxa de amostragem do IMU (01 e 04) | 100 Hz |
 | Janela do modelo de gestos | 99 amostras (≈1 s) |
 | Sliding shift para inferência | 33 (3 inferências/s) |
+| Janela do modelo de exemplo (05) | 50 amostras (0,5 s), shift 50 — sem sobreposição |
+| Queda livre para preencher 0,5 s | ≈1,23 m |
 | Fundo de escala do 01 | ±4 g / ±1000 dps |
 | Fundo de escala do `data_forwarder` | ±2 g / ±500 dps |
 | Coleta recomendada (PoC) | 3–5 min por gesto |

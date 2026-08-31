@@ -5,7 +5,7 @@
  */
 
 /*
- * 05_gesture_led — app minima do curso nrf-manaus-2.
+ * 05_classify_led — app minima do curso nrf-manaus-2.
  *
  * ORIGEM: derivado de samples/nrf_edgeai/classification do Edge AI Add-on v2.3.0.
  *   O sample original alimenta o modelo com VETORES EMBARCADOS. Aqui a entrada
@@ -207,7 +207,7 @@ int main(void)
 
 	nrf_edgeai_rt_version_t v = nrf_edgeai_runtime_version();
 
-	LOG_INF("05_gesture_led — IMU -> inferencia -> LED");
+	LOG_INF("05_classify_led — IMU -> inferencia -> LED");
 	LOG_INF("Edge AI runtime %d.%d.%d", v.field.major, v.field.minor, v.field.patch);
 	LOG_INF("janela %u · entradas %u · classes %u · %u Hz",
 		USER_WINDOW_SIZE, USER_UNIQ_INPUTS_NUM, USER_MODELS_CLASS_NUM, SAMPLE_RATE_HZ);
