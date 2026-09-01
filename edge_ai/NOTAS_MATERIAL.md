@@ -65,6 +65,77 @@ build. Assimetria corrigida com `BUILD_ASSERT`.
 
 ---
 
+### 4b. A coleta por NUS dilata o tempo — e o detector de perdas é cego para isso · ⭐⭐ a mais grave
+
+Medido na coleta de 2026-09-01, com o `01` em modo de coleta e a ponte do `03`:
+
+| Classe | Taxa medida | Amostras perdidas |
+|---|---|---|
+| `idle` | 94,3 Hz | **0** |
+| `swipe_left` | 84,5 Hz | **0** |
+| `unknown` | 81,8 Hz | 46 (0,19%) |
+| `swipe_right` | **76,4 Hz** | **0** |
+
+O `imu_config.data_rate_hz` é 100. Zero amostras perdidas com ids contíguos, e ainda
+assim 76 Hz. **O dado não sumiu no ar: a TAG produziu menos.**
+
+**Por quê.** O `main.c` amostra e envia na mesma thread:
+
+```
+K_TIMER 10 ms → imu_data_ready_cb() → k_sem_give()      [ISR]
+                        ↓
+        main.c:154  k_sem_take(K_FOREVER)               [thread]
+        main.c:156  imu_read()
+        main.c:175  send_imu_data() → ble_nus_send()
+```
+
+O semáforo é criado com **limite 1** (`main.c:332`). Enquanto a thread está no envio,
+o tick do timer chega, encontra o semáforo cheio e é **descartado**, sem contador e sem
+log. Quanto mais movimento, pior o link, mais demora o envio, menos amostras — daí a
+correlação com a classe.
+
+**Por que o id não pega.** O `id++` do `ble_nus.c:143` incrementa por **chamada de
+envio**, não por tick. Tick descartado não vira chamada, não vira id, não vira buraco.
+São duas perdas diferentes e o contador só enxerga uma:
+
+| Perda | Visível? |
+|---|---|
+| tick descartado (semáforo cheio) | **não** — vira só taxa menor |
+| `bt_nus_send()` falha por falta de buffer | sim — buraco de id |
+
+O README upstream atribui a perda a *"RF noise or increased distance"* e oferece o id
+sequencial + `scripts/check_nus_data.py` como mitigação. Isso cobre o segundo caminho.
+O primeiro — o que realmente dominou aqui — passa despercebido pelo detector da
+própria Nordic.
+
+**Por que importa.** Na inferência não há NUS e o `k_timer` roda solto a 100 Hz. Um
+gesto de 1 s vira ~76 linhas no treino e ~100 na inferência: o modelo treina numa
+escala de tempo e infere em outra, com fator diferente por classe. Não há parâmetro de
+janela que conserte — o conserto é resampling, que exigiria saber **onde** estão os
+buracos, informação que o id não carrega.
+
+**Conserto de duas linhas**, se for para corrigir: incrementar o contador no tick, em
+vez de no envio.
+
+```c
+static volatile uint32_t sample_tick;
+
+static void imu_data_ready_cb(void)
+{
+    sample_tick++;              /* conta o tick, tenha ou nao consumidor */
+    k_sem_give(&imu_data_ready_sem);
+}
+```
+
+Não elimina a perda, mas a torna **visível**: buraco de id no lugar exato, e a grade de
+100 Hz vira reconstruível. O lado do PC não muda — o `prep_dataset.py` já conta buracos.
+
+**Slide:** o contador de perdas estava no lugar errado por uma função de distância. Um
+detector que mede o sintoma errado é pior que nenhum, porque o "0 perdidas" dá
+confiança no dado ruim.
+
+---
+
 ## As que contradizem a intuição
 
 ### 5. Janela maior que o evento · ⭐ vale um slide inteiro
@@ -170,8 +241,20 @@ Não há modo headless. Se o roteiro previa automação por CLI, não vem daí.
 ### 13. O script de centralização da Nordic não é CLI
 
 `nordicsemi-neuton/segment-center-signal` — você **edita constantes no fim do .py** e roda.
-Abre janelas do matplotlib e bloqueia. `work_axis` e `threshold_coef` são chutes iniciais
-que precisam de calibração com dado real. É lento (`df.loc[i] = row` em laço).
+Cópia vendorizada em `03_central_uart/tools/segment-center-signal/` (upstream **sem
+licença declarada** — ver `ORIGEM.md` da pasta). `work_axis` e `threshold_coef` são chutes
+iniciais que precisam de calibração com dado real. É lento (`df.loc[i] = row` em laço).
+
+**Correção:** eu tinha escrito aqui que ele "abre janelas do matplotlib e bloqueia".
+Lendo o fonte, é o contrário e é pior: ele chama `plot_segments()` duas vezes mas **nunca
+chama `plt.show()`**. Rodando como script, as figuras são criadas e descartadas em
+silêncio — o aluno espera os gráficos de calibração e não vê nada. Precisa acrescentar um
+`plt.show()` no fim.
+
+**Janela ímpar perde uma linha · falha em silêncio.** O recorte é
+`range(centro - int(w/2), centro + int(w/2))`: com `w=99` saem **98** linhas por segmento.
+Aí os segmentos não casam mais com a janela do Lab e o alinhamento escorrega 1 linha por
+gesto — a centralização inteira é desfeita sem nenhum erro aparecer. Usar valor par.
 
 ---
 
@@ -191,6 +274,128 @@ sendo o certo a usar, mas por precaução, não por falha observada.
 
 **Nota de método para o curso:** vale mostrar isso aos alunos. Uma previsão plausível a
 partir da leitura do código não substitui a medição.
+
+---
+
+## Trocar o modelo — o procedimento e o que falha nele
+
+O ato 3 do loop 1: o aluno treinou no Edge AI Lab e quer o modelo dele rodando na TAG.
+Parece copiar arquivo; tem quatro armadilhas, três delas silenciosas.
+
+### O procedimento, em quatro passos
+
+1. Baixar o zip do Lab e copiar **toda** a pasta `nrf_edgeai_generated/` dele
+2. Colar em `01_gesture_recognition/src/nrf_edgeai_generated/nrf54l15tag/<modelo>/`
+3. Apontar o `CURSO_MODELO` no `CMakeLists.txt` para essa pasta
+4. **Recompilar com `-p`** e gravar
+
+### 14. Recompilar sem `-p` grava o modelo antigo · ⭐ silencioso
+
+O `CURSO_MODELO` mora no `CMakeLists.txt`, e o CMake só relê o arquivo num build
+pristine. Sem o `-p`, o build "funciona", o `west flash` grava, e a TAG continua com o
+modelo anterior. Nada avisa.
+
+É a armadilha mais provável em sala, porque acontece com quem fez tudo certo.
+
+### 15. Como saber qual modelo está rodando · ⭐ o antídoto, vale um slide
+
+O antídoto já existe no upstream e ninguém repara nele. Cada solução do Edge AI Lab
+tem um **solution id** numérico, que aparece em três lugares:
+
+```c
+// no header gerado
+#ifndef _NRF_EDGEAI_USER_MODEL_95867_H_
+nrf_edgeai_t *nrf_edgeai_user_model_95867(void);
+#define nrf_edgeai_user_model nrf_edgeai_user_model_95867   // alias que o main.c usa
+
+// e no boot, ja no codigo do sample — src/main.c:145
+LOG_INF("nRF Edge AI Lab Solution id: %s", nrf_edgeai_solution_id_str(p_model));
+```
+
+No RTT, no boot:
+
+```
+<inf> main: nRF Edge AI Lab Solution id: 95867
+```
+
+| id | modelo |
+|---|---|
+| `91278` | de fábrica, do Add-on v2.3.0 |
+| `95867` | treinado no curso em 2026-09-01 |
+
+Uma linha de log responde "gravei o certo?" sem abrir arquivo nenhum, e é a defesa
+direta contra a armadilha 14. **Ensinar a olhar essa linha vale mais que ensinar o
+procedimento**, porque ela também pega o aluno que copiou na pasta errada.
+
+⚠️ **Com uma condição, descoberta no hardware em 2026-09-01:** no build padrão essa
+linha **não aparece**. Os buffers de log vêm em 1024 bytes, a rajada de boot estoura os
+dois, e tudo que o `main()` loga no início some em silêncio — inclusive o Solution id
+(é a armadilha 3, batendo de novo). O antídoto precisa de antídoto: compile com o
+fragmento `rtt_log.conf`, que agora traz `CONFIG_LOG_BUFFER_SIZE=4096` e
+`CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096`.
+
+**Slide:** o mecanismo de verificação existia no código desde sempre e era inútil por
+falta de 3 kB de buffer. Ninguém percebe, porque a ausência de uma linha de log não
+parece um defeito.
+
+O alias `#define nrf_edgeai_user_model nrf_edgeai_user_model_<id>` é o que faz o
+`main.c` compilar sem saber o id — e é também por isso que **misturar o `.h` de um
+treino com o `.c` de outro dá erro de link**. Essa é a única das quatro que falha alto.
+
+### 16. A pasta gerada tem 5 arquivos, não 2 · silencioso
+
+A doc da Nordic manda *"replace the `nrf_edgeai_generated` folder"*, e está certa. O que
+o zip entrega:
+
+```
+nrf_edgeai_user_model.c      15.120 B
+nrf_edgeai_user_model.h       1.051 B
+nrf_edgeai_user_types.h         585 B   <- o esquecido
+prj_example.conf                 94 B
+README.md                        66 B
+```
+
+O `nrf_edgeai_user_types.h` carrega os typedefs do modelo:
+
+```c
+typedef int16_t nrf_user_input_t;
+typedef flt32_t nrf_user_output_t;
+```
+
+Se o aluno escolher outro **Data Type** ou **Output format** no Lab e mantiver o
+types.h antigo, **compila e infere errado**. No treino de 2026-09-01 os tipos vieram
+iguais aos de fábrica, então o erro não se manifestou — o que é a pior forma de
+aprender que ele existe.
+
+O `prj_example.conf` é inerte dentro de `src/` (o `APPLICATION_CONFIG_DIR` aponta para
+`configuration/<board>`). Ele sugere `CONFIG_NEWLIB_LIBC=y`, que **não** se deve aplicar:
+a app roda com picolibc e funciona.
+
+### 17. Trocar as classes obriga a editar C · silencioso
+
+O modelo devolve um índice. Quem dá nome, cor e tecla a ele é o firmware, em três
+lugares: o `enum class_label_t` (`inference_postprocessing.h`), a tabela de nomes e a
+de limiares (`inference_postprocessing.c:41` e `:61`), e o mapa gesto→tecla no `main.c`.
+
+Treinar com outro conjunto de classes e não mexer neles não dá erro: o gesto sai com o
+nome errado e aperta a tecla errada.
+
+**O truque para não precisar:** treinar com um subconjunto **contíguo começando em 0**
+da ordem do enum. Foi o que fizemos — `idle`, `unknown`, `swipe_right`, `swipe_left`
+são os rótulos 0-3 — e por isso o modelo do curso entrou sem tocar em uma linha de C.
+O `CLASSES` do `prep_dataset.py:50` é uma cópia dessa ordem exatamente para isso.
+
+### O que fica de invariante
+
+Qualquer modelo novo tem que manter três coisas, ou a app quebra:
+
+| Invariante | Onde quebra |
+|---|---|
+| **6 canais** de entrada | `main.c:42` alimenta 6, cravado; outro número desalinha a janela, em silêncio |
+| **Output float32** | `main.c:478` lê `probabilities.p_f32`; saída quantizada vira lixo |
+| **Cortex-M33 · Neuton** | LiteRT/Axon não roda na nRF54L15 |
+
+A **janela** pode mudar à vontade: vem do modelo (`INPUT_WINDOW_SIZE`) e a app lê de lá.
 
 ---
 
