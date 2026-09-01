@@ -12,6 +12,35 @@ set(APPLICATION_CONFIG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/configuration/\${NORMALI
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(gesture_recognition)
 
+#
+# ============================ ESCOLHA DO MODELO (curso) =======================
+#
+# Divergencia do Edge AI Add-on v2.3.0: upstream so tem um modelo por board.
+# Aqui os dois convivem em subpastas de src/nrf_edgeai_generated/nrf54l15tag/,
+# seguindo a mesma convencao que o upstream ja usa na nrf54lm20dk (Axon/, Neuton/).
+#
+# Para trocar: comente uma linha, descomente a outra, e RECOMPILE COM -p
+# (o CMake so relê isto num build pristine).
+#
+#   fabrica         modelo de exemplo da Nordic  · solution id 91278 · janela 99
+#                   7 gestos + idle, treinado pela Nordic
+#   manaus_4gestos  treinado no curso 2026-09-01 · solution id 95867 · janela 100
+#                   idle, unknown, swipe_right, swipe_left (rotulos 0-3)
+#
+# Confira na TAG qual subiu: o boot loga "nRF Edge AI Lab Solution id:" (main.c:145).
+# Essa linha so cabe no log com os buffers aumentados — use o fragmento rtt_log.conf,
+# que ja os traz. Sem ele a rajada de boot engole a linha, em silencio.
+#
+# Editar aqui e a UNICA forma de trocar. Nao ha override por linha de comando: com
+# --sysbuild o -D vai para o CMake do sysbuild e nao chega nesta aplicacao. Testado em
+# 2026-09-01, tambem com prefixo de imagem (-D01_gesture_recognition_CURSO_MODELO=...):
+# nos dois casos o build passa em silencio com o valor abaixo e voce grava o modelo
+# errado, com um binario que parece correto.
+#
+set(CURSO_MODELO "fabrica")
+# set(CURSO_MODELO "manaus_4gestos")
+# ==============================================================================
+
 set(NN_BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/nrf_edgeai_generated/${BOARD}")
 
 if(CONFIG_NRF_EDGEAI_GESTURE_RECOGNITION_MODEL_AXON)
@@ -20,6 +49,9 @@ else()
   # Neuton: use Neuton subdir only for nrf54lm20dk (has both Axon and Neuton)
   if(BOARD STREQUAL "nrf54lm20dk")
     set(NN_SOURCE "${NN_BASE}/Neuton")
+  elseif(BOARD STREQUAL "nrf54l15tag")
+    # CURSO: subpasta por modelo. As demais boards seguem o upstream.
+    set(NN_SOURCE "${NN_BASE}/${CURSO_MODELO}")
   else()
     set(NN_SOURCE "${NN_BASE}")
   endif()

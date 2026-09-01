@@ -423,5 +423,12 @@ Este mesmo código atende os três atos da sessão de Neuton AI — muda só o K
 2. **Modo de coleta** — `CONFIG_DATA_COLLECTION_MODE=y` + `CONFIG_BLE_MODE_NONE=y`.
    Sai `acc_x,acc_y,acc_z,gyro_x,gyro_y,gyro_z` na serial a 100 Hz, sem inferência.
 3. **Modelo próprio** — treinar no [Nordic Edge AI Lab](https://ai.lab.nordicsemi.com/),
-   baixar o `nrf_edgeai_user_model.c` e substituir em
-   `src/nrf_edgeai_generated/nrf54l15tag/`, recompilar e comparar.
+   copiar a pasta `nrf_edgeai_generated/` do zip para uma subpasta nova em
+   `src/nrf_edgeai_generated/nrf54l15tag/`, apontar o `CURSO_MODELO` do
+   [`CMakeLists.txt`](CMakeLists.txt) para ela, recompilar **com `-p`** e comparar.
+
+   Os dois modelos convivem no repo, um por subpasta — troca-se comentando uma linha.
+   Ver [`src/nrf_edgeai_generated/nrf54l15tag/README.md`](src/nrf_edgeai_generated/nrf54l15tag/)
+   para o procedimento e as armadilhas: são **cinco** arquivos e não dois, o `-p` não é
+   opcional, e o boot loga o solution id (`src/main.c:145`) para você confirmar qual
+   modelo subiu.
