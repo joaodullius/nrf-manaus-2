@@ -1,0 +1,15 @@
+# Captura do aluno e saidas das ferramentas — nao versionado.
+# O dataset de referencia do curso fica em dataset_referencia/, que E versionado.
+dataset/
+dataset_centered/
+
+# Merges gerados pelo prep_dataset.py na raiz do lab
+/dataset.csv
+/dataset_centrado.csv
+
+# NOTA: meu_tag.conf NAO entra aqui de proposito. Ele e rastreado e vem no repo
+# com o endereco vazio — e o template que cada aluno preenche, e o CMakeLists.txt
+# falha de proposito quando esta vazio, com a mensagem de onde achar o endereco.
+# Ignora-lo esconderia o template de quem clona.
+# So nao commite o SEU endereco: 'git checkout edge_ai/03_central_uart/meu_tag.conf'
+# antes do commit, ou deixe-o fora do 'git add'.

@@ -320,12 +320,29 @@ def cmd_merge(args) -> None:
 
     print("  Validado contra as regras do Edge AI Lab.")
     print()
-    print("  Antes de subir, para gestos discretos (swipe, knock, tap), centralize o")
-    print("  sinal na janela com o script da Nordic:")
-    print("    github.com/nordicsemi-neuton/segment-center-signal")
-    print()
-    print("  Depois: ai.lab.nordicsemi.com -> classification -> target = 'class'")
-    print("          signal processing: window 99, sliding shift 33 (inferencia)")
+
+    # A janela do Lab tem que ser a mesma usada na centralizacao, senao as
+    # janelas do Lab comecam desalinhadas dos segmentos e a centralizacao e
+    # desfeita. Detectamos pelo tamanho das classes: o center_gestures.py
+    # deixa toda classe multipla da janela.
+    centralizado = all(n % 100 == 0 for n in por_classe.values())
+
+    if centralizado:
+        print("  Todas as classes sao multiplas de 100 — dataset ja centralizado.")
+        print("  ai.lab.nordicsemi.com -> classification -> target = 'class'")
+        print("  signal processing: window 100, training shift 100, inference shift 33")
+        print()
+        print("  A window do Lab TEM que ser a mesma da centralizacao. Diferente,")
+        print("  as janelas do Lab comecam desalinhadas dos segmentos.")
+    else:
+        print("  Gestos discretos (swipe, knock, tap) ainda NAO estao centralizados.")
+        print("  Sem isso a janela corta gestos ao meio. Para centralizar:")
+        print("    python tools/center_gestures.py \"dataset/swipe_*.csv\"")
+        print("    python tools/center_gestures.py \"dataset/idle_*.csv\" \"dataset/unknown_*.csv\" --continuo")
+        print()
+        print("  Para subir assim mesmo (sem centralizar):")
+        print("  ai.lab.nordicsemi.com -> classification -> target = 'class'")
+        print("  signal processing: window 99, training shift 33, inference shift 33")
 
 
 # --------------------------------------------------------------------------

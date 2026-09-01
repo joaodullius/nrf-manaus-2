@@ -32,6 +32,19 @@ TAG (BMI270 @100 Hz)                       nRF54L15-DK                    PC
   "<id> ax,ay,az,gx,gy,gz\r\n"      (so o SEU tag)      serial USB
 ```
 
+## Sem tempo de coletar? Use o dataset de referência
+
+[`dataset_referencia/`](dataset_referencia/) traz uma coleta pronta do preparo do curso:
+`dataset_centrado.csv` sobe direto no Edge AI Lab, e `bruto/` tem os CSVs por classe
+para quem quiser rodar o pipeline inteiro sem gravar. Quatro classes (`idle`,
+`unknown`, `swipe_right`, `swipe_left`), que são os rótulos 0-3 do enum — modelo
+treinado com ele cai no firmware sem editar C.
+
+Leia o [README de lá](dataset_referencia/README.md) antes: tem as limitações medidas,
+inclusive a taxa de amostragem dilatada (76-94 Hz em vez de 100).
+
+Ele **não** serve para o `05_data_forwarder`: unidades e fundo de escala são outros.
+
 ## Passo 1 — TAG em modo de coleta
 
 Não existe cópia do gesture aqui: usa-se o **próprio `01_gesture_recognition`** com um
@@ -166,9 +179,12 @@ mostra float físico (`9.8`), mas é exemplo, não requisito.
 
 **Centralizar gestos discretos.** `swipe`, `knock` e `tap` têm começo e fim, e o pico do
 sinal precisa cair no meio da janela de 1 s — senão o treino recebe meio gesto. A Nordic
-mantém script próprio para isso, e é melhor usar o dela do que manter uma segunda versão:
-[`nordicsemi-neuton/segment-center-signal`](https://github.com/nordicsemi-neuton/segment-center-signal).
-Rotações são contínuas e não precisam.
+mantém script próprio para isso, e é melhor usar o dela do que manter uma segunda versão.
+A cópia está aqui, em [`tools/segment-center-signal/`](tools/segment-center-signal/) —
+leia o [`ORIGEM.md`](tools/segment-center-signal/ORIGEM.md) da pasta antes de rodar: ele
+tem o bloco a editar e as quatro armadilhas do script (janela ímpar perde uma linha, ele
+renomeia suas colunas, cada arquivo precisa ser múltiplo da janela, e os dois parâmetros
+de detecção são chutes que precisam de calibração). Rotações são contínuas e não precisam.
 
 **Enviar para o Lab.** Não há API documentada — o upload é drag-and-drop em
 `ai.lab.nordicsemi.com`.
@@ -179,16 +195,26 @@ No Lab: *classification*, target = coluna `class`, e em signal processing **wind
 com **sliding shift 33** para inferência. Não é coincidência: são os mesmos
 `INPUT_WINDOW_SIZE` e `INPUT_WINDOW_SHIFT` que o `01_gesture_recognition` já usa.
 
-O treino devolve um zip com o modelo em C. Para colocá-lo na TAG, substitua em
-`01_gesture_recognition/src/nrf_edgeai_generated/nrf54l15tag/`:
+O treino devolve um zip. Copie **toda** a pasta `nrf_edgeai_generated/` dele para uma
+subpasta nova em `01_gesture_recognition/src/nrf_edgeai_generated/nrf54l15tag/`,
+aponte o `CURSO_MODELO` do `CMakeLists.txt` para ela e recompile o 01 **com `-p`** e
+**sem** o `data_collection.conf`.
+
+⚠️ São **cinco** arquivos, não dois. O `nrf_edgeai_user_types.h` carrega os typedefs do
+modelo (`nrf_user_input_t`, `nrf_user_output_t`): mantê-lo do modelo anterior **compila
+e infere errado**, sem aviso. E o `-p` não é opcional — o CMake só relê o
+`CMakeLists.txt` num build pristine, então sem ele você grava o modelo antigo achando
+que trocou.
+
+Confira na TAG pelo log de boot, que já existe no sample (`src/main.c:145`):
 
 ```
-nrf_edgeai_user_model.c
-nrf_edgeai_user_model.h
+<inf> main: nRF Edge AI Lab Solution id: 95867
 ```
 
-e recompile o 01 **sem** o `data_collection.conf` — ele volta a inferir, agora com o seu
-modelo, e o teclado BLE responde aos seus gestos.
+O procedimento completo, com as quatro armadilhas, está em
+[`src/nrf_edgeai_generated/nrf54l15tag/README.md`](../01_gesture_recognition/src/nrf_edgeai_generated/nrf54l15tag/)
+e nas [notas do módulo](../NOTAS_MATERIAL.md).
 
 ### Classes (de `inference_postprocessing.h`)
 
