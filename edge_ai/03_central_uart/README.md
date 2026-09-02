@@ -13,8 +13,16 @@ Bluetooth LE; esta DK recebe e joga na serial do PC.
 | Peça | Papel |
 |---|---|
 | **nRF54L15-TAG** | roda o `01_gesture_recognition` em modo de coleta; lê o IMU e manda por NUS |
-| **nRF54LM20-DK** | só grava/depura a TAG (ela encaixa no `DEBUG OUT`) |
-| **nRF54L15-DK** | roda **este** firmware; recebe por NUS e escreve na serial USB |
+| **nRF54LM20-DK** | primeiro **grava a TAG** (ela encaixa no `DEBUG OUT`); depois, com a TAG fora, roda **este** firmware: recebe por NUS e escreve na serial USB |
+
+São só dois kits por aluno, e a DK faz os dois papéis **em sequência**:
+
+1. TAG no `DEBUG OUT` → grava o 01 em modo de coleta e lê o endereço BLE no RTT (Passos 1 e 2)
+2. tira a TAG do `DEBUG OUT` — ela segue na bateria CR2032, anunciando
+3. grava **este** central no próprio SoC da DK, com o endereço lido (Passo 3)
+
+A ordem importa: enquanto a TAG está encaixada e alimentada, o debugger da DK aponta para
+ela, não para o SoC da DK — gravar o central nessa hora gravaria a TAG.
 
 Cada aluno tem o seu par TAG + DK. Como todos os tags anunciam com o mesmo nome, este
 central **filtra pelo endereço BLE** do tag do aluno — sem isso ele conectaria no tag
@@ -23,7 +31,7 @@ do colega.
 ## Fluxo
 
 ```
-TAG (BMI270 @100 Hz)                       nRF54L15-DK                    PC
+TAG (BMI270 @100 Hz)                       nRF54LM20-DK                   PC
   amostra IMU                                                          
   int16 mili-unidades                                                  
         │                                                              
@@ -48,7 +56,9 @@ Ele **não** serve para o `05_data_forwarder`: unidades e fundo de escala são o
 ## Passo 1 — TAG em modo de coleta
 
 Não existe cópia do gesture aqui: usa-se o **próprio `01_gesture_recognition`** com um
-fragmento de Kconfig e um build dir separado, para o demo HID continuar intacto.
+fragmento de Kconfig e um build dir separado, para o demo HID continuar intacto. A TAG
+fica encaixada no `DEBUG OUT` da DK neste passo e no próximo. No VS Code: build
+configuration da TAG com `data_collection.conf` em *Kconfig fragments*.
 
 ```
 west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild ^
@@ -72,11 +82,13 @@ Grave a TAG, abra o RTT e leia a linha **`Identity:`** do boot. Ela vem do
                                                 VALUE              TYPE
 ```
 
-⚠️ **Essa linha só aparece com os buffers de log aumentados.** No build padrão o log
-corta no meio de `HW Platform: Nordi` e tudo depois disso some — inclusive o `Identity:`.
-O `data_collection.conf` já corrige (`CONFIG_LOG_BUFFER_SIZE` e
-`CONFIG_SEGGER_RTT_BUFFER_SIZE_UP`, ambos para 4096). Ver
-[Buffers de log](#por-que-dois-buffers) abaixo.
+Essa linha só cabe no log com os buffers aumentados — o `prj.conf` da TAG já traz
+`CONFIG_LOG_BUFFER_SIZE` e `CONFIG_SEGGER_RTT_BUFFER_SIZE_UP` em 4096 (ver
+[Buffers de log](#por-que-dois-buffers) abaixo). Com os 1024 do Add-on o log corta no
+meio de `HW Platform: Nordi` e o `Identity:` some.
+
+Anote VALUE e TYPE. Agora **tire a TAG do `DEBUG OUT`** e deixe-a na bateria: o próximo
+passo grava o próprio SoC da DK.
 
 ## Passo 3 — central com o seu endereço
 
@@ -88,20 +100,24 @@ CONFIG_LAB_TAG_ADDR_TYPE="random"
 ```
 
 ```
-west build -p -b nrf54l15dk/nrf54l15/cpuapp ^
-  -d C:\work\nrf-manaus-2\edge_ai\03_central_uart\build_dk ^
+west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp ^
+  -d C:\work\nrf-manaus-2\edge_ai\03_central_uart\build_lm20 ^
   C:\work\nrf-manaus-2\edge_ai\03_central_uart ^
   -- -DEXTRA_CONF_FILE=meu_tag.conf
 ```
+
+No VS Code: build configuration da DK (`nrf54lm20dk/nrf54lm20b/cpuapp`) com
+`meu_tag.conf` em *Kconfig fragments*. As DKs do curso são a variante **B**
+(nRF54LM20B); a A também compila, com `nrf54lm20a`.
 
 Deixar o endereço vazio **falha o build de propósito** (`CMakeLists.txt`), com a mensagem
 explicando onde achar o endereço. Um central sem filtro conectaria no tag errado.
 
 ## Passo 4 — ler os dados
 
-O CSV sai na serial USB da nRF54L15-DK, **115200 8N1**. A DK enumera duas portas COM;
-o dado vem em uma delas — no setup de validação foi a **vcom1**, com a vcom0 muda. Se a
-primeira não mostrar nada, tente a outra.
+O CSV sai na serial USB da nRF54LM20-DK, **115200 8N1**. A DK enumera duas portas COM e
+o dado vem em uma delas — na validação foi a **vcom1**, com a vcom0 muda. Se a primeira
+não mostrar nada, tente a outra.
 
 O que sai por onde:
 
@@ -110,7 +126,7 @@ O que sai por onde:
 | CSV do IMU | **serial USB** (uart20) | é o dado a capturar |
 | Log do central | **RTT** | conferir `Filtrando pelo tag ...` e `Connected:` quando algo falhar |
 
-Isso é escolha do sample, e é a escolha certa aqui: o `chosen` do `nrf54l15dk` é
+Isso é escolha do sample, e é a escolha certa aqui: o `chosen` do `nrf54lm20dk` é
 `zephyr,console = &uart20` / `zephyr,shell-uart = &uart20` e **não há** `nordic,nus-uart`,
 então os dados da NUS caem no mesmo uart20 do console. Ligar `CONFIG_LOG_BACKEND_UART`
 intercalaria linhas de log no meio do CSV e sujaria a captura — por isso o sample manda o
@@ -260,31 +276,41 @@ tag rodando na bateria sem debugger — que é exatamente o caso de uso da colet
 
 ## Validado no hardware
 
-TAG + nRF54LM20-DK (gravação) + nRF54L15-DK (central), 2026-08-30:
+**2026-09-02 — setup do curso: TAG + nRF54LM20-DK (variante B).** TAG gravada pelo
+`DEBUG OUT` da DK e lida pelo mesmo J-Link com o `prj.conf` novo: boot inteiro no RTT,
+prompt `tag:~$`, `Identity: EC:EF:40:2D:5E:46 (random)` e `Solution id`. Depois, TAG na
+bateria e o central gravado no SoC da DK (`nrf54lm20dk/nrf54lm20b/cpuapp`):
 
 ```
 <inf> central_uart: Filtrando pelo tag EC:EF:40:2D:5E:46 (random)
 <inf> central_uart: Scan started
 <inf> central_uart: Filters matched. Address: EC:EF:40:2D:5E:46 (random) connectable: 1
 <inf> central_uart: Connected: EC:EF:40:2D:5E:46 (random)
+<inf> central_uart: MTU exchange done
+<inf> central_uart: Security changed: EC:EF:40:2D:5E:46 (random) level 2
 <inf> central_uart: Service discovery completed
 ```
 
-549 linhas de CSV em 4 s na serial (vcom1 nesta maquina), ids contíguos, ~99 Hz — batendo com os 100 Hz do
-`imu_config.data_rate_hz`.
+CSV na **vcom1** da LM20-DK (a vcom0 muda), ids contíguos. `tools/prep_dataset.py record`
+apontado para essa porta: **589 amostras em 6,1 s (96,9 Hz), zero perdidas**.
 
-Consumo: central **247.512 B** flash / **45.465 B** RAM · tag em coleta **267.264 B**
-flash / **58.496 B** RAM.
+Consumo: central na LM20B **235.180 B** flash / **45.396 B** RAM · tag em coleta
+**302.048 B** flash / **63.632 B** RAM (já com console/shell RTT e buffers de 4096 no
+`prj.conf`).
 
-`tools/prep_dataset.py` testado contra esse mesmo fluxo ao vivo: `record` achou a porta
-sozinho e gravou **598 amostras a 99,6 Hz com zero perdidas**; `merge` de duas classes
-validou e escreveu o `dataset.csv`; `merge` de uma classe só foi recusado com saída 1
-(“só 1 classe(s)” e “nenhuma amostra da classe 0”); `convert` detectou buraco de id num
-log com o banner de boot no meio.
+Um detalhe de bancada que vale a lição do [Hardware](#hardware): enquanto uma DK antiga
+ainda rodava um central com o mesmo filtro, a LM20 casava o filtro e falhava em
+`Failed to connect ..., 0x02` — a TAG aceita um central por vez, e ganha quem varre
+primeiro. Apagar o outro central (`nrfutil device recover`) resolveu na hora.
+
+**2026-08-30 — setup de preparo: TAG + nRF54L15-DK como central.** Mesmo fluxo, 549
+linhas em 4 s, ~99 Hz; `record` com 598 amostras a 99,6 Hz e zero perdidas; `merge` e
+`convert` exercitados, inclusive nos casos de erro (uma classe só recusada com saída 1;
+buraco de id detectado num log com o banner de boot no meio).
 
 ## Pontos em aberto
 
-**Aviso de pareamento.** Toda conexão registra:
+**Aviso de pareamento.** Na nRF54L15-DK toda conexão registrava:
 
 ```
 <err> bt_smp: pairing failed (peer reason 0x3)
@@ -292,7 +318,8 @@ log com o banner de boot no meio.
 ```
 
 O `central_uart` pede segurança porque o sample habilita bonding; o tag em modo de coleta
-não exige criptografia na NUS. **O dado flui normalmente** — a descoberta de serviço
+não exige criptografia na NUS. Na LM20B (2026-09-02) a segurança subiu para *level 2* sem
+erro. Num caso ou no outro, **o dado flui normalmente** — a descoberta de serviço
 completa e as notificações chegam. É ruído, não falha. Deixado como está para não
 divergir mais do sample; se incomodar em aula, dá para parar de pedir segurança no
 central.

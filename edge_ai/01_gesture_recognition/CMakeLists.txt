@@ -28,8 +28,8 @@ project(gesture_recognition)
 #                   idle, unknown, swipe_right, swipe_left (rotulos 0-3)
 #
 # Confira na TAG qual subiu: o boot loga "nRF Edge AI Lab Solution id:" (main.c:145).
-# Essa linha so cabe no log com os buffers aumentados — use o fragmento rtt_log.conf,
-# que ja os traz. Sem ele a rajada de boot engole a linha, em silencio.
+# Essa linha so cabe no log com os buffers aumentados — o prj.conf da TAG ja os traz
+# (4096). Com os defaults a rajada de boot engole a linha, em silencio.
 #
 # Editar aqui e a UNICA forma de trocar. Nao ha override por linha de comando: com
 # --sysbuild o -D vai para o CMake do sysbuild e nao chega nesta aplicacao. Testado em

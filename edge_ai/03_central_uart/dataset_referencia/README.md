@@ -65,7 +65,7 @@ A calibração automática deve reencontrar `gyro_y` / 0,95 para o `swipe_right`
 | Window size | **100** | **99** |
 | Sliding shift — training | **100** | **33** |
 | Sliding shift — inference | 33 | 33 |
-| Sub-windowing | 4, com full-window features | 4, com full-window features |
+| Sub-windowing | desligado | desligado |
 | Weights & Coefficients | Quantization-Aware 16-bit Integer | idem |
 | Output format | Floating-point 32-bit (travado) | idem |
 | Target hardware | Cortex-M33 | Cortex-M33 |

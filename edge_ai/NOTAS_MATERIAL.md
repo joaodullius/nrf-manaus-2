@@ -330,9 +330,9 @@ procedimento**, porque ela também pega o aluno que copiou na pasta errada.
 ⚠️ **Com uma condição, descoberta no hardware em 2026-09-01:** no build padrão essa
 linha **não aparece**. Os buffers de log vêm em 1024 bytes, a rajada de boot estoura os
 dois, e tudo que o `main()` loga no início some em silêncio — inclusive o Solution id
-(é a armadilha 3, batendo de novo). O antídoto precisa de antídoto: compile com o
-fragmento `rtt_log.conf`, que agora traz `CONFIG_LOG_BUFFER_SIZE=4096` e
-`CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096`.
+(é a armadilha 3, batendo de novo). O antídoto precisa de antídoto: o `prj.conf` da
+TAG agora traz `CONFIG_LOG_BUFFER_SIZE=4096` e `CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096`
+por padrão.
 
 **Slide:** o mecanismo de verificação existia no código desde sempre e era inútil por
 falta de 3 kB de buffer. Ninguém percebe, porque a ausência de uma linha de log não

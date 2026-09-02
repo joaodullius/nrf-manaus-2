@@ -172,9 +172,10 @@ Sem `FILE_SUFFIX`, vale o `prj.conf` — e ele já traz as três escolhas do cur
 
 ⚠️ Não use `prj_release.conf` nesta aula: ele **desliga** o `CONFIG_BLE_MITM_AUTH`.
 
-Consumo do build de referência: **FLASH 285.052 B (40,0%)** · **RAM 54.152 B (20,7%)**.
-Com o fragmento `rtt_log.conf` (ver abaixo): **FLASH 320.460 B (45,0%)** ·
-**RAM 59.313 B (22,6%)** — o shell custa ~35 kB de flash e ~5 kB de RAM.
+Consumo do build de referência (`prj.conf` do curso, com console/shell por RTT e buffers de
+log em 4096): **FLASH 320.476 B (45,0%)** · **RAM 65.456 B (25,0%)**. O `prj.conf` do
+Add-on, sem o bloco do curso, dava 285.052 B / 54.152 B — o shell custa ~35 kB de flash e
+~5 kB de RAM, e os dois buffers mais ~6 kB de RAM.
 
 ## Console e terminal por RTT
 
@@ -185,11 +186,10 @@ pelo **RTT** (buffer em RAM lido pelo debugger J-Link do DK em que a TAG está e
 O `prj.conf` do upstream já liga `CONFIG_USE_SEGGER_RTT` + `CONFIG_LOG` — ou seja, os
 `LOG_INF()` já saíam. O que faltava era o **console** (`printk`) e o **shell**.
 
-Isso fica num **fragmento opcional**, não no `prj.conf`: assim o
-[`prj.conf`](configuration/nrf54l15tag_nrf54l15_cpuapp/prj.conf) continua **byte a byte
-igual ao do SDK** e o aluno vê exatamente o que o curso acrescenta.
-
-[`configuration/nrf54l15tag_nrf54l15_cpuapp/rtt_log.conf`](configuration/nrf54l15tag_nrf54l15_cpuapp/rtt_log.conf):
+Isso é a **única divergência do curso** no
+[`prj.conf`](configuration/nrf54l15tag_nrf54l15_cpuapp/prj.conf): um bloco no final do
+arquivo, marcado no cabeçalho, que o build padrão já aplica — nada a acrescentar no VS Code
+nem na linha de comando.
 
 ```conf
 CONFIG_RTT_CONSOLE=y
@@ -197,23 +197,9 @@ CONFIG_SHELL=y
 CONFIG_SHELL_BACKEND_RTT=y
 CONFIG_SHELL_BACKEND_SERIAL=n
 CONFIG_SHELL_PROMPT_RTT="tag:~$ "
+CONFIG_LOG_BUFFER_SIZE=4096
+CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096
 ```
-
-Como aplicar:
-
-```bash
-west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild ^
-  -d C:\work\nrf-manaus-2\edge_ai\01_gesture_recognition\build_tag ^
-  C:\work\nrf-manaus-2\edge_ai\01_gesture_recognition ^
-  -- -DEXTRA_CONF_FILE=rtt_log.conf
-```
-
-No VS Code, campo *Kconfig fragments* da build configuration: `rtt_log.conf`.
-
-O caminho **relativo** funciona porque o `CMakeLists.txt` aponta `APPLICATION_CONFIG_DIR`
-para `configuration/<board>`, e o Zephyr resolve `EXTRA_CONF_FILE` relativo contra esse
-diretório (`zephyr/cmake/modules/kconfig.cmake`, `merge_config_files`). Sem o
-`-DEXTRA_CONF_FILE`, o build é o do SDK, sem alteração nenhuma.
 
 | Kconfig | O que habilita |
 |---|---|
@@ -236,9 +222,10 @@ grep -E "LOG_BACKEND_RTT|SHELL_LOG_BACKEND" build_tag/01_gesture_recognition/zep
 
 ### O boot vem truncado (buffers de log)
 
-⚠️ Em regime o RTT entrega tudo, mas a **rajada de boot e truncada**: verificado no
-hardware, o log corta no meio de `<inf> bt_hci_core: HW Platform: Nordi` e some tudo
-depois — incluindo a linha `Identity:` com o endereco BLE do tag.
+⚠️ Em regime o RTT entrega tudo, mas com os buffers de 1024 do Add-on a **rajada de boot
+e truncada**: verificado no hardware, o log corta no meio de
+`<inf> bt_hci_core: HW Platform: Nordi` e some tudo depois — incluindo a linha
+`Identity:` com o endereco BLE do tag.
 
 Os dois buffers envolvidos vem em 1024 bytes e a rajada estoura os dois. Nao adianta
 mexer so no do RTT: com `CONFIG_LOG_MODE_DEFERRED` (ativo por padrao) a mensagem morre
@@ -249,10 +236,9 @@ CONFIG_LOG_BUFFER_SIZE=4096
 CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096
 ```
 
-O fragmento [`data_collection.conf`](configuration/nrf54l15tag_nrf54l15_cpuapp/data_collection.conf)
-(usado no lab [`03_central_uart`](../03_central_uart/)) ja aplica os dois. Para o demo HID
-deste lab isso nao costuma importar, mas se voce precisar ler o boot inteiro, acrescente
-as duas linhas.
+O `prj.conf` do curso ja traz os dois em 4096. E o que faz aparecerem no boot a linha
+`Identity:` (endereco BLE, usado no lab [`03_central_uart`](../03_central_uart/)) e a linha
+`Solution id` (qual modelo subiu) — verificado no hardware em 2026-09-02, boot inteiro no RTT.
 
 ### Como abrir o terminal
 

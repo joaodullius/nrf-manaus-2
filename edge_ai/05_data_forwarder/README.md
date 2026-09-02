@@ -14,7 +14,7 @@ levam amostras do IMU da TAG para o PC; mudam o firmware, o protocolo e a ferram
 | Firmware na TAG | **o mesmo do 01**, com um fragmento | outro firmware |
 | Protocolo | texto: `"<id> ax,...,gz\r\n"` | **CBOR + COBS + CRC-16** |
 | Ferramenta no PC | `prep_dataset.py` (terminal) | **Data Forwarder Host** (GUI) |
-| Segunda placa | nRF54L15-DK obrigatória | opcional (o PC conecta por BLE) |
+| Segunda placa | nRF54LM20-DK obrigatória | opcional (o PC conecta por BLE) |
 | Unidades | mili | **micro** (`INT32_VALUES=y`) |
 | Vantagem | continuidade com o Ato 1, unidades já casam | GUI com plot ao vivo, ferramenta oficial |
 
@@ -61,12 +61,12 @@ contorno também.
 no add-on, ou o executável pronto). É **GUI pura** — o README dele diz textualmente
 *"there is no command-line interface"*.
 
-**Opção B — ponte pela nRF54L15-DK.** É o que a doc da Nordic manda quando o BLE do PC não
+**Opção B — ponte pela nRF54LM20-DK.** É o que a doc da Nordic manda quando o BLE do PC não
 conecta. Use o `03_central_uart` **em modo binário**:
 
 ```
-west build -p -b nrf54l15dk/nrf54l15/cpuapp ^
-  -d ...\03_central_uart\build_dk_bin ^
+west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp ^
+  -d ...\03_central_uart\build_lm20_bin ^
   ...\03_central_uart ^
   -- -DEXTRA_CONF_FILE="meu_tag.conf;binary_bridge.conf"
 ```

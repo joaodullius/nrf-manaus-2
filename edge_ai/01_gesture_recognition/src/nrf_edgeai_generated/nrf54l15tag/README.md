@@ -43,10 +43,10 @@ O boot loga o id, sem precisar inspecionar arquivo (`src/main.c:145`):
 
 `95867` = o do curso. `91278` = o de fábrica.
 
-⚠️ Essa linha **só aparece com os buffers de log aumentados**. Compile com o fragmento
-[`rtt_log.conf`](../../../configuration/nrf54l15tag_nrf54l15_cpuapp/rtt_log.conf), que
-já traz `CONFIG_LOG_BUFFER_SIZE=4096` e `CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096`. Sem
-ele, a rajada de boot estoura os buffers e engole justamente as linhas do `main()`.
+⚠️ Essa linha **só aparece com os buffers de log aumentados**. O
+[`prj.conf`](../../../configuration/nrf54l15tag_nrf54l15_cpuapp/prj.conf) da TAG já traz
+`CONFIG_LOG_BUFFER_SIZE=4096` e `CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096`. Com os defaults
+do Add-on (1024), a rajada de boot estoura os buffers e engole justamente as linhas do `main()`.
 
 Sem o log, a verificação é no binário: procure a string do id dentro do `zephyr.elf`.
 
