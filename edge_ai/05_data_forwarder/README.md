@@ -431,13 +431,19 @@ Baixar o zip e anotar o **solution id**.
 
 TAG de volta no `DEBUG OUT`.
 
+O 04 vem ligado no **modelo de exemplo da Nordic** (estados de transporte de uma
+encomenda), para a fiação rodar antes de existir modelo próprio. O do ventilador já está
+no repo em `src/nrf_edgeai_generated/ventilador_95922/`; para o seu, o caminho é o mesmo:
+
 1. Copiar a pasta `nrf_edgeai_generated/` do zip para uma subpasta nova de
    `src/nrf_edgeai_generated/` — **os três arquivos**, inclusive `nrf_edgeai_user_types.h`
    — e apontar `CURSO_MODELO` no `CMakeLists.txt` para ela.
 2. No topo de `src/main.c`: `USER_WINDOW_SIZE` = janela do Lab, `USER_UNIQ_INPUTS_NUM` = 6,
-   `USER_MODELS_CLASS_NUM` = número de classes. Os valores reais estão no `.c` gerado.
+   `USER_MODELS_CLASS_NUM` = número de classes. Os valores reais estão no `.c` gerado
+   (para o ventilador, o bloco já está lá comentado).
 3. `CLASS_COLORS` com exatamente uma linha por classe, na ordem do dicionário que o
-   `merge` imprimiu (o `BUILD_ASSERT` pega o número errado).
+   `merge` imprimiu (o `BUILD_ASSERT` pega o número errado; a do ventilador está lá,
+   comentada).
 4. A leitura dos 6 eixos em **micro-unidades** (`sensor_value_to_micro()`, ordem
    `ax,ay,az,gx,gy,gz` do CSV) já está no `main.c`. Conferir só `IMU_ACCEL_FS_G` e
    `IMU_GYRO_FS_DPS`: o mesmo fundo de escala deixado no `bmi270.c` antes de coletar.

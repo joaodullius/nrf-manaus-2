@@ -15,17 +15,46 @@ nrf_edgeai_run_inference()  /* roda quando a janela fecha */
 > O sample alimenta o modelo com **vetores embarcados**; aqui a entrada vem do IMU e a
 > saída pinta o LED RGB. Licença Nordic preservada em [LICENSE](LICENSE).
 
-## O que vem no repo: o modelo do ventilador
+## Dois modelos no repo, uma linha para trocar
 
-O binário sai com o **modelo do curso**, treinado no Edge AI Lab com o
-[dataset de referência do 05](../05_data_forwarder/dataset_referencia/): velocidade de um
-ventilador portátil pela vibração, 4 classes. Seis entradas por amostra — os seis eixos do
-BMI270 em **micro-unidades SI**, como o Data Forwarder grava —, janela de 128 amostras a
-100 Hz, features de frequência. No boot:
+Os modelos ficam em subpastas de `src/nrf_edgeai_generated/`, e o `CMakeLists.txt` escolhe
+por `CURSO_MODELO` — como o `01_gesture_recognition` faz com `fabrica` e `manaus_4gestos`:
+
+| Pasta | Modelo | Contrato (janela / entradas / classes) |
+|---|---|---|
+| `Neuton/` | **exemplo da Nordic** (ligado por padrão): estados de transporte de uma encomenda, a partir da magnitude da aceleração | 50 / 1 / 7 |
+| `ventilador_95922/` | **o do curso**: velocidade de um ventilador pela vibração, treinado no Lab com o [dataset de referência do 05](../05_data_forwarder/dataset_referencia/) | 128 / 6 / 4 |
+| `Axon/` | o exemplo compilado para a NPU (só nRF54LM20) | — |
+
+**Ponto de partida: o exemplo da Nordic.** Funciona sem treinar nada — é a fiação
+inteira de ponta a ponta antes de existir modelo próprio. Uma entrada, a magnitude da
+aceleração em mili-g. No boot:
+
+```
+<inf> main: nRF Edge AI Lab Solution id: 90449
+<inf> main: janela 50 · entradas 1 · classes 7 · 100 Hz
+<inf> main: classe 0 — Idle (98%)
+```
+
+| `class` | LED | Estado |
+|---:|---|---|
+| 0 | apagado | Idle |
+| 1 | vermelho | Shaking |
+| 2 | amarelo | Impact |
+| 3 | magenta | Free Fall |
+| 4 | verde | Carrying |
+| 5 | azul | in Car |
+| 6 | ciano | Placed |
+
+**O modelo do curso: o ventilador.** Seis entradas por amostra — os seis eixos do BMI270
+em **micro-unidades SI**, como o Data Forwarder grava —, janela de 128 amostras a 100 Hz,
+features de frequência. Trocar é uma linha no `CMakeLists.txt` e dois blocos no
+`main.c`, que já estão lá comentados (constantes `USER_*` e `CLASS_COLORS`). No boot:
 
 ```
 <inf> main: nRF Edge AI Lab Solution id: 95922
 <inf> main: janela 128 · entradas 6 · classes 4 · 100 Hz
+<inf> main: janela em 1282 ms (esperado 1280)
 <inf> main: classe 0 — idle (99%)
 ```
 
@@ -36,20 +65,9 @@ BMI270 em **micro-unidades SI**, como o Data Forwarder grava —, janela de 128 
 | 2 | amarelo | `vel2` |
 | 3 | vermelho | `vel3` |
 
-A primeira inferência sai 1,28 s depois do boot (uma janela) e depois a cada 1,28 s
-(`INPUT_WINDOW_SHIFT` = 128 no modelo gerado). O LED só muda quando a classe muda.
-
-Os modelos ficam em subpastas de `src/nrf_edgeai_generated/`, e o `CMakeLists.txt` escolhe
-por `CURSO_MODELO`:
-
-| Pasta | Modelo | Contrato (janela / entradas / classes) |
-|---|---|---|
-| `ventilador_95922/` | **o do curso** (padrão) | 128 / 6 / 4 |
-| `Neuton/` | exemplo da Nordic: estados de encomenda a partir da magnitude da aceleração | 50 / 1 / 7 |
-| `Axon/` | o mesmo exemplo compilado para a NPU (só nRF54LM20) | — |
-
-O exemplo da Nordic continua no repo porque é a melhor demonstração da armadilha de
-escala, abaixo.
+A primeira inferência sai uma janela depois do boot e depois a cada janela
+(`INPUT_WINDOW_SHIFT` no modelo gerado: 50 no exemplo, 128 no ventilador). O LED só muda
+quando a classe muda.
 
 ## Build
 
@@ -156,12 +174,19 @@ nrf_edgeai_user_types.h
 
 **2. `CURSO_MODELO`** no [`CMakeLists.txt`](CMakeLists.txt) apontando para a pasta.
 
-**3. As três constantes** no topo do [`src/main.c`](src/main.c):
+**3. As três constantes** no topo do [`src/main.c`](src/main.c). Para o ventilador é só
+trocar qual bloco está comentado:
 
 ```c
+/* Neuton (exemplo da Nordic): 50 / 1 / 7 */
+// #define USER_WINDOW_SIZE      50U
+// #define USER_UNIQ_INPUTS_NUM  1U
+// #define USER_MODELS_CLASS_NUM 7U
+
+/* ventilador_95922 (modelo do curso): 128 / 6 / 4 */
 #define USER_WINDOW_SIZE      128U
-#define USER_UNIQ_INPUTS_NUM    6U
-#define USER_MODELS_CLASS_NUM   4U
+#define USER_UNIQ_INPUTS_NUM  6U
+#define USER_MODELS_CLASS_NUM 4U
 ```
 
 Elas **não são decorativas** — o `main()` confere cada uma contra o modelo carregado com
@@ -170,7 +195,7 @@ valores reais estão no `.c` gerado, como `INPUT_WINDOW_SIZE`, `INPUT_UNIQ_FEATU
 `MODEL_OUTPUTS_NUM`.
 
 **4. A tabela `CLASS_COLORS`** — uma linha por classe, **na ordem do dicionário** que o
-`fwd_to_lab.py merge` imprimiu.
+`fwd_to_lab.py merge` imprimiu. A do ventilador também está lá, comentada.
 
 **5. A escala e o fundo de escala** — coletou com o `05_data_forwarder`? A leitura de 6
 eixos em micro já está certa. Confira só `IMU_ACCEL_FS_G` / `IMU_GYRO_FS_DPS`: têm de
@@ -229,7 +254,7 @@ hardware: nem o banner de boot aparecia, e a CPU estava executando. Foi preciso 
 | | Flash (text+data) | RAM (data+bss) |
 |---|---:|---:|
 | `04_classify_led` (modelo do ventilador, FFT) | **89.384 B** | **24.016 B** |
-| `04_classify_led` (modelo de exemplo da Nordic) | 87.108 B | 19.413 B |
+| `04_classify_led` (modelo de exemplo da Nordic, padrão) | 87.608 B | 19.488 B |
 | `01_gesture_recognition` (modo coleta) | 267.264 B | 58.496 B |
 
 **Um terço do flash e um terço da RAM** do lab 01 — por não ter BLE, MCUboot nem mcumgr.

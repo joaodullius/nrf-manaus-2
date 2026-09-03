@@ -15,17 +15,22 @@ project(classify_led)
 # tem os arquivos gerados pelo Edge AI Lab (nrf_edgeai_user_model.c/.h e
 # nrf_edgeai_user_types.h) de UM modelo:
 #
-#   Neuton           modelo de exemplo da Nordic — 1 entrada (magnitude em mili-g),
-#                    janela 50, 7 classes. Funciona sem treinar nada.
-#   ventilador_95922 modelo do curso — 6 entradas (IMU em micro-unidades),
-#                    janela 128, 4 classes (idle, vel1, vel2, vel3).
+#   Neuton           modelo de exemplo da Nordic — estados de transporte de uma
+#                    encomenda a partir da magnitude da aceleracao: 1 entrada
+#                    (mili-g), janela 50, 7 classes. E o ponto de partida da
+#                    aula: funciona sem treinar nada.
+#   ventilador_95922 modelo do curso — velocidade de um ventilador por vibracao:
+#                    6 entradas (IMU em micro-unidades), janela 128, 4 classes
+#                    (idle, vel1, vel2, vel3).
 #   <seu_modelo>     copie a pasta nrf_edgeai_generated/ do zip do Lab para ca.
 #
-# Trocar o modelo = trocar este nome E as constantes USER_* no topo de src/main.c.
+# Trocar o modelo = trocar este nome E, em src/main.c, as constantes USER_* e a
+# tabela CLASS_COLORS (os dois conjuntos estao la, um comentado).
 # Recompile com -p: o CMake so rele este arquivo num build pristine — sem o -p
 # voce grava o modelo antigo achando que trocou.
 # ==============================================================================
-set(CURSO_MODELO "ventilador_95922")
+set(CURSO_MODELO "Neuton")
+# set(CURSO_MODELO "ventilador_95922")
 
 if(CONFIG_NRF_EDGEAI_CLASSIFICATION_MODEL_AXON)
   set(CURSO_MODELO "Axon")

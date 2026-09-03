@@ -19,15 +19,22 @@
  *     nrf_edgeai_feed_inputs()  entrega UMA amostra por vez; o runtime acumula
  *     nrf_edgeai_run_inference() roda quando a janela fecha
  *
- * O MODELO QUE VEM AQUI e o do curso: velocidade de um ventilador pela vibracao
- * (idle, vel1, vel2, vel3), treinado no Edge AI Lab com o dataset de
- * 05_data_forwarder/dataset_referencia/. Seis entradas por amostra — os seis
- * eixos do BMI270 em MICRO-unidades SI, exatamente como o Data Forwarder
- * gravou — janela de 128 amostras a 100 Hz, features de frequencia.
+ * O MODELO QUE VEM LIGADO e o de exemplo da Nordic (pasta Neuton/): estados de
+ * transporte de uma encomenda — parado, chacoalhando, impacto, queda livre,
+ * carregando, no carro, colocado — a partir de UMA entrada, a magnitude da
+ * aceleracao. Serve para a fiacao funcionar de ponta a ponta antes de existir
+ * modelo proprio.
  *
- * Para colocar O SEU modelo:
- *   1. copie a pasta nrf_edgeai_generated/ do zip do Lab para uma subpasta de
- *      src/nrf_edgeai_generated/ e aponte CURSO_MODELO no CMakeLists.txt
+ * O MODELO DO CURSO (pasta ventilador_95922/) e o que o aluno coloca no lugar:
+ * velocidade de um ventilador pela vibracao (idle, vel1, vel2, vel3), treinado
+ * no Edge AI Lab com o dataset de 05_data_forwarder/dataset_referencia/. Seis
+ * entradas por amostra — os seis eixos do BMI270 em MICRO-unidades SI, como o
+ * Data Forwarder gravou — janela de 128 amostras a 100 Hz, features de
+ * frequencia.
+ *
+ * Para trocar de modelo (o do ventilador, ou O SEU):
+ *   1. a pasta nrf_edgeai_generated/ do zip do Lab vai para uma subpasta de
+ *      src/nrf_edgeai_generated/; aponte CURSO_MODELO no CMakeLists.txt
  *   2. ajuste as tres constantes USER_* abaixo (os valores estao no .c gerado:
  *      INPUT_WINDOW_SIZE, INPUT_UNIQ_FEATURES_NUM, MODEL_OUTPUTS_NUM)
  *   3. a tabela CLASS_COLORS, uma cor por classe, na ordem do dicionario
@@ -61,17 +68,21 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
 /* ------------------------------------------------------------------------
  * Contrato do modelo — CONFERIDO contra o .c gerado pelos asserts em main().
- * Trocar o modelo? Ajuste estes tres.
- *
- *   ventilador_95922 : 128 / 6 / 4
- *   Neuton (exemplo) :  50 / 1 / 7
+ * Trocar o modelo? Troque o bloco — junto com CURSO_MODELO no CMakeLists.txt
+ * e a tabela CLASS_COLORS abaixo.
  * ------------------------------------------------------------------------ */
-#define USER_WINDOW_SIZE      128U /* amostras por janela de inferencia */
-#define USER_UNIQ_INPUTS_NUM  6U   /* entradas por amostra: ax,ay,az,gx,gy,gz */
-#define USER_MODELS_CLASS_NUM 4U   /* classes na saida */
+/* Neuton (exemplo da Nordic): 50 / 1 / 7 */
+#define USER_WINDOW_SIZE      50U  /* amostras por janela de inferencia */
+#define USER_UNIQ_INPUTS_NUM  1U   /* entradas por amostra: so a magnitude */
+#define USER_MODELS_CLASS_NUM 7U   /* classes na saida */
+
+/* ventilador_95922 (modelo do curso): 128 / 6 / 4 */
+// #define USER_WINDOW_SIZE      128U /* amostras por janela de inferencia */
+// #define USER_UNIQ_INPUTS_NUM  6U   /* entradas por amostra: ax,ay,az,gx,gy,gz */
+// #define USER_MODELS_CLASS_NUM 4U   /* classes na saida */
 
 /* Taxa de amostragem: a mesma da coleta (Data Forwarder a 100 Hz). Janela de
- * 128 amostras = 1,28 s por inferencia.
+ * 50 amostras = 0,5 s por inferencia; de 128 = 1,28 s.
  */
 #define SAMPLE_RATE_HZ 100U
 #define SAMPLE_PERIOD_US (1000000U / SAMPLE_RATE_HZ)
@@ -123,12 +134,24 @@ typedef struct {
  * a classe — use PWM (o board expoe rgb_led_1 como leds-group-multicolor) ou
  * numero de piscadas.
  */
+/* Neuton (exemplo da Nordic): estados de transporte de uma encomenda */
 static const class_color_t CLASS_COLORS[USER_MODELS_CLASS_NUM] = {
-	{0, 0, 1, "idle"},  /* azul     */
-	{0, 1, 0, "vel1"},  /* verde    */
-	{1, 1, 0, "vel2"},  /* amarelo  */
-	{1, 0, 0, "vel3"},  /* vermelho */
+	{0, 0, 0, "Idle"},       /* apagado  */
+	{1, 0, 0, "Shaking"},    /* vermelho */
+	{1, 1, 0, "Impact"},     /* amarelo  */
+	{1, 0, 1, "Free Fall"},  /* magenta  */
+	{0, 1, 0, "Carrying"},   /* verde    */
+	{0, 0, 1, "in Car"},     /* azul     */
+	{0, 1, 1, "Placed"},     /* ciano    */
 };
+
+/* ventilador_95922 (modelo do curso): na ordem do dicionario do fwd_to_lab.py */
+// static const class_color_t CLASS_COLORS[USER_MODELS_CLASS_NUM] = {
+// 	{0, 0, 1, "idle"},  /* azul     */
+// 	{0, 1, 0, "vel1"},  /* verde    */
+// 	{1, 1, 0, "vel2"},  /* amarelo  */
+// 	{1, 0, 0, "vel3"},  /* vermelho */
+// };
 
 /* Sem isto, aumentar USER_MODELS_CLASS_NUM e esquecer de acrescentar cores
  * COMPILA: o C preenche o resto com zero, e as classes novas ficam com LED
