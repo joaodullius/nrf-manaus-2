@@ -105,7 +105,7 @@ O `05_data_forwarder` produz dado de outra natureza:
 
 | | `03_central_uart` (este dataset) | `05_data_forwarder` |
 |---|---|---|
-| Canais | 6 | 9, ou 6 com `gesture_compat.conf` |
+| Canais | 6 | 9 (BMI270 + BME688; as 3 ambientais saem no Lab) |
 | Unidades | **mili** | **micro** (`INT32_VALUES=y`) |
 | Fundo de escala | ±4 g / ±1000 dps | ±2 g / ±500 dps (`src/sensor/bmi270.c:85` e `:102`) |
 

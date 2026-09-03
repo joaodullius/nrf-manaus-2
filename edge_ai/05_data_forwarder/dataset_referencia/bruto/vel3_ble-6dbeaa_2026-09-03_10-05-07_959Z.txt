@@ -1,0 +1,43 @@
+[Recording]
+label       : vel3
+session_tag : ble-6dbeaa
+data_rows   : 36471
+
+[Host]
+written_utc : 2026-09-03T10:11:13.507973Z
+os          : Windows-11-10.0.26200-SP0
+os_system   : Windows
+os_release  : 11
+os_version  : 10.0.26200
+machine     : AMD64
+hostname    : JD-Note
+python      : 3.12.10
+
+[Transport]
+transport      : BLE (Nordic UART Service)
+device_name    : nRF DataFwd
+device_address : EC:EF:40:2D:5E:46
+source         : ble:EC:EF:40:2D:5E:46
+protocol       : cobs-cbor v1 (expect_crc=true)
+
+[Timing]
+started_utc : 2026-09-03T10:05:07.959388Z
+stopped_utc : 2026-09-03T10:11:13.453509Z
+
+[Device session_info]
+device_reported_name : nRF DataFwd
+session_id           : 1840435671
+sampling_rate_hz     : 100
+device_start_time    : 1
+channel_count        : 9
+producer_drop_count  : 0
+channels             : ax, ay, az, gx, gy, gz, temp, hum, pres
+
+[Channels]
+count : 9
+names : ax, ay, az, gx, gy, gz, temp, hum, pres
+
+[Errors]
+total_messages : 36544
+incomplete     : no
+transport      : 15

@@ -15,19 +15,41 @@ nrf_edgeai_run_inference()  /* roda quando a janela fecha */
 > O sample alimenta o modelo com **vetores embarcados**; aqui a entrada vem do IMU e a
 > saída pinta o LED RGB. Licença Nordic preservada em [LICENSE](LICENSE).
 
-## Funciona sem treinar nada
+## O que vem no repo: o modelo do ventilador
 
-Vem com o **modelo de exemplo da Nordic** — estados de encomenda, com uma entrada: a
-magnitude da aceleração. E ele **classifica de verdade** na TAG:
+O binário sai com o **modelo do curso**, treinado no Edge AI Lab com o
+[dataset de referência do 05](../05_data_forwarder/dataset_referencia/): velocidade de um
+ventilador portátil pela vibração, 4 classes. Seis entradas por amostra — os seis eixos do
+BMI270 em **micro-unidades SI**, como o Data Forwarder grava —, janela de 128 amostras a
+100 Hz, features de frequência. No boot:
 
 ```
-<inf> main: janela 50 · entradas 1 · classes 7 · 100 Hz
-<inf> main: classe 4 — Carrying (91%)
-<inf> main: classe 0 — Idle (98%)
+<inf> main: nRF Edge AI Lab Solution id: 95922
+<inf> main: janela 128 · entradas 6 · classes 4 · 100 Hz
+<inf> main: classe 0 — idle (99%)
 ```
 
-Parada na mesa: `Idle` com 98%. Isso torna o lab utilizável **antes** de existir modelo
-treinado — o aluno vê a engine funcionando, e só depois troca pelo modelo dele.
+| `class` | LED | Significa |
+|---:|---|---|
+| 0 | azul | `idle` — parada |
+| 1 | verde | `vel1` |
+| 2 | amarelo | `vel2` |
+| 3 | vermelho | `vel3` |
+
+A primeira inferência sai 1,28 s depois do boot (uma janela) e depois a cada 1,28 s
+(`INPUT_WINDOW_SHIFT` = 128 no modelo gerado). O LED só muda quando a classe muda.
+
+Os modelos ficam em subpastas de `src/nrf_edgeai_generated/`, e o `CMakeLists.txt` escolhe
+por `CURSO_MODELO`:
+
+| Pasta | Modelo | Contrato (janela / entradas / classes) |
+|---|---|---|
+| `ventilador_95922/` | **o do curso** (padrão) | 128 / 6 / 4 |
+| `Neuton/` | exemplo da Nordic: estados de encomenda a partir da magnitude da aceleração | 50 / 1 / 7 |
+| `Axon/` | o mesmo exemplo compilado para a NPU (só nRF54LM20) | — |
+
+O exemplo da Nordic continua no repo porque é a melhor demonstração da armadilha de
+escala, abaixo.
 
 ## Build
 
@@ -39,11 +61,19 @@ west build -p -b nrf54l15tag/nrf54l15/cpuapp ^
 
 O LED RGB muda de cor a cada mudança de classe; o RTT diz qual e com que confiança.
 
-## ⚠️ A unidade da entrada — a armadilha central
+## ⚠️ A escala da entrada — a armadilha central
 
-O modelo espera a magnitude em **mili-g** (1 g ≈ 1000), não em m/s² (1 g ≈ 9,81). Isso
-**não está escrito na doc do sample**: foi preciso ler os vetores embarcados dele. O vetor
-da classe IDLE — TAG parada, só gravidade — tem valores **~1017**:
+O modelo espera os números **na escala do dataset em que foi treinado**, e errar isso é
+silencioso. Dois modelos, duas escalas, no mesmo `main.c`:
+
+- **ventilador_95922:** micro-unidades SI, `sensor_value_to_micro()`, sem fator — é o que
+  está no CSV do Data Forwarder Host. Os limites no `.c` gerado confirmam:
+  `INPUT_FEATURES_SCALE_MIN/MAX` do eixo `az` vão de 9.243.097 a 10.913.104, a gravidade
+  em m/s² × 10⁶.
+- **Neuton (exemplo da Nordic):** UMA entrada, a magnitude em **mili-g** (1 g ≈ 1000),
+  não em m/s² (1 g ≈ 9,81). Isso **não está escrito na doc do sample**: foi preciso ler
+  os vetores embarcados dele. O vetor da classe IDLE — TAG parada, só gravidade — tem
+  valores **~1017**:
 
 ```c
 CLASS_0_PARCEL_IDLE_ACCEL_DATA[] = {1019.23, 1018.65, 1016.69, ...};
@@ -57,11 +87,66 @@ fundo da faixa que o modelo conhece (`INPUT_FEATURES_SCALE_MIN = 6.26`), e o fun
 mili-g, reporta `Idle (98%)`.
 
 Essa é a lição central do loop 2, e vale gastar tempo dela em aula: **o modelo espera a
-escala do dataset, e errar isso é silencioso.**
+escala do dataset, e errar isso é silencioso.** No `main.c`, o leitor do IMU é escolhido
+por `USER_UNIQ_INPUTS_NUM`: 6 → seis eixos em micro; 1 → magnitude em mili-g. Outro valor
+não compila.
+
+## Que features o modelo usa? Está no `.c`
+
+Não precisa voltar ao Lab: o `nrf_edgeai_user_model.c` gerado descreve o extrator em dois
+pipelines, um por domínio. No modelo do ventilador:
+
+```c
+static const nrf_edgeai_features_pipeline_func_f32_t timedomain_features_[] = {
+    nrf_edgeai_feature_utility_tss_sum_f32,     /* utilitário: soma dos quadrados */
+    nrf_edgeai_feature_std_f32,                 /* Standard deviation */
+    nrf_edgeai_feature_rms_f32,                 /* Root mean square */
+    nrf_edgeai_feature_mcr_f32                  /* Mean-crossing rate */
+};
+static const nrf_edgeai_features_pipeline_func_f32_t freqdomain_features_[] = {
+    nrf_edgeai_feature_utility_rfft_128_f32,    /* a FFT de 128 pontos */
+    nrf_edgeai_feature_dom_freqs_features_f32,  /* Dominant frequencies */
+    nrf_edgeai_feature_freqs_energy_ratios_f32, /* razão de energia entre bandas */
+    nrf_edgeai_feature_spectrum_bins_f32        /* Amplitude spectrum, 64 bins */
+};
+```
+
+Isso é o que o firmware **calcula**. O que o modelo **consome** vem de
+`FEATURES_EXTRACTION_MASK[]`: um `uint64` por canal, um bit por feature. No ventilador são
+**45** bits ligados de `EXTRACTED_FEATURES_NUM` = 495 candidatas — o *Feature selection*
+do Lab escolheu 45, e `ax` ficou com mais bits que os outros canais, coerente com o
+`ax_amplitude_spectrum` no topo da Feature Importance. Feature marcado no Lab que não
+sobreviveu à seleção nem entra no pipeline: o `.c` é a verdade do que roda na TAG.
+
+## ⚠️ A taxa de amostragem — a segunda armadilha, silenciosa como a primeira
+
+O modelo também espera **o ritmo do dataset**. Com features de frequência, o espectro que
+o modelo vê depende diretamente da taxa em que a app entrega amostras: amostrar 3% mais
+devagar desloca todos os picos 3% para cima, e com bins de FFT de 0,78 Hz (100 Hz / 128)
+isso é mais de um bin em 30 Hz.
+
+**Não use `k_msleep(10)` no laço.** O tempo da leitura do BMI270 pelo SPI (~0,3 ms)
+soma ao sleep, cada amostra leva ~10,3 ms e o laço cai para **96,9 Hz**. Medido na TAG:
+a janela de 128 amostras fechava em **1321 ms** em vez de 1280, e o ventilador em `vel1`
+era classificado como `vel2`, `vel2` como `vel3`. Nenhum erro, nenhum aviso — só a
+resposta errada, com 99% de confiança.
+
+O `main.c` amostra por **k_timer periódico + semáforo**, igual ao
+`05_data_forwarder/src/sensor/bmi270.c`, e a janela fecha em 1282 ms (0,2%). O boot
+imprime o ritmo das três primeiras janelas, e qualquer janela fora de 2% vira `<wrn>`:
+
+```
+<inf> main: janela em 1282 ms (esperado 1280)
+```
+
+Se aparecer `janela em ... taxa fora da da coleta`, o modelo está vendo outro espectro.
 
 ## Trocar pelo seu modelo (loop 2)
 
-**1. Os arquivos gerados** — substitua em `src/nrf_edgeai_generated/Neuton/`:
+**1. Os arquivos gerados** — copie a pasta `nrf_edgeai_generated/` do zip do Lab para uma
+subpasta nova de `src/nrf_edgeai_generated/` (por exemplo `meu_modelo/`). São **três**
+arquivos que importam, e o `nrf_edgeai_user_types.h` vai junto: ele carrega os typedefs
+do modelo, e manter o de outro modelo compila e infere errado.
 
 ```
 nrf_edgeai_user_model.c
@@ -69,12 +154,14 @@ nrf_edgeai_user_model.h
 nrf_edgeai_user_types.h
 ```
 
-**2. As três constantes** no topo do [`src/main.c`](src/main.c):
+**2. `CURSO_MODELO`** no [`CMakeLists.txt`](CMakeLists.txt) apontando para a pasta.
+
+**3. As três constantes** no topo do [`src/main.c`](src/main.c):
 
 ```c
-#define USER_WINDOW_SIZE      50U
-#define USER_UNIQ_INPUTS_NUM   1U
-#define USER_MODELS_CLASS_NUM  7U
+#define USER_WINDOW_SIZE      128U
+#define USER_UNIQ_INPUTS_NUM    6U
+#define USER_MODELS_CLASS_NUM   4U
 ```
 
 Elas **não são decorativas** — o `main()` confere cada uma contra o modelo carregado com
@@ -82,13 +169,16 @@ Elas **não são decorativas** — o `main()` confere cada uma contra o modelo c
 valores reais estão no `.c` gerado, como `INPUT_WINDOW_SIZE`, `INPUT_UNIQ_FEATURES_NUM` e
 `MODEL_OUTPUTS_NUM`.
 
-**3. A tabela `CLASS_COLORS`** — uma linha por classe.
+**4. A tabela `CLASS_COLORS`** — uma linha por classe, **na ordem do dicionário** que o
+`fwd_to_lab.py merge` imprimiu.
 
-**4. A entrada** — hoje `imu_read_magnitude()` entrega um valor. Modelo com 6 canais
-(accel + gyro)? Troque a função por uma que preencha um vetor de 6 e ajuste
-`USER_UNIQ_INPUTS_NUM`. **Na mesma escala em que você capturou**: o
-[`03_central_uart`](../03_central_uart/) entrega mili-unidades; o
-[`05_data_forwarder`](../05_data_forwarder/) no padrão, micro.
+**5. A escala e o fundo de escala** — coletou com o `05_data_forwarder`? A leitura de 6
+eixos em micro já está certa. Confira só `IMU_ACCEL_FS_G` / `IMU_GYRO_FS_DPS`: têm de
+ser os mesmos que você deixou no `bmi270.c` do forwarder antes de coletar.
+
+**6. `west build -p`.** Sem o `-p` o CMake não relê o `CURSO_MODELO` e você grava o
+modelo antigo. Confira no RTT a linha `Solution id` — é o número do zip — e as três
+linhas `janela em ... ms` logo depois: têm de bater com o esperado.
 
 ### Mudar o número de classes
 
@@ -138,7 +228,8 @@ hardware: nem o banner de boot aparecia, e a CPU estava executando. Foi preciso 
 
 | | Flash (text+data) | RAM (data+bss) |
 |---|---:|---:|
-| `04_classify_led` (modelo de exemplo) | **87.108 B** | **19.413 B** |
+| `04_classify_led` (modelo do ventilador, FFT) | **89.292 B** | **24.016 B** |
+| `04_classify_led` (modelo de exemplo da Nordic) | 87.108 B | 19.413 B |
 | `01_gesture_recognition` (modo coleta) | 267.264 B | 58.496 B |
 
 **Um terço do flash e um terço da RAM** do lab 01 — por não ter BLE, MCUboot nem mcumgr.

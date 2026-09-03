@@ -19,19 +19,31 @@
  *     nrf_edgeai_feed_inputs()  entrega UMA amostra por vez; o runtime acumula
  *     nrf_edgeai_run_inference() roda quando a janela fecha
  *
- * O MODELO QUE VEM AQUI NAO E DE GESTOS. E o modelo de exemplo da Nordic
- * (estados de encomenda: parado, chacoalhando, impacto, queda livre, ...), que
- * recebe UMA entrada: a magnitude da aceleracao. Ele serve para a fiacao
- * funcionar de ponta a ponta antes de existir modelo proprio.
+ * O MODELO QUE VEM AQUI e o do curso: velocidade de um ventilador pela vibracao
+ * (idle, vel1, vel2, vel3), treinado no Edge AI Lab com o dataset de
+ * 05_data_forwarder/dataset_referencia/. Seis entradas por amostra — os seis
+ * eixos do BMI270 em MICRO-unidades SI, exatamente como o Data Forwarder
+ * gravou — janela de 128 amostras a 100 Hz, features de frequencia.
  *
- * No loop 2 o aluno troca:
- *   1. os arquivos em src/nrf_edgeai_generated/  pelo modelo dele
- *   2. as tres constantes USER_* abaixo, conforme o modelo treinado
- *   3. a tabela CLASS_COLORS, com uma cor por classe
+ * Para colocar O SEU modelo:
+ *   1. copie a pasta nrf_edgeai_generated/ do zip do Lab para uma subpasta de
+ *      src/nrf_edgeai_generated/ e aponte CURSO_MODELO no CMakeLists.txt
+ *   2. ajuste as tres constantes USER_* abaixo (os valores estao no .c gerado:
+ *      INPUT_WINDOW_SIZE, INPUT_UNIQ_FEATURES_NUM, MODEL_OUTPUTS_NUM)
+ *   3. a tabela CLASS_COLORS, uma cor por classe, na ordem do dicionario
+ *   4. recompile com -p
  *
  * As tres constantes NAO sao decorativas: os __ASSERT_NO_MSG() em main()
  * conferem cada uma contra o modelo carregado. Errar uma trava o boot com um
  * assert — que e exatamente a licao de que o modelo tem contrato.
+ *
+ * A ESCALA faz parte do contrato, e errar ela e SILENCIOSO: compila, roda e
+ * classifica errado. O modelo espera os numeros na escala do dataset em que
+ * foi treinado. Aqui: micro-unidades (sensor_value_to_micro()), porque o CSV
+ * do Data Forwarder Host e assim. O modelo de exemplo da Nordic (pasta Neuton/)
+ * espera outra coisa: UMA entrada, a magnitude da aceleracao em mili-g — veja
+ * imu_read_magnitude() abaixo, que fica no binario so quando
+ * USER_UNIQ_INPUTS_NUM == 1.
  */
 
 #include <zephyr/kernel.h>
@@ -50,17 +62,46 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 /* ------------------------------------------------------------------------
  * Contrato do modelo — CONFERIDO contra o .c gerado pelos asserts em main().
  * Trocar o modelo? Ajuste estes tres.
+ *
+ *   ventilador_95922 : 128 / 6 / 4
+ *   Neuton (exemplo) :  50 / 1 / 7
  * ------------------------------------------------------------------------ */
-#define USER_WINDOW_SIZE     50U /* amostras por janela de inferencia */
-#define USER_UNIQ_INPUTS_NUM 1U  /* entradas por amostra: so a magnitude */
-#define USER_MODELS_CLASS_NUM 7U /* classes na saida */
+#define USER_WINDOW_SIZE      128U /* amostras por janela de inferencia */
+#define USER_UNIQ_INPUTS_NUM  6U   /* entradas por amostra: ax,ay,az,gx,gy,gz */
+#define USER_MODELS_CLASS_NUM 4U   /* classes na saida */
 
-/* Taxa de amostragem. O modelo de exemplo espera magnitude da aceleracao;
- * 100 Hz e o mesmo do 01_gesture_recognition, entao a janela de 50 amostras
- * cobre 0,5 s.
+/* Taxa de amostragem: a mesma da coleta (Data Forwarder a 100 Hz). Janela de
+ * 128 amostras = 1,28 s por inferencia.
  */
 #define SAMPLE_RATE_HZ 100U
-#define SAMPLE_PERIOD_MS (1000U / SAMPLE_RATE_HZ)
+#define SAMPLE_PERIOD_US (1000000U / SAMPLE_RATE_HZ)
+
+/* O ritmo de amostragem e um k_timer periodico + semaforo, igual ao
+ * 05_data_forwarder (src/sensor/bmi270.c). NAO use k_msleep(10) no laco: o
+ * tempo da leitura SPI soma ao sleep e o laco cai para ~97 Hz (medido: janela
+ * de 128 amostras em 1321 ms em vez de 1280). Com features de frequencia isso
+ * desloca o espectro inteiro em 3% e o modelo passa a ver uma velocidade acima
+ * da real. A taxa da inferencia tem de ser a taxa da coleta.
+ */
+static K_SEM_DEFINE(tick_sem, 0, 1);
+static void tick_handler(struct k_timer *t)
+{
+	ARG_UNUSED(t);
+	k_sem_give(&tick_sem);
+}
+static K_TIMER_DEFINE(tick_timer, tick_handler, NULL);
+
+/* Tolerancia para o aviso de janela fora do ritmo: 2% de 1280 ms. */
+#define WINDOW_EXPECTED_MS ((USER_WINDOW_SIZE * 1000U) / SAMPLE_RATE_HZ)
+#define WINDOW_TOLERANCE_MS (WINDOW_EXPECTED_MS / 50U)
+
+/* Fundo de escala do BMI270: o MESMO da coleta. O 05_data_forwarder do curso
+ * e editado para +-4 g / +-1000 dps antes de coletar (bmi270.c:85 e :102).
+ * Nao muda a unidade, so o teto antes de saturar — mas o modelo aprendeu com
+ * um sinal que satura num ponto, e precisa ver o mesmo aqui.
+ */
+#define IMU_ACCEL_FS_G   4
+#define IMU_GYRO_FS_DPS  1000
 
 /* ------------------------------------------------------------------------
  * LED RGB da TAG (led1_red / led1_green / led1_blue no DTS do board)
@@ -74,7 +115,8 @@ typedef struct {
 	const char *nome;
 } class_color_t;
 
-/* Uma cor por classe. Trocou o modelo, troque esta tabela.
+/* Uma cor por classe, NA ORDEM DO DICIONARIO de classes do dataset
+ * (a ordem de --classes no fwd_to_lab.py). Trocou o modelo, troque esta tabela.
  *
  * O LED e GPIO liga/desliga por canal: 3 bits, 8 combinacoes, uma delas
  * apagada. Acima de 8 classes as cores se repetem e o LED deixa de identificar
@@ -82,19 +124,16 @@ typedef struct {
  * numero de piscadas.
  */
 static const class_color_t CLASS_COLORS[USER_MODELS_CLASS_NUM] = {
-	{0, 0, 0, "Idle"},       /* apagado */
-	{1, 0, 0, "Shaking"},    /* vermelho */
-	{1, 1, 0, "Impact"},     /* amarelo */
-	{1, 0, 1, "Free Fall"},  /* magenta */
-	{0, 1, 0, "Carrying"},   /* verde */
-	{0, 0, 1, "in Car"},     /* azul */
-	{0, 1, 1, "Placed"},     /* ciano */
+	{0, 0, 1, "idle"},  /* azul     */
+	{0, 1, 0, "vel1"},  /* verde    */
+	{1, 1, 0, "vel2"},  /* amarelo  */
+	{1, 0, 0, "vel3"},  /* vermelho */
 };
 
 /* Sem isto, aumentar USER_MODELS_CLASS_NUM e esquecer de acrescentar cores
  * COMPILA: o C preenche o resto com zero, e as classes novas ficam com LED
- * apagado (igual a "Idle") e nome NULL indo para o %s do LOG_INF. Falha
- * silenciosa. Diminuir ja falhava no build ("excess elements").
+ * apagado e nome NULL indo para o %s do LOG_INF. Falha silenciosa. Diminuir ja
+ * falhava no build ("excess elements").
  */
 BUILD_ASSERT(ARRAY_SIZE(CLASS_COLORS) == USER_MODELS_CLASS_NUM,
 	     "CLASS_COLORS precisa ter exatamente USER_MODELS_CLASS_NUM entradas");
@@ -130,27 +169,53 @@ static int leds_init(void)
  * ------------------------------------------------------------------------ */
 static const struct device *const imu = DEVICE_DT_GET_ONE(bosch_bmi270);
 
-/* Magnitude da aceleracao em MILI-G: sqrt(x^2 + y^2 + z^2) / 9.80665 * 1000.
+#if USER_UNIQ_INPUTS_NUM == 6
+/* Seis canais em MICRO-unidades SI: m/s2 x 1e6 e rad/s x 1e6 (o giroscopio
+ * do Zephyr e rad/s, nao dps). E o que o Data Forwarder manda com
+ * INT32_VALUES=y e o que esta no CSV que treinou o modelo: mesma funcao
+ * (sensor_value_to_micro), mesma ordem (ax,ay,az,gx,gy,gz), nenhum fator.
+ */
+static int imu_read_sample(flt32_t out[6])
+{
+	struct sensor_value accel[3], gyro[3];
+	int err = sensor_sample_fetch(imu);
+
+	if (err) {
+		return err;
+	}
+	err = sensor_channel_get(imu, SENSOR_CHAN_ACCEL_XYZ, accel);
+	if (err) {
+		return err;
+	}
+	err = sensor_channel_get(imu, SENSOR_CHAN_GYRO_XYZ, gyro);
+	if (err) {
+		return err;
+	}
+	for (int i = 0; i < 3; i++) {
+		out[i] = (flt32_t)sensor_value_to_micro(&accel[i]);
+		out[3 + i] = (flt32_t)sensor_value_to_micro(&gyro[i]);
+	}
+	return 0;
+}
+
+#elif USER_UNIQ_INPUTS_NUM == 1
+/* Modelo de exemplo da Nordic (pasta Neuton/): UMA entrada, a magnitude da
+ * aceleracao em MILI-G — sqrt(x^2 + y^2 + z^2) / 9.80665 * 1000.
  *
- * A unidade importa, e nao esta escrita em lugar nenhum da doc do sample — foi
- * preciso ler os vetores embarcados dele para descobrir. O vetor da classe IDLE
- * (TAG parada, so gravidade) tem valores ~1017, nao ~9.8:
+ * A unidade nao esta escrita na doc do sample; foi preciso ler os vetores
+ * embarcados dele. O vetor da classe IDLE (TAG parada, so gravidade) tem
+ * valores ~1017, nao ~9.8:
  *
  *     CLASS_0_PARCEL_IDLE_ACCEL_DATA[] = {1019.23, 1018.65, 1016.69, ...}
- *
- * Logo: mili-g, onde 1 g ~ 1000.
  *
  * Alimentar em m/s2 (1 g ~ 9.81) NAO da erro nenhum — compila, roda, e
  * classifica errado: 9.8 cai no fundo da faixa que o modelo conhece
  * (INPUT_FEATURES_SCALE_MIN = 6.26), e o fundo da faixa e justamente queda
  * livre. Verificado no hardware: a TAG parada na mesa reportava "Free Fall".
- *
- * E a licao central do loop 2: o modelo espera a escala do dataset, e errar
- * isso e silencioso.
  */
 #define MILLI_G_POR_MS2 (1000.0 / 9.80665)
 
-static int imu_read_magnitude(flt32_t *out)
+static int imu_read_sample(flt32_t out[1])
 {
 	struct sensor_value accel[3];
 	int err = sensor_sample_fetch(imu);
@@ -167,21 +232,30 @@ static int imu_read_magnitude(flt32_t *out)
 	double y = sensor_value_to_double(&accel[1]);
 	double z = sensor_value_to_double(&accel[2]);
 
-	*out = (flt32_t)(sqrt(x * x + y * y + z * z) * MILLI_G_POR_MS2);
+	out[0] = (flt32_t)(sqrt(x * x + y * y + z * z) * MILLI_G_POR_MS2);
 	return 0;
 }
+#else
+#error "USER_UNIQ_INPUTS_NUM: so ha leitor de IMU para 1 (magnitude) ou 6 (eixos)"
+#endif
 
 static int imu_init(void)
 {
-	struct sensor_value fs = {.val1 = 4, .val2 = 0};     /* +-4 g, como o 01 */
+	struct sensor_value fs_a = {.val1 = IMU_ACCEL_FS_G, .val2 = 0};
+	struct sensor_value fs_g = {.val1 = IMU_GYRO_FS_DPS, .val2 = 0};
 	struct sensor_value odr = {.val1 = SAMPLE_RATE_HZ, .val2 = 0};
 
 	if (!device_is_ready(imu)) {
 		LOG_ERR("BMI270 nao esta pronto");
 		return -ENODEV;
 	}
-	(void)sensor_attr_set(imu, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_FULL_SCALE, &fs);
+	/* Frequencia por ultimo: e ela que liga o sensor (mesma ordem do
+	 * 05_data_forwarder/src/sensor/bmi270.c).
+	 */
+	(void)sensor_attr_set(imu, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_FULL_SCALE, &fs_a);
 	(void)sensor_attr_set(imu, SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &odr);
+	(void)sensor_attr_set(imu, SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_FULL_SCALE, &fs_g);
+	(void)sensor_attr_set(imu, SENSOR_CHAN_GYRO_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &odr);
 	return 0;
 }
 
@@ -209,6 +283,7 @@ int main(void)
 
 	LOG_INF("04_classify_led — IMU -> inferencia -> LED");
 	LOG_INF("Edge AI runtime %d.%d.%d", v.field.major, v.field.minor, v.field.patch);
+	LOG_INF("nRF Edge AI Lab Solution id: %s", nrf_edgeai_solution_id_str(p_model));
 	LOG_INF("janela %u · entradas %u · classes %u · %u Hz",
 		USER_WINDOW_SIZE, USER_UNIQ_INPUTS_NUM, USER_MODELS_CLASS_NUM, SAMPLE_RATE_HZ);
 
@@ -217,17 +292,41 @@ int main(void)
 	}
 
 	int32_t ultima_classe = -1;
+	uint32_t t_janela = k_uptime_get_32();
+	uint32_t janelas = 0;
+
+	k_timer_start(&tick_timer, K_NO_WAIT, K_USEC(SAMPLE_PERIOD_US));
 
 	while (1) {
-		flt32_t magnitude;
+		flt32_t amostra[USER_UNIQ_INPUTS_NUM];
 
-		if (imu_read_magnitude(&magnitude) == 0) {
-			res = nrf_edgeai_feed_inputs(p_model, &magnitude, USER_UNIQ_INPUTS_NUM);
+		k_sem_take(&tick_sem, K_FOREVER);
+
+		if (imu_read_sample(amostra) == 0) {
+			res = nrf_edgeai_feed_inputs(p_model, amostra, USER_UNIQ_INPUTS_NUM);
 
 			/* INPROGRESS domina: o runtime so infere quando a janela
 			 * fecha. Nao e erro.
 			 */
 			if (res == NRF_EDGEAI_ERR_SUCCESS) {
+				/* Ritmo real da janela. Se sair da tolerancia, o
+				 * espectro que o modelo ve nao e o do dataset.
+				 */
+				uint32_t agora = k_uptime_get_32();
+				uint32_t dt = agora - t_janela;
+
+				t_janela = agora;
+				if (dt > WINDOW_EXPECTED_MS + WINDOW_TOLERANCE_MS ||
+				    dt + WINDOW_TOLERANCE_MS < WINDOW_EXPECTED_MS) {
+					LOG_WRN("janela em %u ms (esperado %u): taxa fora "
+						"da da coleta", dt, WINDOW_EXPECTED_MS);
+				} else if (janelas < 3) {
+					/* As primeiras, para conferir o ritmo no boot. */
+					LOG_INF("janela em %u ms (esperado %u)", dt,
+						WINDOW_EXPECTED_MS);
+				}
+				janelas++;
+
 				res = nrf_edgeai_run_inference(p_model);
 				if (res == NRF_EDGEAI_ERR_SUCCESS) {
 					/* A saida decodificada fica no proprio handle. */
@@ -251,8 +350,6 @@ int main(void)
 				LOG_WRN("feed_inputs: %d", (int)res);
 			}
 		}
-
-		k_msleep(SAMPLE_PERIOD_MS);
 	}
 
 	return 0;
