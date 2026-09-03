@@ -16,8 +16,8 @@ e a licença Nordic preservada em cada pasta.
 | [`01_gesture_recognition/`](01_gesture_recognition/) | Gestos com IMU e modelo Neuton na CPU; vira teclado BLE HID. Base dos três atos da sessão de Neuton AI: demo pronto → modo de coleta → modelo próprio | nRF54L15-TAG | ✅ copiado e compilado |
 | [`02_anomaly/`](02_anomaly/) | Detecção de anomalia (saúde de engrenagem por vibração): terceira tarefa da engine, FFT no binário, score + limiar. Sem sensor — vetores embarcados | nRF54LM20-DK | ✅ copiado e compilado |
 | [`03_central_uart/`](03_central_uart/) | Ponte NUS -> UART para a coleta de dados: recebe as amostras do IMU do tag em modo de coleta e joga na serial do PC. Filtra pelo endereco BLE do tag do aluno | nRF54LM20-DK (+ nRF54L15-TAG) | ✅ copiado e compilado |
-| [`04_classify_led/`](04_classify_led/) | App minima: IMU → inferencia → LED RGB. Onde o modelo proprio do aluno entra. Vem com o modelo de exemplo da Nordic como andaime | nRF54L15-TAG | ✅ compilado e rodando |
-| [`05_data_forwarder/`](05_data_forwarder/) | **Alternativa ao 03:** coleta pelo caminho oficial da Nordic (CBOR/COBS por NUS) + GUI do Data Forwarder Host. Traz contorno de um bug do zcbor no Windows | nRF54L15-TAG | ✅ compilado e validado |
+| [`04_classify_led/`](04_classify_led/) | App minima: IMU → inferencia → LED RGB. Onde o modelo proprio do aluno entra. Vem com o modelo do curso (velocidade de um ventilador por vibracao, 4 classes, FFT); o exemplo da Nordic fica como contraste de escala | nRF54L15-TAG | ✅ validado no ventilador |
+| [`05_data_forwarder/`](05_data_forwarder/) | **Loop 2, caminho oficial:** coleta pelo `data_forwarder` da Nordic (CBOR/COBS por NUS, 9 canais) + GUI do Data Forwarder Host + `fwd_to_lab.py` + dataset de referencia do ventilador. LED de estado. Contorno de um bug do zcbor no Windows | nRF54L15-TAG (+ Bluetooth do PC) | ✅ roteiro dos 7 passos validado |
 | `06_ww_kws/` | Wake word e comandos de voz via microfone PDM (TFLite → compilador → inferência na NPU) | nRF54LM20-DK + mic PDM | ⏳ a copiar |
 | `07_benchmark_npu_vs_cpu/` | Medição comparativa de latência/energia por inferência: NPU vs. CPU | nRF54LM20-DK | ⏳ a montar |
 

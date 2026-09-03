@@ -1,4 +1,4 @@
-# 05 · App mínima: IMU → inferência → LED
+# 04 · App mínima: IMU → inferência → LED
 
 Onde o **modelo próprio do aluno** entra. O `01_gesture_recognition` tem HID, MCUboot,
 mcumgr, UX state manager e pareamento MITM — o Edge AI é uma fração dele. Aqui sobra só a
@@ -68,7 +68,7 @@ silencioso. Dois modelos, duas escalas, no mesmo `main.c`:
 
 - **ventilador_95922:** micro-unidades SI, `sensor_value_to_micro()`, sem fator — é o que
   está no CSV do Data Forwarder Host. Os limites no `.c` gerado confirmam:
-  `INPUT_FEATURES_SCALE_MIN/MAX` do eixo `az` vão de 9.243.097 a 10.913.104, a gravidade
+  `INPUT_FEATURES_SCALE_MIN/MAX` do eixo `az` vão de 9.620.195 a 10.377.983, a gravidade
   em m/s² × 10⁶.
 - **Neuton (exemplo da Nordic):** UMA entrada, a magnitude em **mili-g** (1 g ≈ 1000),
   não em m/s² (1 g ≈ 9,81). Isso **não está escrito na doc do sample**: foi preciso ler
@@ -127,9 +127,9 @@ isso é mais de um bin em 30 Hz.
 
 **Não use `k_msleep(10)` no laço.** O tempo da leitura do BMI270 pelo SPI (~0,3 ms)
 soma ao sleep, cada amostra leva ~10,3 ms e o laço cai para **96,9 Hz**. Medido na TAG:
-a janela de 128 amostras fechava em **1321 ms** em vez de 1280, e o ventilador em `vel1`
-era classificado como `vel2`, `vel2` como `vel3`. Nenhum erro, nenhum aviso — só a
-resposta errada, com 99% de confiança.
+a janela de 128 amostras fechava em **1321 ms** em vez de 1280 — e a classe saía uma
+velocidade acima da real. Nenhum erro, nenhum aviso — só a resposta errada, com 99% de
+confiança.
 
 O `main.c` amostra por **k_timer periódico + semáforo**, igual ao
 `05_data_forwarder/src/sensor/bmi270.c`, e a janela fecha em 1282 ms (0,2%). O boot
@@ -228,7 +228,7 @@ hardware: nem o banner de boot aparecia, e a CPU estava executando. Foi preciso 
 
 | | Flash (text+data) | RAM (data+bss) |
 |---|---:|---:|
-| `04_classify_led` (modelo do ventilador, FFT) | **89.292 B** | **24.016 B** |
+| `04_classify_led` (modelo do ventilador, FFT) | **89.384 B** | **24.016 B** |
 | `04_classify_led` (modelo de exemplo da Nordic) | 87.108 B | 19.413 B |
 | `01_gesture_recognition` (modo coleta) | 267.264 B | 58.496 B |
 

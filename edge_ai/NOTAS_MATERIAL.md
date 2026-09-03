@@ -458,6 +458,63 @@ número em 14×.
 
 ---
 
+## Loop 2 — o que a bancada ensinou (2026-09-02/03)
+
+Caso: velocidade de um ventilador portátil por vibração, 4 classes, coletado com o
+`data_forwarder` + Data Forwarder Host, treinado no Lab com features de frequência,
+rodando no `04_classify_led`. Tudo validado; o detalhe está nos READMEs do 05 e do 04.
+
+### 18. A taxa de inferência é parte do contrato · ⭐⭐ silenciosa
+
+`k_msleep(10)` no laço do 04 dava 96,9 Hz (a leitura SPI soma ao sleep): janela de 128
+em 1321 ms em vez de 1280. Com FFT, 3 % de taxa é o espectro inteiro deslocado — uma
+velocidade acima da real, com 99 % de confiança. Corrigido com k_timer + semáforo, igual
+ao forwarder; o boot agora imprime o ritmo das três primeiras janelas e avisa se sair de
+2 %. Vale um slide ao lado da armadilha de escala: as duas têm o mesmo perfil.
+
+### 19. O domínio da coleta é o domínio do modelo · ⭐
+
+Ventilador no carregador gira mais devagar que na bateria. Modelo treinado no carregador
+→ `vel1` vira `vel2` na bateria. Regravado tudo na bateria. Mesma família da lição da
+fixação: muda só a variável que se quer classificar, e colete onde o modelo vai rodar.
+
+### 20. FLOAT32 e micro-unidades: o caminho da Nordic, sem conversão
+
+O CSV do Host sobe no Lab como está (micro-unidades SI, float) e a app alimenta com
+`sensor_value_to_micro()`. Zero fatores. INT16 exigiria dividir por 1000 e não cabia
+para as colunas do BME688. O loop 2 não precisa casar com o loop 1.
+
+### 21. Remover colunas é no Lab, não no firmware
+
+O sample manda 9 canais; `temp,hum,pres` saem em *Remove variables* no upload. O Host é
+validado a 500 frames/s × 10 canais — banda não é argumento para desligar o BME688.
+
+### 22. Features para vibração: frequência e energia; média é orientação
+
+Marcar amplitude spectrum, dominant frequencies, espectrais, RMS, std, mean-crossing
+rate. Não marcar mean (gravidade = orientação da TAG, o `acc_mean` do loop 1 de novo).
+Feature selection ligado: o Lab ficou com **45 de 495** candidatas. O que o modelo usa
+está no `.c` gerado (`timedomain_features_[]`, `freqdomain_features_[]`,
+`FEATURES_EXTRACTION_MASK[]`) — não precisa voltar ao Lab para saber.
+
+### 23. Janela 128 é obrigatória com FFT, e "Time Interval" engana
+
+Frequency features exigem potência de 2 entre 128 e 2048. Em *Time Interval*, 128 **ms**
+a 100 Hz vira 12 amostras e o Lab recusa; usar *Number of Rows*.
+
+### 24. Três coisas de bancada que parecem falha e não são
+
+- **RTT velho após regravar:** o logger acha o bloco RTT do firmware anterior na RAM e
+  mostra um boot que não é o seu. Ler de novo.
+- **`Sensor init failed (-19)` ao reencaixar a TAG:** os sensores não recebem reset do
+  SoC; tirar da DEBUG OUT, tirar bateria, 5 s, encaixar.
+- **Python da Store esconde o log do Host** em `%LOCALAPPDATA%/Packages/...`.
+
+### 25. `proto_send_samples()` retorna 0 sem conexão
+
+Ele só enfileira; o envio falha depois numa work queue (`-22`, `nus_mtu == 0`). Para um
+LED de "transmitindo" o estado tem de vir de um `bt_conn_cb`, não do retorno.
+
 ## Números que valem decorar
 
 | | |
@@ -474,4 +531,7 @@ número em 14×.
 | Tipos aceitos pelo Lab | INT8, INT16, FLOAT32 |
 | Modelo de gestos (01) | 3.336 B flash · 1.818 B RAM — 1,0% da imagem |
 | Modelo do 04 | 5.794 B flash · 760 B RAM — 6,7% da imagem |
+| Janela do modelo do ventilador (04) | 128 amostras (1,28 s), shift de inferência 128 |
+| Modelo do ventilador | 39 coeficientes · 45 de 495 features · 11,7 kB NVM (8,8 kB é a FFT) |
+| Ritmo aceito pelo 04 | janela de 1280 ms ± 2 % — fora disso, `<wrn>` no boot |
 | Runtime `nrf_edgeai_*` | ~1 kB, praticamente constante |

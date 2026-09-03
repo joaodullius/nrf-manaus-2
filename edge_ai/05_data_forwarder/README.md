@@ -1,4 +1,4 @@
-# 04 · Coleta pelo caminho oficial (Data Forwarder)
+# 05 · Coleta pelo caminho oficial (Data Forwarder)
 
 **Alternativa ao [`03_central_uart`](../03_central_uart/), não continuação dele.** Os dois
 levam amostras do IMU da TAG para o PC; mudam o firmware, o protocolo e a ferramenta.
@@ -19,7 +19,7 @@ levam amostras do IMU da TAG para o PC; mudam o firmware, o protocolo e a ferram
 | Vantagem | continuidade com o Ato 1, unidades já casam | GUI com plot ao vivo, ferramenta oficial |
 
 Para o **loop 1** use o 03: as unidades já batem com o que a app de gestos alimenta na
-inferência. Para o **loop 2**, onde o aluno escreve a própria app, o 04 é melhor — a app
+inferência. Para o **loop 2**, onde o aluno escreve a própria app, use este — a app
 é escrita para casar com o que foi capturado, então a diferença de unidades deixa de ser
 um problema.
 
@@ -73,18 +73,18 @@ descrito no fim desta seção.
 ### Antes de começar: três decisões
 
 **1. Fundo de escala.** O sample crava ±2 g / ±500 dps em `src/sensor/bmi270.c:85` e
-`:102`. O 04 usa ±4 g. Alinhar o 05 para 4 / 1000 antes de coletar: um swipe vigoroso a
-±2 g satura na captura e não satura na inferência, e o modelo aprende um sinal que a app
-nunca vai ver.
+`:102`. O 04 usa ±4 g / ±1000 dps. Alinhar o 05 antes de coletar: um sinal que satura a
+±2 g na captura não satura na inferência, e o modelo aprende algo que a app nunca vai ver.
 
 **2. Como receber.** Opção A: PC direto por BLE (Data Forwarder Host, fonte *BLE NUS*).
 Opção B: nRF54LM20-DK como ponte binária, Host com fonte *UART*. Tentar A; se o BLE do
 Windows não conectar ou perder frames, B. A doc da Nordic segue essa mesma ordem.
 
-**3. Classes e janela.** 3 a 5 classes (limite prático do LED RGB, ver README do 04).
-Repetir as 4 do loop 1 (`idle`, `unknown`, `swipe_right`, `swipe_left`) permite comparar
-os dois caminhos. Janela **par** (100 amostras, shift 33) — o script de centralização
-perde uma linha com janela ímpar.
+**3. O que classificar.** 3 a 5 classes (limite prático do LED RGB, ver README do 04).
+O caso do curso é **vibração**: a velocidade de um ventilador, 4 classes (`idle`, `vel1`,
+`vel2`, `vel3`) — contínuo, sem centralização, e o que separa as classes é o espectro.
+Janela **128** (potência de 2, exigida pelos features de frequência). Gestos discretos
+também funcionam por este caminho, mas voltam a exigir a centralização do loop 1.
 
 ### Escala e tipo: o loop 2 vai em FLOAT32, micro-unidades
 
@@ -285,9 +285,9 @@ No Host, sessão com fonte **UART**, a **vcom1** da DK, 115200 8N1. Se ficar mud
 
 ### Passo 4 — gravar uma classe por vez ✅
 
-Na aba da sessão: **label** (`swipe_right`), pasta de saída, `Record`, gesto por 2 a 5
-minutos, `Stop`. Repetir por classe; `unknown` com movimentos aleatórios e mais tempo que
-as demais. Cada gravação gera `{label}_{sessão}_{utc}.csv` com header
+Na aba da sessão: **label** (`vel1`), pasta de saída, `Record`, uns 5 minutos na
+condição da classe, `Stop`. Repetir por classe **sem mexer na TAG** entre uma e outra.
+Cada gravação gera `{label}_{sessão}_{utc}.csv` com header
 
 ```
 device_time_ms,ax,ay,az,gx,gy,gz,temp,hum,pres,label
@@ -311,9 +311,9 @@ app de inferência alimenta o modelo na mesma escala com `sensor_value_to_micro(
 loop 1 trabalha em mili — `sensor_value_to_double() * 1000` — e isso **não** importa aqui:
 o modelo do loop 2 é treinado em micro e alimentado em micro.)
 
-*Validado 2026-09-02, BLE direto no PC (Bluetooth interno de um notebook Windows):* as
-4 gravações de [`dataset_referencia/`](dataset_referencia/), 22 min no total, com **2
-amostras perdidas em 134 mil** (`device_time_ms` avança 9/10/11 ms; `producer_drop_count
+*Validado 2026-09-03, BLE direto no PC (Bluetooth interno de um notebook Windows):* as
+4 gravações de [`dataset_referencia/`](dataset_referencia/), 24 min no total, com **18
+amostras perdidas em 146 mil** (`device_time_ms` avança 9/10/11 ms; `producer_drop_count
 = 0` nos sidecars). A ponte na DK segue como plano B para quem não tiver adaptador ou
 não conseguir conectar, não por falta de banda.
 
@@ -348,15 +348,16 @@ por gravação.
 Gestos discretos (swipes) ainda precisam de centralização depois disso, como no loop 1
 (`center_gestures.py` do 03). Vibração, `idle` e `unknown` não.
 
-*Validado 2026-09-02 com o caso do ventilador (abaixo):* 4 gravações → 4 classes,
+*Validado 2026-09-03 com o caso do ventilador (abaixo):* 4 gravações → 4 classes,
 146.523 linhas, `ax,ay,az,gx,gy,gz,temp,hum,pres,class`; recusas exercitadas (classe
 listada sem arquivo, uma classe só — nada gravado, `exit 1`).
 
 ### O caso de uso do loop 2 na bancada: velocidade de um ventilador por vibração
 
 **A coleta completa está no repo:** [`dataset_referencia/`](dataset_referencia/), com as
-5 gravações brutas do Host (`bruto/`), o `dataset_ventilador.csv` pronto para o Lab e um
-README com as limitações. É a rede de segurança da aula, como o do 03 para o loop 1.
+4 gravações brutas do Host (`bruto/`), o `dataset_ventilador.csv` pronto para o Lab e um
+README com as regras de coleta e as limitações. É a rede de segurança da aula, como o do
+03 para o loop 1.
 
 Em vez de gestos, um ventilador portátil de 3 velocidades com a TAG presa nele:
 classes `idle`, `vel1`, `vel2`, `vel3`. É um caso melhor para o loop 2 do que repetir
@@ -373,12 +374,16 @@ O `info` já mostra a separação, pelo desvio-padrão:
 | vel2 | 0,098 | 0,014 |
 | vel3 | 0,174 | 0,014 |
 
-Duas coisas para o material:
+Três coisas para o material:
 
 - **Muda só a variável que se quer classificar.** A fixação do sensor faz parte da
   classe: a mesma velocidade com a TAG presa de outro jeito dá outro perfil. Prender uma
   vez e gravar todas as classes sem mexer, `idle` incluído. O `info` do `fwd_to_lab.py`
   mostra o desvio-padrão por gravação e denuncia quando algo além da velocidade mudou.
+- **Colete na condição em que o modelo vai rodar.** O ventilador gira mais devagar no
+  carregador que na bateria; um modelo treinado no carregador classifica `vel1` como
+  `vel2` na bateria, com 99 % de confiança. O dataset de referência é da bateria, que é
+  como o ventilador anda na aula.
 - **Features de frequência exigem janela potência de 2.** Para vibração, os features
   no domínio da frequência são os que importam, e o Lab só os aceita com janela de
   **128 a 2048 amostras, potência de 2**
@@ -404,7 +409,7 @@ acurácia — o Lab descarta o que não contribui — só footprint no que sobra
 
 | Marcar | Por quê |
 |---|---|
-| **Amplitude spectrum** | o espectro em si; foi o feature mais importante do primeiro treino |
+| **Amplitude spectrum** | o espectro em si; é o feature mais importante do modelo do curso |
 | **Dominant frequencies**, Spectral centroid / spread / crest / RMS | a doc do Lab lista "vibration analysis" e "motor condition monitoring" como o caso deles |
 | Root mean square, Standard deviation | energia da vibração, cresce com a velocidade; o `info` já mostra que separam |
 | Range (ou Max / Min) | amplitude de pico, complementa o RMS |
@@ -426,22 +431,26 @@ Baixar o zip e anotar o **solution id**.
 
 TAG de volta no `DEBUG OUT`.
 
-1. Substituir os arquivos de `src/nrf_edgeai_generated/Neuton/` pelos do zip — **todos**,
-   inclusive `nrf_edgeai_user_types.h`.
+1. Copiar a pasta `nrf_edgeai_generated/` do zip para uma subpasta nova de
+   `src/nrf_edgeai_generated/` — **os três arquivos**, inclusive `nrf_edgeai_user_types.h`
+   — e apontar `CURSO_MODELO` no `CMakeLists.txt` para ela.
 2. No topo de `src/main.c`: `USER_WINDOW_SIZE` = janela do Lab, `USER_UNIQ_INPUTS_NUM` = 6,
    `USER_MODELS_CLASS_NUM` = número de classes. Os valores reais estão no `.c` gerado.
-3. `CLASS_COLORS` com exatamente uma linha por classe (o `BUILD_ASSERT` pega).
-4. Trocar `imu_read_magnitude()` por leitura de 6 canais em **micro-unidades**
-   (`sensor_value_to_micro()`, accel e gyro, na ordem `ax,ay,az,gx,gy,gz` do CSV). Em
-   `imu_init()`, configurar também o giroscópio, com o fundo de escala da coleta.
+3. `CLASS_COLORS` com exatamente uma linha por classe, na ordem do dicionário que o
+   `merge` imprimiu (o `BUILD_ASSERT` pega o número errado).
+4. A leitura dos 6 eixos em **micro-unidades** (`sensor_value_to_micro()`, ordem
+   `ax,ay,az,gx,gy,gz` do CSV) já está no `main.c`. Conferir só `IMU_ACCEL_FS_G` e
+   `IMU_GYRO_FS_DPS`: o mesmo fundo de escala deixado no `bmi270.c` antes de coletar.
 
 ```
 west build -p -b nrf54l15tag/nrf54l15/cpuapp -d C:\work\nrf-manaus-2\edge_ai\04_classify_led\build_tag C:\work\nrf-manaus-2\edge_ai\04_classify_led
 west flash -d C:\work\nrf-manaus-2\edge_ai\04_classify_led\build_tag --dev-id <serial da DK>
 ```
 
-O `-p` não é opcional. No RTT: conferir o `Solution id`; TAG parada na mesa tem de dar
-`idle` com confiança alta. Outra classe parada = escala errada (ver README do 04).
+O `-p` não é opcional. No RTT: conferir o `Solution id`, as três linhas
+`janela em ... ms (esperado 1280)` do boot, e que a TAG parada dá `idle` com confiança
+alta. Outra classe parada = escala errada; janela fora de 2 % = ritmo errado (as duas
+armadilhas estão no README do 04).
 
 *Validado 2026-09-03 com o dataset do ventilador (coleta na bateria):* Lab com janela
 128 / shift de treino 32 / features de frequência, FLOAT32, Cortex-M33 → **acurácia
