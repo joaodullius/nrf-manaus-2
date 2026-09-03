@@ -16,10 +16,11 @@ e a licença Nordic preservada em cada pasta.
 | [`01_gesture_recognition/`](01_gesture_recognition/) | Gestos com IMU e modelo Neuton na CPU; vira teclado BLE HID. Base dos três atos da sessão de Neuton AI: demo pronto → modo de coleta → modelo próprio | nRF54L15-TAG | ✅ copiado e compilado |
 | [`02_anomaly/`](02_anomaly/) | Detecção de anomalia (saúde de engrenagem por vibração): terceira tarefa da engine, FFT no binário, score + limiar. Sem sensor — vetores embarcados | nRF54LM20-DK | ✅ copiado e compilado |
 | [`03_central_uart/`](03_central_uart/) | Ponte NUS -> UART para a coleta de dados: recebe as amostras do IMU do tag em modo de coleta e joga na serial do PC. Filtra pelo endereco BLE do tag do aluno | nRF54LM20-DK (+ nRF54L15-TAG) | ✅ copiado e compilado |
-| [`04_classify_led/`](04_classify_led/) | App minima: IMU → inferencia → LED RGB. Onde o modelo proprio do aluno entra. Vem com o modelo do curso (velocidade de um ventilador por vibracao, 4 classes, FFT); o exemplo da Nordic fica como contraste de escala | nRF54L15-TAG | ✅ validado no ventilador |
+| [`04_classify_led/`](04_classify_led/) | App minima: IMU → inferencia → LED RGB. Onde o modelo proprio do aluno entra. Parte do exemplo da Nordic (estados de transporte) e troca, por uma linha, para o modelo do curso (velocidade de um ventilador por vibracao, 4 classes, FFT) | nRF54L15-TAG | ✅ validado no ventilador |
 | [`05_data_forwarder/`](05_data_forwarder/) | **Loop 2, caminho oficial:** coleta pelo `data_forwarder` da Nordic (CBOR/COBS por NUS, 9 canais) + GUI do Data Forwarder Host + `fwd_to_lab.py` + dataset de referencia do ventilador. LED de estado. Contorno de um bug do zcbor no Windows | nRF54L15-TAG (+ Bluetooth do PC) | ✅ roteiro dos 7 passos validado |
 | `06_ww_kws/` | Wake word e comandos de voz via microfone PDM (TFLite → compilador → inferência na NPU) | nRF54LM20-DK + mic PDM | ⏳ a copiar |
 | `07_benchmark_npu_vs_cpu/` | Medição comparativa de latência/energia por inferência: NPU vs. CPU | nRF54LM20-DK | ⏳ a montar |
+| [`hex/`](hex/) | Um `.hex` pronto por passo dos labs 01-05, para gravar sem compilar (`nrfutil device program`). Regenerados por `hex/build_all.py` | TAG e LM20-DK | ✅ |
 
 Cada pasta tem seu próprio `README.md` com os comandos de build e o que estudar.
 

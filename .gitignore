@@ -8,6 +8,8 @@ referencias/
 build*/
 *.hex
 *.zip
+# ... exceto os hex de referencia de cada passo (edge_ai/hex/build_all.py)
+!edge_ai/hex/*.hex
 
 # IDE / editor
 .vscode/
