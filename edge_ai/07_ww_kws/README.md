@@ -96,6 +96,54 @@ Saídas: os **estados** (`Waiting for wakeword`, `Keyword spotted: …`) vão pa
 Zephyr ficam na `uart20`/**VCOM1**. **LED0** aceso = janela de comandos aberta;
 **LED1** pisca = comando aceito.
 
+## Como a inferência roda no Axon
+
+O Axon é um **periférico** do nRF54LM20B, como o PDM: um processador próprio que roda
+**independente da CPU**. A rede não é interpretada — ela foi **compilada** para a NPU
+pelo Edge AI Lab, e o `_axon.h` de cada modelo carrega exatamente dois artefatos (os
+nomes aparecem no `nm` do ELF):
+
+| Artefato | O que é | ww (36711) | kws (36712) |
+|---|---|---|---|
+| `cmd_buffer_…` | o **programa** da NPU: a rede traduzida em comandos Axon | 9,7 kB | 62,9 kB |
+| `axon_model_const_…` | os **pesos, quantizados em int8** | 25,0 kB | 295,9 kB |
+
+O que acontece a cada `nrf_edgeai_run_inference()` (uma vez por 30 ms de áudio):
+
+1. **Áudio vira imagem.** O PCM cru é transformado em **mel-espectrograma** — o retrato
+   tempo × frequência que redes de voz consomem (`nrf_edgeai_feature_audio_mels_i16`,
+   no pipeline de features do modelo gerado). Esse passo faz parte da execução Axon
+   (`nrf_edgeai_run_inference_axon_audiomels`): a NPU acelera as operações de DSP
+   envolvidas (FFT, log — aceleração de vetores int24 listada no datasheet).
+2. **A CPU entrega e dorme.** O driver submete o *command buffer* à NPU e, no modo
+   síncrono usado aqui, a thread bloqueia num semáforo até a interrupção de fim de
+   job. Não há cópia de rede para a NPU a cada inferência — comandos e pesos são lidos
+   da flash (RRAM) por DMA, através de um cache interno pequeno, camada por camada.
+3. **Ativações intermediárias ficam no *interlayer buffer***: um buffer global em RAM
+   compartilhado por **todos** os modelos (dono é quem estiver executando). É o
+   `CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE=6656` do [`prj.conf`](prj.conf) —
+   dimensionado pela maior necessidade entre os dois modelos; trocar de modelo pode
+   exigir aumentar esse número (a engine confere na inicialização).
+4. **O final é CPU.** A saída int8 da NPU é dequantizada para float
+   (`nrf_edgeai_output_dequantize_axon_q8_f32`) e a ativação final vira probabilidade
+   na CPU — o Axon executa ReLU/ReLU6/LeakyReLU nativamente, mas **softmax/sigmoide
+   ficam na CPU**. Daí sai o `decoded_output.classif` que o pós-processamento lê.
+
+Dois detalhes que fecham o quadro:
+
+- **Os modelos são *streaming***: guardam contexto entre inferências (variáveis
+  persistentes, do padrão TFLite `VarHandle` — as do kws ocupam 26,6 kB de RAM). É
+  esse contexto de áudio acumulado que `ww_reset()`/`kws_reset()` zeram na troca de
+  estágio, para o modelo que assume não "ouvir" o passado do outro.
+- **Por que a NPU vale a pena:** a mesma rede na CPU seria até ~15× mais lenta e
+  ~10× menos eficiente em energia — e aqui a CPU fica livre (dormindo) durante a
+  execução, em vez de fazer MACs.
+
+Fontes: datasheet nRF54LM20A/B, cap. *AXONS — Neural processing unit*
+(<https://docs.nordicsemi.com/r/bundle/ps_nrf54lm20a/page/axons.html>); Edge AI Add-on,
+*Axon inference integration*
+(<https://nrfconnectdocs.nordicsemi.com/addons/addon-edge-ai/latest/integrations/axon.html>).
+
 ## Hardware
 
 nRF54LM20-DK (variante **B**) + microfone PDM MEMS **Adafruit 3492** (SPH0641), ligado
