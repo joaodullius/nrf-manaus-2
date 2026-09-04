@@ -115,10 +115,13 @@ O que acontece a cada `nrf_edgeai_run_inference()` (uma vez por 30 ms de áudio)
    no pipeline de features do modelo gerado). Esse passo faz parte da execução Axon
    (`nrf_edgeai_run_inference_axon_audiomels`): a NPU acelera as operações de DSP
    envolvidas (FFT, log — aceleração de vetores int24 listada no datasheet).
-2. **A CPU entrega e dorme.** O driver submete o *command buffer* à NPU e, no modo
-   síncrono usado aqui, a thread bloqueia num semáforo até a interrupção de fim de
-   job. Não há cópia de rede para a NPU a cada inferência — comandos e pesos são lidos
-   da flash (RRAM) por DMA, através de um cache interno pequeno, camada por camada.
+2. **A CPU entrega e dorme.** "Entregar" é só apontar o *command buffer* e disparar o
+   job; no modo síncrono usado aqui, a thread bloqueia num semáforo até a interrupção
+   de fim de job. Não há cópia de rede nem de dados para "dentro" da NPU: o Axon vira
+   **mestre do barramento** (como um periférico com EasyDMA) e busca sozinho comandos
+   e pesos **direto da flash (RRAM)**, através de um cache interno pequeno (TCM),
+   camada por camada, de forma *pipelined* — por isso o desempenho escala quase linear
+   com o tamanho do modelo.
 3. **Ativações intermediárias ficam no *interlayer buffer***: um buffer global em RAM
    compartilhado por **todos** os modelos (dono é quem estiver executando). É o
    `CONFIG_NRF_AXON_INTERLAYER_BUFFER_SIZE=6656` do [`prj.conf`](prj.conf) —
@@ -143,6 +146,44 @@ Fontes: datasheet nRF54LM20A/B, cap. *AXONS — Neural processing unit*
 (<https://docs.nordicsemi.com/r/bundle/ps_nrf54lm20a/page/axons.html>); Edge AI Add-on,
 *Axon inference integration*
 (<https://nrfconnectdocs.nordicsemi.com/addons/addon-edge-ai/latest/integrations/axon.html>).
+
+## A cadeia de buffers — do PDM ao Axon
+
+O buffer em que o PDM escreve **não** é o que o Axon consome. O áudio atravessa uma
+cadeia de buffers em RAM, com cópias deliberadas no meio — e a RAM é o ponto de
+encontro de toda a cadeia (PDM → RAM → Axon → RAM → CPU):
+
+```
+PDM20 ──EasyDMA──► mem_slab (4 blocos × 320 B)      dmic.c — buffer do driver
+                        │ dmic_read() pega um bloco cheio
+                        ▼
+            nrf_edgeai_feed_inputs()                copia p/ a janela interna da engine
+                        │ (o app devolve o bloco na hora: free_dmic_buffer)
+                        ▼
+            extracted_features_buffer_              mel-espectrograma (features)
+                        ▼
+            interlayer buffer (6.656 B)             o que o Axon de fato consome
+```
+
+Por que não é direto — três razões, todas visíveis no código:
+
+- **O Axon não come PCM.** Ele consome o mel-espectrograma; entre o buffer do PDM e a
+  NPU existe obrigatoriamente a transformação de features. O PCM cru nunca chega ao
+  Axon.
+- **O ritmo do streaming exige devolver o buffer rápido.** O `dmic_mem_slab` tem só
+  4 blocos de 10 ms; o PDM precisa deles de volta para não estourar. Está explícito em
+  `ww_process()`/`kws_process()`: logo depois de `nrf_edgeai_feed_inputs()` vem
+  `free_dmic_buffer()` — o bloco volta ao driver **antes** de a inferência rodar. Se o
+  Axon consumisse esse buffer diretamente, o PDM o sobrescreveria no meio do job.
+- **A engine acumula.** `feed_inputs()` retorna `INPROGRESS` (o app pula a inferência
+  com `-EBUSY`) até juntar janela suficiente — a engine mantém a própria janela de
+  entrada, separada dos blocos do driver.
+
+O "zero-cópia" vale para **pesos e rede** (ficam na flash; o Axon lê de lá) e para o
+par CPU↔Axon dentro de uma inferência (mesma RAM, nada é copiado para "dentro" da
+NPU). Já o caminho do áudio tem cópias de propósito: **cada cópia compra um
+desacoplamento** — o tempo real do PDM (um bloco a cada 10 ms, impreterivelmente) fica
+independente do tempo de inferência da NPU.
 
 ## Hardware
 
