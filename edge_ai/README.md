@@ -21,7 +21,7 @@ e a licença Nordic preservada em cada pasta.
 | [`06_mic_check/`](06_mic_check/) | Prova de bancada do microfone PDM (Adafruit 3492): mesma configuracao de PDM do `07_ww_kws`, barra de VU na serial. Valida a fiacao antes do modelo | nRF54LM20-DK + Adafruit 3492 | ✅ validado com o mic na DK |
 | [`07_ww_kws/`](07_ww_kws/) | **Axon:** wake word "Okay Nordic" + 10 comandos de voz via microfone PDM, dois modelos TFLite na NPU | nRF54LM20-DK + Adafruit 3492 | ✅ validado na bancada (wake word + comandos) |
 | `08_benchmark_npu_vs_cpu/` | Medição comparativa de latência/energia por inferência: NPU vs. CPU | nRF54LM20-DK | ⏳ a montar |
-| [`hex/`](hex/) | Um `.hex` pronto por passo dos labs 01-05, para gravar sem compilar (`nrfutil device program`). Regenerados por `hex/build_all.py` | TAG e LM20-DK | ✅ |
+| [`hex/`](hex/) | Um `.hex` pronto por passo dos labs 01-07, para gravar sem compilar (`nrfutil device program`). Regenerados por `hex/build_all.py` | TAG e LM20-DK | ✅ |
 
 Cada pasta tem seu próprio `README.md` com os comandos de build e o que estudar.
 

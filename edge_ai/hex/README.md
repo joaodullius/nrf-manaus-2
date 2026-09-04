@@ -19,6 +19,8 @@ corresponde ao fonte deste repo no commit em que foi gerado; regenerar tudo é u
 | `04_classify_led_ventilador_tag.hex` | loop 2 · modelo do curso | TAG | `CURSO_MODELO ventilador_95922` (128/6/4), blocos do ventilador | 89.600 / 24.016 |
 | `05_data_forwarder_sample_tag.hex` | loop 2 · coletar | TAG | `05_data_forwarder` como o sample: ±2 g / ±500 dps, 9 canais, LED de estado | 202.380 / 47.304 |
 | `05_data_forwarder_4g_tag.hex` | loop 2 · coletar (curso) | TAG | o mesmo com o fundo de escala editado: **±4 g / ±1000 dps** — o da coleta do dataset de referência | 202.380 / 47.304 |
+| `06_mic_check_lm20dk.hex` | Axon · provar o mic | LM20-DK (B) | `06_mic_check`, barra de VU do microfone PDM na VCOM1 | 52.692 / 9.896 |
+| `07_ww_kws_lm20dk.hex` | Axon · wake word + comandos | LM20-DK (B) | `07_ww_kws`, "Okay Nordic" + 10 comandos na NPU; estados na VCOM0 | 511.656 / 54.216 |
 
 ⚠️ **Os dois hex do 03 filtram pelo endereço da TAG de referência** (`EC:EF:40:2D:5E:46`,
 `random`). Servem na bancada do instrutor e como referência. O aluno **tem de compilar o
