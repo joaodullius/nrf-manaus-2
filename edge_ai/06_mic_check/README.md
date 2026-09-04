@@ -34,6 +34,44 @@ barra de pinos do breakout precisa estar soldada.
 Os pinos vêm do overlay [`boards/nrf54lm20dk_nrf54lm20b_cpuapp.overlay`](boards/nrf54lm20dk_nrf54lm20b_cpuapp.overlay) —
 o mesmo par CLK/DAT do `07_ww_kws`.
 
+## A interface PDM — o que viaja nesses dois fios
+
+O microfone MEMS digital já tem o conversor dentro: um **modulador sigma-delta** que
+cospe **1 bit por pulso de clock** — a *densidade* de 1s codifica a amplitude do som
+(daí o nome, *pulse density modulation*). Nenhum sinal analógico chega à DK.
+
+Do lado do nRF54LM20, **PDM é um periférico de verdade** (o SoC tem dois, `PDM20` e
+`PDM21`) — não é GPIO manipulado por software:
+
+```
+  SPH0641 (mic)                PDM20 (periférico)                         aplicação
+┌───────────────┐  ◄── CLK ── ┌────────────────────────────────┐
+│ som → Σ∆ 1bit │             │ gera o clock (1–3,25 MHz aqui) │  blocos de 160
+│               │  ── DAT ──► │ amostra DAT na borda escolhida │  amostras (10 ms)
+└───────────────┘   1 bit/clk │ filtro CIC + HP + ganho (HW)   │ ────────────────► dmic_read()
+                              │ → PCM 16 bit @ 16 kHz          │   (CPU dormindo
+                              │ → EasyDMA → RAM                │    o tempo todo)
+                              └────────────────────────────────┘
+```
+
+- **O periférico gera o `PDM_CLK`** e amostra o `DAT` sozinho. Os GPIOs entram só como
+  pinos físicos: o pinctrl do overlay (`NRF_PSEL(PDM_CLK, 1, 4)` / `PDM_DIN, 1, 5`)
+  rota os sinais, e o PDM20 só aceita pinos dos **portos P1 ou P3** — por isso o
+  exemplo usa `P1.04`/`P1.05`, e não um pino qualquer.
+- **Um fio de dado, até dois mics:** o periférico amostra o `DAT` na **borda de
+  descida** para o canal esquerdo e na de subida para o direito. O pino `SEL` do mic
+  diz em qual meia-onda ele dirige a linha — `SEL`=GND → esquerdo → casa com o
+  `PDM_CHAN_LEFT` que o app pede. É por isso que `SEL` no lado errado zera o áudio.
+- **A conversão PDM→PCM é hardware:** um filtro de decimação (CIC de 5ª ordem), filtro
+  passa-alta e ganho de ±20 dB transformam o bitstream de MHz em amostras **PCM de
+  16 bits a 16 kHz** (ex.: clock de 1,28 MHz ÷ razão 80 = 16 kHz).
+- **EasyDMA** escreve as amostras prontas direto na RAM. No Zephyr (driver `nrfx_pdm`
+  + API `dmic`), isso vira blocos de 160 amostras num *mem slab*: o `dmic_read()` do
+  app só recolhe buffers cheios — a CPU não toca em amostra nenhuma no caminho.
+
+Fonte: datasheet do nRF54LM20A/B, capítulo *PDM — Pulse density modulation interface*
+(<https://docs.nordicsemi.com/r/bundle/ps_nrf54lm20a/page/pdm.html>).
+
 ## Build
 
 Zephyr puro: compila direto do SDK padrão, **sem** o workspace do Add-on. Entre no
