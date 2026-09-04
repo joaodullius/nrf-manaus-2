@@ -86,6 +86,32 @@ a corrente da rajada Axon é **maior** (2,72 vs 2,29 mA). O caminho do driver
 (submissão, workqueue, dequantização a 33 jobs/s) mantém a CPU ativa o bastante
 para somar, não substituir, o consumo da NPU.
 
+## A escala no mesmo Axon — quatro modelos medidos
+
+Todos os modelos que o curso roda, medidos na **mesma NPU** (média de 100+
+inferências cada):
+
+| Modelo | Pesos + programa | Latência/inf. | Como foi medido |
+|---|---|---|---|
+| Encomendas (este exemplo) | 9,4 kB | **0,33 ms** | este harness |
+| Wake word "okay nordic" (07) | 34,7 kB | **2,35 ms** | 07 em `APP_MODE_WW_ONLY`, instrumentação temporária¹ |
+| DS-CNN (MLPerf Tiny KWS) | 36,5 kB | **5,4 ms** | `tests/axon/inference` do add-on (só a rede, mels pré-computados) |
+| Comandos de voz (07) | 358,8 kB | **11,95 ms** | 07 em `APP_MODE_KWS_ONLY`, instrumentação temporária¹ |
+
+¹ `k_cycle_get_32` em volta do `ww_process`/`kws_process` (inclui o front-end de
+mels, que roda dentro da execução Axon), áudio ambiente, patch aplicado e
+revertido sem tocar na cópia literal do repo.
+
+As duas leituras para o slide:
+
+- **A latência segue a computação (MACs), não os bytes.** DS-CNN e wake word têm
+  o *mesmo* tamanho (36,5 vs 34,7 kB) e latências 2,3× diferentes — convolução
+  reusa cada peso muitas vezes; camada densa usa uma. E o KWS tem 10× os bytes
+  do wake word mas só 5× a latência.
+- **O orçamento de tempo real fecha com folga.** O KWS de 12 ms numa janela de
+  30 ms usa 40 % da NPU; o wake word, 8 %. É por isso que os cinco detectores do
+  `10_sound_events` cabem intercalados sem esforço.
+
 ## Metodologia (o que entra na conta)
 
 - Mede-se **só o `nrf_edgeai_run_inference()`** com o relógio do sistema
