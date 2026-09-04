@@ -114,6 +114,25 @@ As duas leituras para o slide:
   30 ms usa 40 % da NPU; o wake word, 8 %. É por isso que os cinco detectores do
   `10_sound_events` cabem intercalados sem esforço.
 
+### O consumo da escuta contínua — a cascata vista pela bateria
+
+Medido no `07_ww_kws` real (mic PDM ativo, sem UART/console — fragmento de
+medição desliga log/console e a `uart20`; a `uart30` fica dormente porque o app
+a exige), 45 s de regime por modo, áudio ambiente:
+
+| Modo de escuta | Corrente média | Potência @ 1,8 V | CR2032 (225 mAh) |
+|---|---|---|---|
+| **Wake word gated** (porteiro de 35 kB, NPU ~8 %) | **837 µA** | 1,5 mW | ~11 dias |
+| **KWS direto** (359 kB o tempo todo, NPU ~40 %) | **1.452 µA** | 2,6 mW | ~6 dias |
+
+![Consumo da escuta contínua](bench_escuta.png)
+
+A média segue o *duty cycle* da NPU (base de ~0,4 mA do sistema mic+CPU +
+duty × ~2,7 mA de inferência) — a arquitetura em cascata do 07 aparece
+diretamente na conta de bateria: **escutar com o porteiro custa 57 %** do que
+custaria rodar o modelo grande direto. CSVs crus:
+`doc/edge_ai/data/ppk2_escuta_*.csv`.
+
 ## Metodologia (o que entra na conta)
 
 - Mede-se **só o `nrf_edgeai_run_inference()`** com o relógio do sistema
