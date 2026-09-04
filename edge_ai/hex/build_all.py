@@ -141,6 +141,10 @@ VARIANTES = [
      [], []),
     ("05_data_forwarder_4g_tag", "05_data_forwarder", TAG,
      [], [edit_05_escala]),
+    ("06_mic_check_lm20dk", "06_ww_kws/mic_check", LM20,
+     ["--sysbuild"], []),
+    ("06_ww_kws_lm20dk", "06_ww_kws", LM20,
+     ["--sysbuild"], []),
 ]
 
 
@@ -153,7 +157,7 @@ def west(args):
 
 def acha_hex(build_dir, app):
     for cand in (build_dir / "merged.hex",
-                 build_dir / app / "zephyr" / "zephyr.hex",
+                 build_dir / Path(app).name / "zephyr" / "zephyr.hex",
                  build_dir / "zephyr" / "zephyr.hex"):
         if cand.exists():
             return cand
