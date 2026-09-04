@@ -102,6 +102,8 @@ inferências cada):
 mels, que roda dentro da execução Axon), áudio ambiente, patch aplicado e
 revertido sem tocar na cópia literal do repo.
 
+![A escala do Axon: latência × tamanho dos quatro modelos](bench_escala.png)
+
 As duas leituras para o slide:
 
 - **A latência segue a computação (MACs), não os bytes.** DS-CNN e wake word têm
