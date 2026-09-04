@@ -113,6 +113,15 @@ Modelo: solution 90449, janela 50, 7 classes
 
 ## Medir energia com o PPK2
 
+![Ligação do PPK2 na nRF54LM20-DK](ligacao_ppk2.png)
+
+A ligação (validada no guia da DK e na Academy): **remova o jumper do P14**
+(VDD nRF CURRENT MEASURE), PPK2 **VOUT** no pino do meio (seta ↓, lado do SoC) e
+**GND** no pino GND do P14; PPK2 em **source meter, 3,0 V, 100 kS/s**, saída ligada.
+Os dois USB ficam conectados (a DK grava e alimenta o resto da placa; o PPK2 usa o
+conector USB DATA/POWER). Assim mede-se **só o VDD do SoC**. Guarde o jumper — sem o
+PPK2 no lugar ele precisa voltar, senão a placa não liga o SoC.
+
 Recompile cada variante com o fragmento [`power.conf`](power.conf) (desliga console,
 serial e log — UART ligada contamina a medição, receita do `axon_low_power`):
 
