@@ -151,6 +151,11 @@ VARIANTES = [
      ["--sysbuild"], []),
     ("10_sound_events_lm20dk", "10_sound_events", LM20,
      ["--sysbuild"], []),
+    ("11_benchmark_axon_lm20dk", "11_benchmark_npu_vs_cpu", LM20,
+     ["--sysbuild"], []),
+    ("11_benchmark_neuton_lm20dk", "11_benchmark_npu_vs_cpu", LM20,
+     ["--sysbuild", "--",
+      "-D11_benchmark_npu_vs_cpu_CONFIG_NRF_EDGEAI_CLASSIFICATION_MODEL_NEUTON=y"], []),
 ]
 
 

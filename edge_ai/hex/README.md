@@ -24,6 +24,8 @@ corresponde ao fonte deste repo no commit em que foi gerado; regenerar tudo é u
 | `08_cough_detection_lm20dk.hex` | Axon · um zip do Lab | LM20-DK (B) | `08_cough_detection`, detector de tosse; painel na VCOM1 | 143.308 / 25.512 |
 | `09_dog_bark_detection_lm20dk.hex` | Axon · outro zip, mesmo molde | LM20-DK (B) | `09_dog_bark_detection`, detector de latido | 143.344 / 25.512 |
 | `10_sound_events_lm20dk.hex` | Axon · cinco detectores | LM20-DK (B) | `10_sound_events`, 5 modelos intercalados na NPU, painel com rms e traço bruto | 285.404 / 46.896 |
+| `11_benchmark_axon_lm20dk.hex` | benchmark · NPU | LM20-DK (B) | `11_benchmark_npu_vs_cpu` variante Axon: 700 inferências/rajada, latência na VCOM1 | 95.600 / 13.080 |
+| `11_benchmark_neuton_lm20dk.hex` | benchmark · CPU | LM20-DK (B) | o mesmo com o modelo Neuton na CPU | 75.540 / 11.536 |
 
 ⚠️ **Os dois hex do 03 filtram pelo endereço da TAG de referência** (`EC:EF:40:2D:5E:46`,
 `random`). Servem na bancada do instrutor e como referência. O aluno **tem de compilar o
