@@ -38,13 +38,13 @@ pinos do breakout precisa estar soldada.
 
 ![Ligação do microfone PDM na nRF54LM20-DK](ligacao_mic_pdm.png)
 
-| Adafruit 3492 | nRF54LM20-DK | Por quê |
-|---|---|---|
-| `3V` | **`VDD:IO`** | alimentação do mic **no mesmo nível lógico dos GPIO** (1,8 V por padrão). O verso do módulo diz "Vin/Vlogic: 3.3V", mas o SPH0641 aceita 1,62–3,6 V e a Nordic testou em 1,8 V |
-| `GND` | `GND` | |
-| `SEL` | `GND` | escolhe o **canal esquerdo**; o app só lê esse canal |
-| `CLK` | **`P1.04`** | clock PDM gerado pela DK (1–3,25 MHz) |
-| `DAT` | **`P1.05`** | dados PDM |
+| Adafruit 3492 | nRF54LM20-DK | Fio | Por quê |
+|---|---|---|---|
+| `3V` | **`VDD:IO`** | vermelho | alimentação do mic **no mesmo nível lógico dos GPIO** (1,8 V por padrão). O verso do módulo diz "Vin/Vlogic: 3.3V", mas o SPH0641 aceita 1,62–3,6 V e a Nordic testou em 1,8 V |
+| `GND` | `GND` | preto | |
+| `SEL` | `GND` | marrom | escolhe o **canal esquerdo**; o app só lê esse canal |
+| `CLK` | **`P1.04`** | laranja | clock PDM gerado pela DK (1–3,25 MHz) |
+| `DAT` | **`P1.05`** | amarelo | dados PDM |
 
 - **Tudo cabe no header P2** (serigrafia `PORT1 00-15`, 2×10 pinos): a linha de cima é
   `GND 01 03 05 … 15 VDD IO`, a de baixo `VDD IO 00 02 04 … 14 GND`. `P1.05` é o 4º pino da
