@@ -20,8 +20,11 @@ e a licença Nordic preservada em cada pasta.
 | [`05_data_forwarder/`](05_data_forwarder/) | **Loop 2, caminho oficial:** coleta pelo `data_forwarder` da Nordic (CBOR/COBS por NUS, 9 canais) + GUI do Data Forwarder Host + `fwd_to_lab.py` + dataset de referencia do ventilador. LED de estado. Contorno de um bug do zcbor no Windows | nRF54L15-TAG (+ Bluetooth do PC) | ✅ roteiro dos 7 passos validado |
 | [`06_mic_check/`](06_mic_check/) | Prova de bancada do microfone PDM (Adafruit 3492): mesma configuracao de PDM do `07_ww_kws`, barra de VU na serial. Valida a fiacao antes do modelo | nRF54LM20-DK + Adafruit 3492 | ✅ validado com o mic na DK |
 | [`07_ww_kws/`](07_ww_kws/) | **Axon:** wake word "Okay Nordic" + 10 comandos de voz via microfone PDM, dois modelos TFLite na NPU | nRF54LM20-DK + Adafruit 3492 | ✅ validado na bancada (wake word + comandos) |
-| `08_benchmark_npu_vs_cpu/` | Medição comparativa de latência/energia por inferência: NPU vs. CPU | nRF54LM20-DK | ⏳ a montar |
-| [`hex/`](hex/) | Um `.hex` pronto por passo dos labs 01-07, para gravar sem compilar (`nrfutil device program`). Regenerados por `hex/build_all.py` | TAG e LM20-DK | ✅ |
+| [`08_cough_detection/`](08_cough_detection/) | Um zip do Edge AI Lab na NPU, do jeito mais curto: modelo pronto de tosse + as 4 chamadas da API. Exemplo-molde para qualquer solucao do Lab | nRF54LM20-DK + Adafruit 3492 | ✅ tosse validada na bancada (no 10) |
+| [`09_dog_bark_detection/`](09_dog_bark_detection/) | O mesmo molde com outro zip (latido): trocar o modelo nao muda o app; muda a calibracao — este e "gatilho facil" (limiar 0,90 vs 0,50 da tosse) | nRF54LM20-DK + Adafruit 3492 | ✅ latido validado na bancada (no 10) |
+| [`10_sound_events/`](10_sound_events/) | Cinco detectores do Lab "ao mesmo tempo" na NPU: multiplexing do Axon, interlayer buffer compartilhado, calibracao por detector | nRF54LM20-DK + Adafruit 3492 | 🔬 parcial: latido/tosse ok; bebe/miado/ronco em investigacao |
+| `11_benchmark_npu_vs_cpu/` | Medição comparativa de latência/energia por inferência: NPU vs. CPU | nRF54LM20-DK | ⏳ a montar |
+| [`hex/`](hex/) | Um `.hex` pronto por passo dos labs 01-10, para gravar sem compilar (`nrfutil device program`). Regenerados por `hex/build_all.py` | TAG e LM20-DK | ✅ |
 
 Cada pasta tem seu próprio `README.md` com os comandos de build e o que estudar.
 

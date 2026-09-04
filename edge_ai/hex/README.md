@@ -21,6 +21,9 @@ corresponde ao fonte deste repo no commit em que foi gerado; regenerar tudo é u
 | `05_data_forwarder_4g_tag.hex` | loop 2 · coletar (curso) | TAG | o mesmo com o fundo de escala editado: **±4 g / ±1000 dps** — o da coleta do dataset de referência | 202.380 / 47.304 |
 | `06_mic_check_lm20dk.hex` | Axon · provar o mic | LM20-DK (B) | `06_mic_check`, barra de VU do microfone PDM na VCOM1 | 52.692 / 9.896 |
 | `07_ww_kws_lm20dk.hex` | Axon · wake word + comandos | LM20-DK (B) | `07_ww_kws`, "Okay Nordic" + 10 comandos na NPU; estados na VCOM0 | 511.656 / 54.216 |
+| `08_cough_detection_lm20dk.hex` | Axon · um zip do Lab | LM20-DK (B) | `08_cough_detection`, detector de tosse; painel na VCOM1 | 143.308 / 25.512 |
+| `09_dog_bark_detection_lm20dk.hex` | Axon · outro zip, mesmo molde | LM20-DK (B) | `09_dog_bark_detection`, detector de latido | 143.344 / 25.512 |
+| `10_sound_events_lm20dk.hex` | Axon · cinco detectores | LM20-DK (B) | `10_sound_events`, 5 modelos intercalados na NPU, painel com rms e traço bruto | 285.404 / 46.896 |
 
 ⚠️ **Os dois hex do 03 filtram pelo endereço da TAG de referência** (`EC:EF:40:2D:5E:46`,
 `random`). Servem na bancada do instrutor e como referência. O aluno **tem de compilar o

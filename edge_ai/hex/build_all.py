@@ -145,6 +145,12 @@ VARIANTES = [
      ["--sysbuild"], []),
     ("07_ww_kws_lm20dk", "07_ww_kws", LM20,
      ["--sysbuild"], []),
+    ("08_cough_detection_lm20dk", "08_cough_detection", LM20,
+     ["--sysbuild"], []),
+    ("09_dog_bark_detection_lm20dk", "09_dog_bark_detection", LM20,
+     ["--sysbuild"], []),
+    ("10_sound_events_lm20dk", "10_sound_events", LM20,
+     ["--sysbuild"], []),
 ]
 
 

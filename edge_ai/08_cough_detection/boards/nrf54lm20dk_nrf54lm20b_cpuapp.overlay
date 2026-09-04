@@ -1,0 +1,26 @@
+/*
+ * 08_cough_detection — mesma pinagem de PDM do 06_mic_check e do 07_ww_kws.
+ *
+ *   Adafruit 3492  ->  nRF54LM20-DK
+ *   3V             ->  VDD:IO (1.8 V)
+ *   GND            ->  GND
+ *   SEL            ->  GND      (canal esquerdo)
+ *   CLK            ->  P1.04
+ *   DAT            ->  P1.05
+ */
+
+&pinctrl {
+	pdm20_default_alt: pdm20_default_alt {
+		group1 {
+			psels = <NRF_PSEL(PDM_CLK, 1, 4)>,
+				<NRF_PSEL(PDM_DIN, 1, 5)>;
+		};
+	};
+};
+
+dmic_dev: &pdm20 {
+	status = "okay";
+	pinctrl-0 = <&pdm20_default_alt>;
+	pinctrl-names = "default";
+	clock-source = "PCLK32M";
+};
