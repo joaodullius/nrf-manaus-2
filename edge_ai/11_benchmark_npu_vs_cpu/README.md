@@ -43,32 +43,48 @@ só a dequantização e o softmax voltam para a CPU.
 
 ## Resultados medidos (bancada, 2026-09-04)
 
-nRF54LM20-DK (B), CPU @ 128 MHz, 700 inferências por rajada, estímulo idêntico:
+nRF54LM20-DK (B), CPU @ 128 MHz, 700 inferências por rajada, estímulo idêntico;
+energia medida com o PPK2 no trilho de 1,8 V (variantes `power.conf`, sem serial):
 
 | | Neuton (CPU) | Axon (NPU) |
 |---|---|---|
 | Latência por inferência (min/méd/máx) | 227 / **229** / 265 µs | 331 / **332** / 337 µs |
+| Rajada de 700 inferências | 171 ms @ 2,29 mA | 242 ms @ 2,72 mA |
+| **Energia por inferência** | **~1,0 µJ** | **~1,7 µJ** |
+| Piso de sono entre rajadas | ~4 µA | ~4 µA |
 | Classes erradas (7 janelas × 100) | 0 | 0 |
 | Flash do app | 75.540 B | 95.600 B |
 | RAM do app | 11.536 B | 13.080 B |
 
-**A NPU perdeu — e essa é a lição.** Este modelo é minúsculo (uma rede Neuton de
-poucos kB); em 229 µs a CPU resolve. No caminho Axon, o custo **fixo** de cada
-inferência — submeter o command buffer, workqueue, interrupção, semáforo,
-dequantizar — domina o tempo, e a variante ainda carrega ~20 kB a mais de flash
-(driver + modelo int8 + command buffer). O "até 15× mais rápido / 10× mais
-eficiente" da NPU vale para **redes grandes** — como a de comandos de voz do
-`07_ww_kws` (296 kB de pesos), impraticável na CPU em tempo real. A regra para o
-slide:
+![Formas de onda de corrente: Neuton vs Axon](bench_ondas.png)
+
+A forma de onda diz tudo de uma vez: para este modelo, a rajada da NPU é **mais
+larga e mais alta** — o custo fixo por job mantém a CPU acordada além da NPU.
+
+**A NPU perdeu em latência E em energia — e essa é a lição.** Este modelo é
+minúsculo (uma rede Neuton de poucos kB); em 229 µs a CPU resolve. No caminho
+Axon, o custo **fixo** de cada inferência — submeter o command buffer, workqueue,
+interrupção, semáforo, dequantizar — domina o tempo, e a variante ainda carrega
+~20 kB a mais de flash (driver + modelo int8 + command buffer).
+
+**E o modelo grande?** Medimos também (via `tests/axon/compiled_models` do add-on):
+o **DS-CNN do MLPerf Tiny** (KWS, a rede de referência dos benchmarks embarcados)
+roda na NPU em **~5,4 ms por inferência** (5.373–5.416 ticks @ 1 MHz, 15 vetores
+bit-exact). Uma rede dessas na CPU com tflite-micro leva **dezenas de ms** — é o
+regime do "até 15× mais rápido / 10× mais eficiente" da Nordic, e do modelo de
+comandos de voz do `07_ww_kws` (296 kB de pesos), impraticável na CPU em tempo
+real. A regra para o slide:
 
 > **NPU não é "sempre mais rápido"; é "escala para modelos que a CPU não aguenta".**
 > Modelo pequeno → CPU ganha (sem overhead fixo). Modelo grande → NPU ganha por
 > ordem de grandeza — e com a CPU livre (dormindo) durante a inferência, o que
 > muda também a conta de energia.
 
-Energia por inferência: pendente de medição com o PPK2 (abaixo). Nota: mesmo com
-latência maior, a energia do Axon pode ser competitiva — durante os 332 µs a CPU
-está em idle, não queimando ciclos.
+Nota honesta sobre a energia: esperava-se que o Axon compensasse porque a CPU
+dorme durante a inferência — mas a medição mostrou o contrário para este modelo:
+a corrente da rajada Axon é **maior** (2,72 vs 2,29 mA). O caminho do driver
+(submissão, workqueue, dequantização a 33 jobs/s) mantém a CPU ativa o bastante
+para somar, não substituir, o consumo da NPU.
 
 ## Metodologia (o que entra na conta)
 
@@ -129,6 +145,14 @@ serial e log — UART ligada contamina a medição, receita do `axon_low_power`)
      -D11_benchmark_npu_vs_cpu_EXTRA_CONF_FILE=power.conf
 ```
 
-No PPK2 em modo *source meter* alimentando a DK, cada rajada de 700 inferências
-aparece como um degrau: **energia por inferência = (carga do degrau − piso) / 700**.
-Comparar o degrau das duas variantes fecha a coluna que falta na tabela acima.
+Cada rajada de 700 inferências aparece como um degrau:
+**energia por inferência = (I_rajada − piso) × V × t_rajada / 700**.
+
+Como foi feito na bancada do curso (os números da tabela acima): fiação de
+**3 fios** no P14 (VIN no pino ↑, VOUT no pino ↓, GND no GND) e PPK2 em modo
+**amperímetro** — a DK alimenta o SoC no trilho nativo de **1,8 V** e o PPK2 só
+fica em série. Funciona igual ao source meter e mede o ponto de operação real.
+A captura e o cálculo foram automatizados por script com a biblioteca Python
+`ppk2-api` (sem o app gráfico); os CSVs crus estão no repo de docs
+(`doc/edge_ai/data/ppk2_*.csv`) e a figura acima sai de
+`doc/_template/fig_m1_11_ondas.py`.
