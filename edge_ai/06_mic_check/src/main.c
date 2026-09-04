@@ -1,7 +1,7 @@
 /*
  * mic_check — prova de bancada do microfone PDM (Adafruit 3492) na nRF54LM20-DK.
  *
- * Codigo do curso nrf-manaus-2 (modulo edge_ai/06_ww_kws). Nao vem do SDK.
+ * Codigo do curso nrf-manaus-2 (modulo edge_ai/06_mic_check). Nao vem do SDK.
  *
  * Configura o PDM20 exatamente como o app ww_kws da Nordic (16 kHz, 16 bits,
  * canal esquerdo, blocos de 10 ms) e imprime, a cada 100 ms, o nivel do sinal

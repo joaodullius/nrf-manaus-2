@@ -141,9 +141,9 @@ VARIANTES = [
      [], []),
     ("05_data_forwarder_4g_tag", "05_data_forwarder", TAG,
      [], [edit_05_escala]),
-    ("06_mic_check_lm20dk", "06_ww_kws/mic_check", LM20,
+    ("06_mic_check_lm20dk", "06_mic_check", LM20,
      ["--sysbuild"], []),
-    ("06_ww_kws_lm20dk", "06_ww_kws", LM20,
+    ("07_ww_kws_lm20dk", "07_ww_kws", LM20,
      ["--sysbuild"], []),
 ]
 

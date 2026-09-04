@@ -18,8 +18,9 @@ e a licença Nordic preservada em cada pasta.
 | [`03_central_uart/`](03_central_uart/) | Ponte NUS -> UART para a coleta de dados: recebe as amostras do IMU do tag em modo de coleta e joga na serial do PC. Filtra pelo endereco BLE do tag do aluno | nRF54LM20-DK (+ nRF54L15-TAG) | ✅ copiado e compilado |
 | [`04_classify_led/`](04_classify_led/) | App minima: IMU → inferencia → LED RGB. Onde o modelo proprio do aluno entra. Parte do exemplo da Nordic (estados de transporte) e troca, por uma linha, para o modelo do curso (velocidade de um ventilador por vibracao, 4 classes, FFT) | nRF54L15-TAG | ✅ validado no ventilador |
 | [`05_data_forwarder/`](05_data_forwarder/) | **Loop 2, caminho oficial:** coleta pelo `data_forwarder` da Nordic (CBOR/COBS por NUS, 9 canais) + GUI do Data Forwarder Host + `fwd_to_lab.py` + dataset de referencia do ventilador. LED de estado. Contorno de um bug do zcbor no Windows | nRF54L15-TAG (+ Bluetooth do PC) | ✅ roteiro dos 7 passos validado |
-| [`06_ww_kws/`](06_ww_kws/) | **Axon:** wake word "Okay Nordic" + 10 comandos de voz via microfone PDM, dois modelos TFLite na NPU. `mic_check/` prova a fiacao do mic antes do modelo | nRF54LM20-DK + Adafruit 3492 | ✅ copiado e compilado; mic_check validado na DK |
-| `07_benchmark_npu_vs_cpu/` | Medição comparativa de latência/energia por inferência: NPU vs. CPU | nRF54LM20-DK | ⏳ a montar |
+| [`06_mic_check/`](06_mic_check/) | Prova de bancada do microfone PDM (Adafruit 3492): mesma configuracao de PDM do `07_ww_kws`, barra de VU na serial. Valida a fiacao antes do modelo | nRF54LM20-DK + Adafruit 3492 | ✅ validado com o mic na DK |
+| [`07_ww_kws/`](07_ww_kws/) | **Axon:** wake word "Okay Nordic" + 10 comandos de voz via microfone PDM, dois modelos TFLite na NPU | nRF54LM20-DK + Adafruit 3492 | ✅ validado na bancada (wake word + comandos) |
+| `08_benchmark_npu_vs_cpu/` | Medição comparativa de latência/energia por inferência: NPU vs. CPU | nRF54LM20-DK | ⏳ a montar |
 | [`hex/`](hex/) | Um `.hex` pronto por passo dos labs 01-05, para gravar sem compilar (`nrfutil device program`). Regenerados por `hex/build_all.py` | TAG e LM20-DK | ✅ |
 
 Cada pasta tem seu próprio `README.md` com os comandos de build e o que estudar.

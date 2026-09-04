@@ -1,4 +1,4 @@
-# 06 · Wake word e comandos de voz na NPU (Axon)
+# 07 · Wake word e comandos de voz na NPU (Axon)
 
 Primeiro exemplo do módulo que **não roda na CPU**: um microfone PDM alimenta dois modelos
 TensorFlow Lite compilados para o **Axon**, a NPU do nRF54LM20B. O primeiro escuta a
@@ -9,8 +9,7 @@ e depois volta a esperar a frase.
 > **Origem:** cópia literal de `applications/ww_kws` do
 > **Edge AI Add-on for nRF Connect SDK v2.3.0** (tag `v2.3.0`, commit `1c24f3a`),
 > copiada em 2026-09-04. Os arquivos principais carregam o caminho upstream no cabeçalho;
-> licença Nordic preservada em [LICENSE](LICENSE). A subpasta [`mic_check/`](mic_check/)
-> é código do curso.
+> licença Nordic preservada em [LICENSE](LICENSE).
 
 ## O que ele demonstra
 
@@ -32,74 +31,38 @@ e depois volta a esperar a frase.
 
 ## Hardware
 
-nRF54LM20-DK (variante **B**) + microfone PDM MEMS **Adafruit 3492** (SPH0641). É o
-mesmo módulo com que a Nordic testou o app. Fios fêmea-fêmea nos pinos da DK; a barra de
-pinos do breakout precisa estar soldada.
+nRF54LM20-DK (variante **B**) + microfone PDM MEMS **Adafruit 3492** (SPH0641), ligado
+como no [`06_mic_check/`](../06_mic_check/) — figura, tabela de fios e as pegadinhas do
+header P2 estão lá. **Valide a fiação no `06_mic_check` antes de gravar este app**: um
+modelo mudo não diz se o problema é fio, canal, alimentação ou o modelo.
 
-![Ligação do microfone PDM na nRF54LM20-DK](ligacao_mic_pdm.png)
+Os pinos vêm do overlay [`boards/nrf54lm20dk_nrf54lm20b_cpuapp.overlay`](boards/nrf54lm20dk_nrf54lm20b_cpuapp.overlay)
+(o mesmo par CLK/DAT do `06_mic_check`); para outro microfone, os limites de clock e
+ciclo de trabalho ficam em `src/dmic.c`.
 
-| Adafruit 3492 | nRF54LM20-DK | Fio | Por quê |
-|---|---|---|---|
-| `3V` | **`VDD:IO`** | vermelho | alimentação do mic **no mesmo nível lógico dos GPIO** (1,8 V por padrão). O verso do módulo diz "Vin/Vlogic: 3.3V", mas o SPH0641 aceita 1,62–3,6 V e a Nordic testou em 1,8 V |
-| `GND` | `GND` | preto | |
-| `SEL` | `GND` | marrom | escolhe o **canal esquerdo**; o app só lê esse canal |
-| `CLK` | **`P1.04`** | laranja | clock PDM gerado pela DK (1–3,25 MHz) |
-| `DAT` | **`P1.05`** | amarelo | dados PDM |
+## Build e gravação
 
-- **Tudo cabe no header P2** (serigrafia `PORT1 00-15`, 2×10 pinos): a linha de cima é
-  `GND 01 03 05 … 15 VDD IO`, a de baixo `VDD IO 00 02 04 … 14 GND`. `P1.05` é o 4º pino da
-  linha de cima, `P1.04` o 4º da linha de baixo; `VDD IO` e `GND` estão nas pontas.
-- Os headers de alimentação **P6–P10 e P18 são 5 V — não usar**: o mic aguenta, mas o
-  `DAT` voltaria em 5 V para um GPIO de 1,8 V.
-- `SEL` solto ou em `3V` põe o dado na outra borda do clock e o app lê **zeros**.
-- A distância mic-DK não é crítica com fios de 10–20 cm; acima disso o clock PDM começa a
-  sofrer.
-
-Os pinos vêm do overlay [`boards/nrf54lm20dk_nrf54lm20b_cpuapp.overlay`](boards/nrf54lm20dk_nrf54lm20b_cpuapp.overlay);
-para outro microfone, os limites de clock e ciclo de trabalho ficam em `src/dmic.c`.
-
-## Passo 0 — provar o microfone antes do modelo (`mic_check/`)
-
-Um modelo mudo não diz se o problema é fio, canal, alimentação ou o modelo. O
-[`mic_check/`](mic_check/) configura o PDM **exatamente como o app** e imprime o nível
-do sinal dez vezes por segundo, com uma barra de VU:
+O app precisa do **Edge AI Add-on**, que não vem no SDK `C:\ncs\v3.4.0` — ele entra como
+módulo extra pelo `-DEXTRA_ZEPHYR_MODULES`, como nos exemplos Neuton. Entre no ambiente
+do toolchain primeiro:
 
 ```
-cd C:\ncs\sdk-edge-ai
-west build -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild ^
-     -d C:\work\nrf-manaus-2\edge_ai\06_ww_kws\mic_check\build_lm20 ^
-     C:\work\nrf-manaus-2\edge_ai\06_ww_kws\mic_check
-nrfutil device program --firmware edge_ai\06_ww_kws\mic_check\build_lm20\mic_check\zephyr\zephyr.hex --serial-number <serial>
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 --terminal
+```
+
+Depois, de dentro de `C:\ncs\v3.4.0`:
+
+```
+west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild ^
+     -d C:\work\nrf-manaus-2\edge_ai\07_ww_kws\build_lm20 ^
+     C:\work\nrf-manaus-2\edge_ai\07_ww_kws ^
+     -- -DEXTRA_ZEPHYR_MODULES=C:/ncs/sdk-edge-ai/edge-ai
+nrfutil device program --firmware edge_ai\07_ww_kws\build_lm20\07_ww_kws\zephyr\zephyr.hex --serial-number <serial>
 nrfutil device reset --serial-number <serial>
 ```
 
-Terminal na **VCOM1** (a segunda COM da DK), 115200. O que se vê:
-
-```
-=== mic_check: PDM20 CLK=P1.04 DAT=P1.05 SEL=GND, 16 kHz mono (canal esquerdo) ===
-PDM rodando. Fale perto do microfone e veja a barra subir.
-
-[   12] rms=   61 pico=  310 dc=    -4 |##########                    |  -54 dBFS   <- sala em silêncio
-[   13] rms= 2870 pico=14020 dc=    12 |####################          |  -21 dBFS   <- falando perto
-```
-
-| Sintoma | Causa provável |
-|---|---|
-| `AMOSTRAS TODAS IGUAIS (0)` em todas as linhas | `DAT` solto, `SEL` no lado errado (ou solto) ou mic sem alimentação |
-| `rms` alto e **constante**, barra cheia sem som | `CLK` trocado com `DAT`, ou mic recebendo 5 V |
-| `dmic_read falhou` | o PDM não está entregando blocos: overlay/pino errado — não é fio |
-| Nível reage à voz | fiação **validada**; siga para o modelo |
-
-## Passo 1 — o app da Nordic
-
-```
-cd C:\ncs\sdk-edge-ai
-west build -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild ^
-     -d C:\work\nrf-manaus-2\edge_ai\06_ww_kws\build_lm20 ^
-     C:\work\nrf-manaus-2\edge_ai\06_ww_kws
-nrfutil device program --firmware edge_ai\06_ww_kws\build_lm20\06_ww_kws\zephyr\zephyr.hex --serial-number <serial>
-nrfutil device reset --serial-number <serial>
-```
+No VS Code (extensão nRF Connect): board `nrf54lm20dk/nrf54lm20b/cpuapp`, SDK v3.4.0,
+*Extra CMake arguments* = `-DEXTRA_ZEPHYR_MODULES=C:/ncs/sdk-edge-ai/edge-ai`.
 
 Dois terminais, os dois a 115200:
 
@@ -120,7 +83,7 @@ Roteiro de teste:
 A pronúncia dos modelos é de inglês americano. Se a frase não pega, baixar
 `CONFIG_WW_PROBABILITY_THRESHOLD` (padrão 990 = 99 %) ou `CONFIG_WW_COUNT_THRESHOLD`
 (padrão 15 de 20) num `.conf` extra é o primeiro ajuste; o segundo é conferir no
-`mic_check` se o nível ao falar chega perto de -20 dBFS.
+[`06_mic_check`](../06_mic_check/) se o nível ao falar chega perto de -20 dBFS.
 
 ### Modos
 

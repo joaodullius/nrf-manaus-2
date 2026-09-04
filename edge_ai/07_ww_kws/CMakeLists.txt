@@ -4,7 +4,7 @@
 #   SDK     : nRF Connect SDK v3.4.0 (workspace do add-on)
 #   Upstream: applications/ww_kws/CMakeLists.txt
 #   Local   : C:/ncs/sdk-edge-ai/edge-ai/applications/ww_kws/CMakeLists.txt
-#   Copiado : 2026-09-04 — curso nrf-manaus-2, modulo edge_ai/06_ww_kws
+#   Copiado : 2026-09-04 — curso nrf-manaus-2, modulo edge_ai/07_ww_kws
 #
 # Para conferir se divergiu do SDK:
 #   diff <este arquivo> C:/ncs/sdk-edge-ai/edge-ai/applications/ww_kws/CMakeLists.txt
