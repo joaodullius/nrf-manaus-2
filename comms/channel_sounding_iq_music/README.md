@@ -145,11 +145,19 @@ curso, com as três capturas de 1, 3 e 5 m:
 | 3,0 m | — | — | — | — | — |
 | 5,0 m | — | — | — | — | — |
 
-**Medido em 2026-09-05, na distância da bancada (não medida com trena), linha de visada, n = 69:**
+**Medido em 2026-09-05 na bancada do curso — TAG a 0,78 m da antena do LM20-DK (trena),
+TAG montado sobre uma nRF54L15-DK ao lado de cabos USB, n = 69:**
 
-| bancada | ifft_fw | phase_slope | rtt | music | n |
+| Trena | `ifft_fw` | `phase_slope` | `rtt` | `music` | n |
 |---|---|---|---|---|---|
-| — | 1,92 ± 0,09 | 2,16 ± 0,16 | 1,39 ± 0,70 | 1,95 ± 0,08 | 69 |
+| 0,78 m (trena) | 1,92 ± 0,09 | 2,16 ± 0,16 | 1,39 ± 0,70 | 1,95 ± 0,08 | 69 |
+
+Os quatro estimadores leem entre ~1,4 e 2,2 m para uma distância real de 0,78 m — um
+viés de mais de 1 m. Causas plausíveis, sem afirmar qual pesa mais: distância curta
+(campo próximo), o TAG apoiado sobre uma nRF54L15-DK com cabos e conectores metálicos
+ao lado (multipath), antena única, e o algoritmo de referência sem calibração. É esse
+o número que o aluno deve tentar bater com a tabela medida por trena acima — linha de
+visada, TAG na bateria, longe de metal.
 
 O que ler nela: o **desvio** de cada estimador é a sua repetibilidade; a diferença da
 média para a trena é o **viés**. O `rtt` é o mais grosseiro; o `phase_slope` é o mais
