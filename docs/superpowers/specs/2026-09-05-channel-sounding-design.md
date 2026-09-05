@@ -10,8 +10,9 @@ O bloco de Channel Sounding ocupa **~3h** das 10h dos dias 3–4, dividindo o m�
 
 - **Labs 100% embarcados.** O par é nRF54LM20-DK (initiator) ↔ nRF54L15-TAG (reflector). Nada no caminho crítico do aluno depende de smartphone.
 - **Smartphone (Galaxy S26) é demo do instrutor**, com plano de contingência (§7).
-- **Quatro labs**: os três primeiros são o núcleo; o quarto (segurança) entra conforme o tempo do dia.
-- **Sem lab de step modes.** RTT e PBR são apresentados na teoria, antes do lab 3.
+- **Cinco labs**: os três primeiros são o núcleo; segurança (4) e melhoria do ranging (5) entram conforme o tempo do dia.
+- **Sem lab de step modes.** RTT e PBR são apresentados na teoria e observados na prática no lab 2, sem firmware dedicado.
+- **Sem DFU/OTA.** Já foi coberto no treinamento anterior (Sidia) e não é essencial ao CS. O TAG é gravado por fio (§5.3).
 
 ## 2. Estado da arte verificado no SDK
 
@@ -29,8 +30,6 @@ Conferido na árvore instalada, não na documentação.
 `zephyr/samples/bluetooth/channel_sounding/` traz `cs_test` e `connected_cs`, mais crus, úteis como apoio de teoria.
 
 **Board targets.** O `platform_allow` dos samples RAS e IPT inclui `nrf54lm20dk/nrf54lm20a/cpuapp` e `nrf54lm20dk/nrf54lm20b/cpuapp`. O board `nrf54l15tag` existe (`zephyr/boards/nordic/nrf54l15tag`, target `nrf54l15tag/nrf54l15/cpuapp`) mas **não** consta do `platform_allow` de nenhum dos quatro — isso é gate de CI/twister, não de build. A Nordic documenta `west build -b nrf54l15tag/nrf54l15/cpuapp` para o `ras_reflector`; para o `ipt_reflector` não há documentação equivalente (item de validação, §9).
-
-**Precisão.** A Nordic declara que o algoritmo de referência dos samples "não é representativo" do que a tecnologia entrega. O material precisa dizer isso explicitamente, sob pena de o aluno concluir que Channel Sounding é impreciso.
 
 ### 2.1 RAS e IPT — dois caminhos para o mesmo número
 
@@ -52,6 +51,25 @@ São duas formas de o initiator obter a contribuição do reflector. A diferenç
 
 As duas últimas linhas vêm da doc da Nordic, que é explícita nos dois pontos: IPT só serve para PBR (o RTT de um step mode 3 ainda precisa de RAS ou equivalente para voltar pela ACL), e o sample de IPT "não oferece a mesma proteção contra ataques de ranging" que um arranjo RAS com mode 1 + mode 2. **Os labs 3 e 4 são os dois lados desse trade-off.**
 
+### 2.2 O algoritmo de referência e o que existe fora
+
+**Posição da Nordic, validada no MCP.** O `cs_de` é referência, não produto: *"provided just as reference algorithms — we recommend you to work with a third party algorithm partner if you require more sophisticated algorithms"* (webinar *From theory to practice*), *"the accuracy is not representative for Channel Sounding and should be replaced if accuracy is important"* (release notes 2.9.0), *"an open and free-to-use IFFT algorithm suitable for simple ranging use cases"* (página de produto). O Kconfig marca `BT_CS_DE` como `[EXPERIMENTAL]`; no DevZone #128575 a resposta oficial a um usuário insatisfeito com a precisão foi que o roadmap só se discute com vendas. Parceiro de algoritmo citado nominalmente no webinar: Metirionic.
+
+**A nuance que viabiliza o lab 5:** a Nordic não fornece o algoritmo preciso, mas **fornece o de referência em fonte**. `subsys/bluetooth/cs_de/cs_de.c`, 328 linhas, três funções — `cs_de_rtt()`, `cs_de_phase_slope()`, `cs_de_ifft()` — sob a licença Nordic 5-Clause, que permite uso *"with or without modification"* desde que em silício Nordic. O aluno lê inteiro.
+
+**Fora da Nordic:**
+
+| Fonte | O que é | Uso no curso |
+|---|---|---|
+| `skig/waves` (github.com/skig/waves) | MIT. Firmware initiator/reflector para nRF54L15 DK (NCS 3.2.2) + toolset Python com `cs_music.py`, `cs_ifft.py`, `cs_phase_slope.py`, `cs_amplitude_response.py` | **O Python, vendorizado no lab 5.** O firmware não: é mode 2 puro sem RAS, NCS antigo, e imprime hexdump cru |
+| Zephyr `connected_cs` | Apache-2.0, estimador básico | Mesma classe do `cs_de`; sem ganho |
+| `mintisan/awesome-channel-sounding` | Lista curada | Só links, nenhum código de algoritmo |
+| arXiv 2608.17497 *Channel Modeling for Phase-Based Ranging* | Simulador Python da camada física do CS (mode 3, 72 tons, multipath) | Material de slide |
+
+O `cs_music.py` do waves: 70 linhas, só NumPy. Entrada: fase e amplitude por canal. MUSIC com spatial smoothing, uma fonte dominante, grade de 512 pontos de 0 a 500 ns, devolve a distância do pico do pseudo-espectro. Sem calibração.
+
+A literatura (blog do Bluetooth SIG, *A step towards 10-cm ranging accuracy*) fala em super-resolução (MUSIC/ESPRIT) chegando a ~λ/10 contra ~1,9 m de resolução bruta do IFFT sobre 79 MHz. **Número não verificado por nós** — é o que o lab 5 mede.
+
 ## 3. Abordagem
 
 **Cópias adaptadas em `comms/`**, seguindo a convenção já usada em `edge_ai/`: cada lab é uma aplicação freestanding própria (`CMakeLists.txt` + `prj.conf` + `README.md`), copiada do sample NCS correspondente, com licença Nordic preservada e as divergências do curso marcadas por comentário no cabeçalho — exatamente o padrão de `edge_ai/03_central_uart`.
@@ -63,22 +81,56 @@ Alternativas descartadas:
 
 Empréstimo pontual da primeira: o ajuste do S26 fica num fragmento `.conf` separado, para não contaminar o build dos alunos.
 
-## 4. Os quatro labs
+### 3.1 Tudo que vem de fora entra no repo, com fonte
 
-| # | Lab | Board target | Base no SDK |
+Regra geral do curso, estendida para além dos samples Nordic: **nenhum lab depende de download externo em sala**. Todo código de terceiros é vendorizado na pasta do lab, com:
+
+- o arquivo `LICENSE` original copiado ao lado;
+- cabeçalho no arquivo com `ORIGEM:` — repositório, caminho, commit/tag ou data da cópia, licença — no mesmo formato do `src/main.c` do `03_central_uart`;
+- as alterações do curso marcadas por comentário (`ALTERADO PELO CURSO (nrf-manaus-2)`), nunca silenciosas;
+- o `README.md` do lab com uma seção **Fontes** listando repositórios, papers e páginas usados, com URL.
+
+Isso cobre os samples do NCS (Nordic 5-Clause), o Python do waves (MIT) e qualquer figura ou trecho de paper que apareça no material.
+
+## 4. Os cinco labs
+
+| # | Lab | Board target | Base |
 |---|---|---|---|
 | 1 | `channel_sounding_reflector/` | `nrf54l15tag/nrf54l15/cpuapp` | `ras_reflector` |
 | 2 | `channel_sounding_initiator/` | `nrf54lm20dk/nrf54lm20b/cpuapp` | `ras_initiator` |
 | 3 | `channel_sounding_ipt_reflector/` + `channel_sounding_ipt_initiator/` | TAG + LM20-DK | `ipt_reflector` + `ipt_initiator` |
 | 4 | segurança — sem firmware novo | par do lab 2 | `ras_*` |
+| 5 | `channel_sounding_iq_music/` | LM20-DK + PC | lab 2 + Python (`cs_de` reimplementado, `cs_music.py` do waves) |
 
-**Lab 1 — reflector no TAG, CS default.** O dispositivo simples: anuncia o Ranging Service, acende o LED ao conectar. Sai obrigatoriamente com OTA DFU (§5.3) e com RTT (§5.2). É gravado **uma única vez por fio**, no início do bloco; daí em diante o TAG só recebe atualização por ar.
+**Lab 1 — reflector no TAG, CS default.** O dispositivo simples: anuncia o Ranging Service, acende o LED ao conectar. Sai com RTT (§5.2). Gravado por fio no `DEBUG OUT` da DK (§5.3).
 
-**Lab 2 — initiator no LM20-DK, CS default.** Fecha o par e imprime distância no terminal. Primeira medida real do bloco. O `ras_initiator` sai como vem do SDK: step mode 2 com submode 1 (PBR + RTT).
+**Lab 2 — initiator no LM20-DK, CS default. É aqui que RTT e PBR aparecem na prática.** O `ras_initiator` sai como vem do SDK (step mode 2 com submode 1, PBR + RTT) e, a cada procedure, imprime três estimativas da **mesma** distância:
 
-**Lab 3 — IPT.** Mesmo par, mesma distância — muda por onde viaja o dado do reflector. Atrito mínimo: o reflector IPT vai para o TAG **por OTA** (é aqui que o DFU do lab 1 é usado pela primeira vez), e o initiator IPT vai para o DK. O aluno compara com o lab 2: tempo até a primeira medida, taxa de atualização, e a ausência de tráfego GATT.
+```
+Latest distance estimates on antenna path 0: ifft: 2.31, phase_slope: 2.44, rtt: 2.70 meters
+```
 
-**Lab 4 — segurança (conforme o tempo).** Sem firmware novo: o TAG volta ao reflector RAS por OTA e o par do lab 2 é reexaminado com outros olhos. Conteúdo: a ACL cifrada como pré-requisito e o passo "CS security enabled" no log; o RTT com payload aleatório (o SDC suporta 32/64/96/128 bits) como limite físico contra falsificação de fase; o contraste com o IPT do lab 3 (PBR sozinho); e o que o SDC **não** suporta — RTT with Sounding Sequence, Normalized Attack Detection Metric, CS AM Attack Resilience — para o aluno não sair achando que tudo da spec está no chip. Gancho para o módulo do dia 5.
+| Coluna | Princípio | Como estima (`cs_de.h`) |
+|---|---|---|
+| `ifft` | PBR | transformada inversa de Fourier sobre a fase por canal |
+| `phase_slope` | PBR | inclinação média da fase em função da frequência |
+| `rtt` | RTT | tempo de ida e volta |
+
+Roteiro guiado no README, sem firmware novo: (1) trena — TAG a 1 m, 3 m, 5 m, anota as três colunas, qual acompanha, qual oscila; (2) obstrução — corpo entre TAG e DK, TAG perto de metal; o que a física prevê é que os estimadores de PBR reajam ao multipath e o RTT seja mais grosseiro mas não "salte" — a bancada confirma (§9). Variação opcional no README: o `choice` de Kconfig do sample permite build só-RTT (`SAMPLE_RAS_INITIATOR_STEP_MODE_1`) ou só-PBR (`_2`) via fragmento `.conf`, rebuild só da DK.
+
+**Lab 3 — IPT.** Mesmo par, mesma distância — muda por onde viaja o dado do reflector. O TAG volta ao `DEBUG OUT` e recebe o reflector IPT por fio; a DK recebe o initiator IPT. O aluno compara com o lab 2: `time_delta` entre estimativas (latência), taxa de atualização, ausência de tráfego GATT — e **a coluna `rtt` que desapareceu**, porque o `ipt_initiator` imprime só `median`, `update` e `time_delta`. É "IPT só faz PBR" visto na tela.
+
+**Lab 4 — segurança (conforme o tempo).** Sem firmware novo: o TAG volta ao reflector RAS por fio e o par do lab 2 é reexaminado com outros olhos. Conteúdo: a ACL cifrada como pré-requisito e o passo "CS security enabled" no log; o RTT com payload aleatório (o SDC suporta 32/64/96/128 bits) como limite físico contra falsificação de fase; o contraste com o IPT do lab 3 (PBR sozinho); e o que o SDC **não** suporta — RTT with Sounding Sequence, Normalized Attack Detection Metric, CS AM Attack Resilience — para o aluno não sair achando que tudo da spec está no chip. Gancho para o módulo do dia 5.
+
+**Lab 5 — IQ para o PC e MUSIC (conforme o tempo).** Mesmo padrão pedagógico do `05_data_forwarder` do Edge AI: o firmware vira fonte de dados, a inteligência roda no PC.
+
+- *Firmware*: o initiator do lab 2 mais ~20 linhas. Após o `cs_de_calc()`, imprimir na serial USB da DK uma linha CSV por procedure com canal, I/Q local e remoto, indicador de tone quality e as três estimativas do `cs_de`. Tudo já está em `m_cs_de_report.iq_tones[ap]`, a estrutura que o próprio sample monta. Nada de novo no rádio. Fica numa pasta própria para o lab 2 continuar limpo.
+- *PC (Python, em `tools/`)*, em três passos com uma pergunta cada:
+  1. Reimplementar o IFFT do `cs_de` em NumPy e **reproduzir o número que o firmware imprimiu**. *Entendi o que o chip faz?*
+  2. Rodar o `cs_music.py` (vendorizado, MIT, com `ORIGEM:`) sobre o mesmo IQ. *O que a super-resolução muda?*
+  3. Trena a 1/3/5 m e com obstrução; comparar IFFT × phase slope × RTT × MUSIC. *Quanto ganhei, e em que condição?*
+- *O que fica*: o algoritmo é camada de aplicação; o mesmo IQ dá respostas diferentes; o ganho de precisão é medido, não prometido.
+- *Caveats no README*: antena única (o TAG tem duas, o `cs_de` usa uma); MUSIC assumindo uma fonte, que sofre em multipath forte; ganho real sobre o IFFT desconhecido até a bancada; licenças não se misturam — MIT no PC, Nordic 5-Clause no firmware.
 
 ## 5. Convenções transversais
 
@@ -93,13 +145,13 @@ Os dois initiators do SDK usam a mesma biblioteca `bt_scan` do `central_uart`, e
 
 Com seis TAGs na sala anunciando o mesmo UUID **e** o mesmo nome, cada DK conectaria no primeiro que aparecesse e as estações se cruzariam.
 
-O filtro fica **só no initiator** (labs 2 e 3, no LM20-DK). O TAG não muda e não sabe de nada — ele anuncia igual para todos. A solução herda literalmente a convenção de `edge_ai/03_central_uart`, inclusive os nomes dos símbolos, para o aluno reconhecer no dia 3 o que já usou no dia 1:
+O filtro fica **só no initiator** (labs 2, 3 e 5, no LM20-DK). O TAG não muda e não sabe de nada — ele anuncia igual para todos. A solução herda literalmente a convenção de `edge_ai/03_central_uart`, inclusive os nomes dos símbolos, para o aluno reconhecer no dia 3 o que já usou no dia 1:
 
-- `CONFIG_LAB_TAG_ADDR_VALUE` (string, default `""`) e `CONFIG_LAB_TAG_ADDR_TYPE` (default `"random"`), num `menu "Lab: filtro do tag (nrf-manaus-2)"` no `Kconfig` dos dois initiators.
+- `CONFIG_LAB_TAG_ADDR_VALUE` (string, default `""`) e `CONFIG_LAB_TAG_ADDR_TYPE` (default `"random"`), num `menu "Lab: filtro do tag (nrf-manaus-2)"` no `Kconfig` de cada initiator.
 - Fragmento `meu_tag.conf`, aplicado com `-DEXTRA_CONF_FILE=meu_tag.conf`. Valor vazio **quebra o build de propósito**, com mensagem explicando por quê.
 - Divergência no `main.c`: `add_tag_address_filter()` e troca do `bt_scan_filter_enable(..., false)` por `true` — modo **AND**, exigindo UUID (ou nome) **e** endereço.
 
-**O aluno reaproveita o endereço do Edge AI.** É a mesma peça física. O host obtém o endereço estático do controller pelo comando HCI vendor-specific `Read_Static_Addresses` (`vs_read_static_addr` em `zephyr/subsys/bluetooth/host/id.c`) — ele não o inventa nem o lê do settings, então é estável por peça entre firmwares. A experiência dos labs do Edge AI confirma na prática. Basta **copiar o `meu_tag.conf` de `edge_ai/03_central_uart`** para os labs 2 e 3. Não há passo de descoberta.
+**O aluno reaproveita o endereço do Edge AI.** É a mesma peça física. O host obtém o endereço estático do controller pelo comando HCI vendor-specific `Read_Static_Addresses` (`vs_read_static_addr` em `zephyr/subsys/bluetooth/host/id.c`) — ele não o inventa nem o lê do settings, então é estável por peça entre firmwares. A experiência dos labs do Edge AI confirma na prática. Basta **copiar o `meu_tag.conf` de `edge_ai/03_central_uart`** para os labs de initiator. Não há passo de descoberta.
 
 ### 5.2 RTT no TAG é a única saída de log
 
@@ -117,32 +169,19 @@ CONFIG_RTT_CONSOLE=y
 
 O README traz o comando de leitura por CLI, como já se faz na bancada. E registra o limite, que é conteúdo e não obstáculo: **RTT só existe com o TAG encaixado no `DEBUG OUT`**. Na CR2032 não há log — a evidência de vida passa a ser o LED e a saída do initiator. É a diferença entre bancada e campo.
 
-### 5.3 OTA DFU no TAG é regra, não opção
+### 5.3 Gravação do TAG por fio, no `DEBUG OUT` da DK
 
-Todo firmware de TAG (labs 1 e 3, e o da demo) sai com:
+Mesma mecânica do Edge AI, e a mesma armadilha: **enquanto o TAG está encaixado e alimentado, o debugger da DK aponta para ele, não para o SoC da DK**. Gravar "a DK" nessa hora grava o TAG. A ordem é sempre:
 
-```
-# prj.conf
-CONFIG_BOOTLOADER_MCUBOOT=y
-CONFIG_NCS_SAMPLE_MCUMGR_BT_OTA_DFU=y
+1. TAG no `DEBUG OUT` → grava o reflector, lê o RTT se precisar;
+2. tira o TAG → ele segue na CR2032, anunciando;
+3. grava o initiator no SoC da DK.
 
-# sysbuild.conf
-SB_CONFIG_BOOTLOADER_MCUBOOT=y
-
-# sysbuild/mcuboot.conf
-CONFIG_FPROTECT_ALLOW_COMBINED_REGIONS=y
-CONFIG_PM_PARTITION_SIZE_MCUBOOT=0xF800
-```
-
-Sem isso, um aluno que grave um binário errado deixa o TAG dependente de fio. A restrição de 62 kB na partição do MCUboot é exigência de FPROTECT documentada pela Nordic para este sample.
-
-O bloco faz a ida e volta por OTA: RAS (lab 1) → IPT (lab 3) → RAS (lab 4). O DFU deixa de ser requisito e vira prática.
+Acontece duas vezes no bloco (reflector RAS no lab 1, reflector IPT no lab 3, e de volta ao RAS se o lab 4 rodar). Sem MCUboot, sem partições, sem OTA.
 
 ## 6. Bancada
 
-Seis estações, cada uma com **1 nRF54LM20-DK + 1 nRF54L15-TAG** e dois alunos. Nenhum lab precisa de mais de um DK ou mais de um TAG, então as seis rodam em paralelo sem disputa.
-
-O TAG é gravado por fio uma única vez (lab 1, encaixado no `DEBUG OUT` da DK) e depois só recebe OTA. Isso transforma a exigência de DFU em vantagem didática: o aluno vê o reflector virar um dispositivo de campo, alimentado por moeda, atualizável sem cabo.
+Seis estações, cada uma com **1 nRF54LM20-DK + 1 nRF54L15-TAG** e dois alunos. Nenhum lab precisa de mais de um DK ou mais de um TAG, então as seis rodam em paralelo sem disputa. O lab 5 precisa do PC com Python — já é pré-requisito do Edge AI.
 
 **Risco de RF — não documentado, inferência nossa.** Seis pares fazendo Channel Sounding simultaneamente na mesma sala é uma condição que a Nordic não cobre. Mitigação: os initiators saem com intervalo de procedure escalonado por estação (estação *n*, de 0 a 5, usa `1000 + n×250` ms — de 1000 a 2250 ms), o que espalha as janelas e ainda vira assunto de aula sobre agendamento. Plano B, se degradar: rodar as medições em duas ondas de três estações.
 
@@ -150,7 +189,7 @@ O TAG é gravado por fio uma única vez (lab 1, encaixado no `DEBUG OUT` da DK) 
 
 A demo roda num **TAG**, não num DK: bateria de moeda, na mão, é o que impressiona.
 
-**Lado do firmware:** lab 1 + `android_ranging.conf` + fragmento `s26.conf` com `CONFIG_BT_CTLR_SDC_MAX_CONN_EVENT_LEN_DEFAULT=1250`, isolado para não tocar no build dos alunos. O `android_ranging.conf` liga `BT_BONDABLE`, `SETTINGS`, `NVS`, `FLASH_MAP` e sobe `BT_RAS_MAX_ANTENNA_PATHS` / `BT_CTLR_SDC_CS_MAX_ANTENNA_PATHS` para 2 — e precisa conviver com as partições do MCUboot no TAG.
+**Lado do firmware:** lab 1 + `android_ranging.conf` + fragmento `s26.conf` com `CONFIG_BT_CTLR_SDC_MAX_CONN_EVENT_LEN_DEFAULT=1250`, isolado para não tocar no build dos alunos. O `android_ranging.conf` liga `BT_BONDABLE`, `SETTINGS`, `NVS`, `FLASH_MAP` e sobe `BT_RAS_MAX_ANTENNA_PATHS` / `BT_CTLR_SDC_CS_MAX_ANTENNA_PATHS` para 2.
 
 O TAG da demo sai com `CONFIG_BT_DEVICE_NAME="CS Reflector DEMO"`, para não se perder no meio de seis `"Nordic CS Reflector"` idênticos na lista do app.
 
@@ -173,26 +212,28 @@ Status na Nordic: sem correção oficial e sem posicionamento sobre se o comport
 
 ## 8. Material
 
-Deck `doc/comms/M2-01_Channel_Sounding.pptx`, no padrão dos M1-xx: por que RSSI não serve para medir distância; o que BLE 6.0 traz; **RTT × PBR (antes do lab 3, porque o IPT só existe no mundo do PBR)**; a mecânica de initiator/reflector/subevent; o Ranging Service; RAS × IPT como trade-off; o mapa de suporte atual.
+Deck `doc/comms/M2-01_Channel_Sounding.pptx`, no padrão dos M1-xx: por que RSSI não serve para medir distância; o que BLE 6.0 traz; **RTT × PBR (antes do lab 2, que os mostra lado a lado, e do lab 3, porque o IPT só existe no mundo do PBR)**; a mecânica de initiator/reflector/subevent; o Ranging Service; RAS × IPT como trade-off; "o algoritmo é camada de aplicação" (a posição da Nordic, os parceiros, o que existe aberto); o mapa de suporte atual.
 
-Duas figuras novas geradas em `doc/_template/`: a anatomia de um procedure CS e o comparativo RAS × IPT.
+Figuras novas geradas em `doc/_template/`: a anatomia de um procedure CS; o comparativo RAS × IPT; e, para o lab 5, IFFT × MUSIC sobre o mesmo IQ.
 
 ## 9. Validação pendente
 
 Nada abaixo é dedução — tem que ir na bancada:
 
-- [ ] Os quatro firmwares compilando nos seus board targets — em especial `ipt_reflector` no TAG, que a Nordic não documenta
-- [ ] Um par real (LM20-DK ↔ TAG) medindo distância com RAS
-- [ ] O mesmo par medindo com IPT
+- [ ] Os cinco firmwares compilando nos seus board targets — em especial `ipt_reflector` no TAG, que a Nordic não documenta
+- [ ] Um par real (LM20-DK ↔ TAG) medindo distância com RAS: as três colunas aparecendo
+- [ ] Lab 2: o comportamento dos três estimadores sob obstrução e perto de metal é o que a física prevê?
+- [ ] O mesmo par medindo com IPT; `time_delta` menor que no RAS?
 - [ ] RTT do TAG lendo por CLI
-- [ ] OTA DFU no TAG: ida e volta RAS → IPT → RAS
 - [ ] Filtro de endereço rejeitando o TAG do colega, nos dois initiators
+- [ ] Lab 5: o CSV sai íntegro na serial a 1 procedure/s; o IFFT em NumPy reproduz o número do firmware; o MUSIC ganha (ou não) sobre o IFFT — e quanto
 - [ ] Comportamento com várias estações simultâneas
 - [ ] S26: itens 1 e 2 da §7
 
 ## 10. Fora de escopo
 
-- Lab de step modes (RTT × PBR × mode 3 exploratório) — fica na teoria
+- DFU/OTA no TAG — coberto no treinamento anterior (Sidia); o TAG é gravado por fio
+- Lab de step modes (RTT × PBR × mode 3 exploratório) — RTT e PBR aparecem no lab 2
 - Trilateração / multi-âncora
 - Medição de consumo com PPK2
-- Algoritmos de ranging de terceiros / parceiros da Nordic
+- Algoritmos de ranging de parceiros da Nordic (Metirionic etc.)
