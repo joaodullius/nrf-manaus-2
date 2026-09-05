@@ -41,6 +41,8 @@ em int8 e compilada** num arquivo extra, o `nrf_edgeai_user_model_axon.h`
 job e **dorme num semáforo** enquanto a NPU lê pesos da flash por DMA e trabalha —
 só a dequantização e o softmax voltam para a CPU.
 
+![Pipeline do mesmo modelo em Neuton e em Axon](pipeline_neuton_axon.png)
+
 ## Resultados medidos (bancada, 2026-09-04)
 
 nRF54LM20-DK (B), CPU @ 128 MHz, 700 inferências por rajada, estímulo idêntico;
