@@ -40,7 +40,7 @@ a engine entrega prontos para a NPU executar.
 | Getter no código | `nrf_edgeai_user_model_36711()` | `nrf_edgeai_user_model_36712()` |
 | Classes | **1**: `okay nordic` — a saída é uma probabilidade só: "esta janela contém a frase?" | **12**: `OTHER`, `SILENCE` + os 10 comandos **down, go, left, no, off, on, right, stop, up, yes** |
 | Flash (pesos + programa da NPU) | **~35 kB** (25,0k const + 9,7k cmd) | **~359 kB** (295,9k const + 62,9k cmd) |
-| Papel | porteiro **sempre ligado** | vocabulário grande, roda **só por 3 s** |
+| Papel | **sempre ligado**: decide quando acordar o modelo grande | vocabulário grande, roda **só por 3 s** |
 
 Os rótulos estão em `nrf_edgeai_generated/nrf_edgeai_user_model_labels.h` de cada pasta;
 os tamanhos saem de `arm-zephyr-eabi-nm --size-sort` no `zephyr.elf`
@@ -48,7 +48,7 @@ os tamanhos saem de `arm-zephyr-eabi-nm --size-sort` no `zephyr.elf`
 
 **Por que dois modelos?** É a arquitetura clássica de *cascata*: o modelo de comandos é
 **10× maior** que o da wake word. Deixá-lo escutando o tempo todo custaria energia e
-geraria falsos positivos com 10 palavras abertas; o porteiro de 35 kB decide *quando*
+geraria falsos positivos com 10 palavras abertas; o modelo pequeno de 35 kB decide *quando*
 vale a pena acordar o modelo caro. O mesmo padrão de "Hey Siri"/"Alexa".
 
 A entrada é idêntica para os dois: PCM **16 kHz, int16**, em blocos de **160 amostras

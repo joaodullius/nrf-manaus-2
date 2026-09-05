@@ -74,7 +74,7 @@ padrões para compor (slide "três padrões" do M1-03):
    com o "resto" treinado.
 2. **Limiar de confiança** no pós-processamento — grátis, mas confiança não é
    familiaridade.
-3. **Dois modelos no mesmo firmware** — anomalia como porteiro do classificador.
+3. **Dois modelos no mesmo firmware** — a anomalia decidindo quando o classificador roda.
    A engine suporta: cada modelo gerado exporta símbolos com sufixo do solution-id
    (`nrf_edgeai_user_model_<id>()`), então N modelos convivem; alimente a mesma
    janela nos dois e só aceite a classe quando o score estiver abaixo do limiar.

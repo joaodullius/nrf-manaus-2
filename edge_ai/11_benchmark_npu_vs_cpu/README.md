@@ -122,14 +122,14 @@ a exige), 45 s de regime por modo, áudio ambiente:
 
 | Modo de escuta | Corrente média | Potência @ 1,8 V | CR2032 (225 mAh) |
 |---|---|---|---|
-| **Wake word gated** (porteiro de 35 kB, NPU ~8 %) | **837 µA** | 1,5 mW | ~11 dias |
+| **Wake word gated** (wake word de 35 kB, NPU ~8 %) | **837 µA** | 1,5 mW | ~11 dias |
 | **KWS direto** (359 kB o tempo todo, NPU ~40 %) | **1.452 µA** | 2,6 mW | ~6 dias |
 
 ![Consumo da escuta contínua](bench_escuta.png)
 
 A média segue o *duty cycle* da NPU (base de ~0,4 mA do sistema mic+CPU +
 duty × ~2,7 mA de inferência) — a arquitetura em cascata do 07 aparece
-diretamente na conta de bateria: **escutar com o porteiro custa 57 %** do que
+diretamente na conta de bateria: **escutar com o wake word custa 57 %** do que
 custaria rodar o modelo grande direto. CSVs crus:
 `doc/edge_ai/data/ppk2_escuta_*.csv`.
 
