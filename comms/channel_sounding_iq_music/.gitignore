@@ -3,3 +3,6 @@
 # falha de proposito quando esta vazio, com a mensagem de onde achar o endereco.
 # So nao commite o SEU endereco: 'git checkout comms/channel_sounding_iq_music/meu_tag.conf'
 # antes do commit, ou deixe-o fora do 'git add'.
+
+# Capturas do aluno — nao versionadas
+capturas/
