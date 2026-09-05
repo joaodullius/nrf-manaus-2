@@ -1,0 +1,31 @@
+#
+# Kconfig do curso (nrf-manaus-2). O ipt_initiator do SDK nao tem Kconfig proprio;
+# este arquivo existe so para o filtro do tag, com os mesmos simbolos do
+# edge_ai/03_central_uart e do comms/channel_sounding_initiator.
+#
+
+menu "Lab: filtro do tag (nrf-manaus-2)"
+
+config LAB_TAG_ADDR_VALUE
+	string "Endereco BLE do tag deste aluno"
+	default ""
+	help
+	  Endereco BLE do nRF54L15-TAG em que este initiator deve conectar, no
+	  formato "EF:12:34:56:78:9A".
+
+	  O initiator IPT da Nordic procura o reflector pelo NOME
+	  ("Nordic CS IPT Reflector"), que e igual em todos os TAGs da sala. Sem
+	  isto ele conectaria no do colega. O build falha se ficar vazio.
+
+	  E o mesmo endereco do edge_ai/03_central_uart e do lab 2.
+
+config LAB_TAG_ADDR_TYPE
+	string "Tipo do endereco BLE do tag"
+	default "random"
+	help
+	  "random" ou "public", conforme aparece entre parenteses na linha
+	  "Identity:" do log do tag.
+
+endmenu
+
+source "Kconfig.zephyr"
