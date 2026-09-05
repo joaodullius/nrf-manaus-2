@@ -167,6 +167,8 @@ E, na mesma data, com o TAG **montado sobre uma nRF54L15-DK** ao lado de cabos U
 |---|---|---|---|---|---|
 | 0,78 m | 1,92 ± 0,09 | 2,16 ± 0,16 | 1,39 ± 0,70 | 1,95 ± 0,08 | 69 |
 
+![Quatro estimadores contra a trena — média ± desvio por ponto, com a reta ideal](cs_vies.png)
+
 Três coisas que os números dizem, sem precisar de mais teoria:
 
 - **Todos os estimadores leem longe demais**, de +0,9 a +1,5 m no `ifft` — e o viés
