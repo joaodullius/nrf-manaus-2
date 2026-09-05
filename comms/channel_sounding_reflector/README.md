@@ -84,7 +84,24 @@ Se precisar reler, ele está na linha `Identity:` do boot, no RTT.
 
 ## Demo do instrutor com smartphone
 
-Ver [`demo.conf`](demo.conf) e [`s26.conf`](s26.conf). Não faz parte do lab do aluno.
+Não faz parte do lab do aluno. O telefone é o initiator (Android `RangingManager`), o
+TAG é o reflector, e o app mostra a distância na tela.
+
+```
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/channel_sounding_reflector/build_tag_demo C:/work/nrf-manaus-2/comms/channel_sounding_reflector -- "-DEXTRA_CONF_FILE=android_ranging.conf;demo.conf;s26.conf"
+```
+
+| Fragmento | O que faz |
+|---|---|
+| `android_ranging.conf` (do SDK) | bonding + settings em NVS, e 2 caminhos de antena — o que o Android exige |
+| `demo.conf` | nome `CS Reflector DEMO`, para achar o TAG certo entre seis iguais |
+| `s26.conf` | `MAX_CONN_EVENT_LEN_DEFAULT=1250` — sem isso o Galaxy S26 falha com `0x1E` no *Procedure Enable* |
+
+Suporte documentado pela Nordic hoje: Pixel 9 e 10 (Android 16 QPR2+ / 17), nRF Toolbox
+≥ 4.1.4. O S26 exige o `s26.conf` **e** um ajuste do lado do telefone
+(`min_sub_event_len` ≥ 2250 µs) que o nRF Toolbox da loja não expõe — precisa de um
+build próprio do app (open source, Kotlin). Se não houver telefone compatível no dia, a
+demo é o par embarcado (labs 1 + 2) projetado na tela.
 
 ## Fontes
 
