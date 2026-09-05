@@ -140,28 +140,34 @@ distância (≈ 37 m de caminho de ida-e-volta, a partir de 4·Δφ < π).
 
 ## Medição de referência da bancada
 
-A tabela abaixo — trena, 30 s por distância — é preenchida pelo instrutor antes do
-curso, com as três capturas de 1, 3 e 5 m:
+Medido em 2026-09-05 na bancada do curso: trena da antena do LM20-DK ao TAG, linha de
+visada, TAG na bateria, 30 s por distância (`CONFIG_LAB_PROCEDURE_INTERVAL=50`, ~1
+procedure/s). Média ± desvio em metros:
 
 | Trena | `ifft_fw` | `phase_slope` | `rtt` | `music` | n |
 |---|---|---|---|---|---|
-| 1,0 m | — | — | — | — | — |
-| 3,0 m | — | — | — | — | — |
-| 5,0 m | — | — | — | — | — |
+| 1,0 m | 2,05 ± 0,23 | 2,70 ± 0,16 | 1,89 ± 0,61 | 2,17 ± 0,16 | 30 |
+| 3,0 m | 4,46 ± 0,48 | 5,84 ± 0,72 | 4,42 ± 0,96 | 4,97 ± 0,96 | 30 |
+| 5,0 m | 5,86 ± 0,84 | 6,75 ± 0,38 | 6,14 ± 1,02 | 6,20 ± 0,30 | 30 |
 
-**Medido em 2026-09-05 na bancada do curso — TAG a 0,78 m da antena do LM20-DK (trena),
-TAG montado sobre uma nRF54L15-DK ao lado de cabos USB, n = 69:**
+E, na mesma data, com o TAG **montado sobre uma nRF54L15-DK** ao lado de cabos USB
+(a montagem de bancada, não a de campo), a 0,78 m:
 
 | Trena | `ifft_fw` | `phase_slope` | `rtt` | `music` | n |
 |---|---|---|---|---|---|
-| 0,78 m (trena) | 1,92 ± 0,09 | 2,16 ± 0,16 | 1,39 ± 0,70 | 1,95 ± 0,08 | 69 |
+| 0,78 m | 1,92 ± 0,09 | 2,16 ± 0,16 | 1,39 ± 0,70 | 1,95 ± 0,08 | 69 |
 
-Os quatro estimadores leem entre ~1,4 e 2,2 m para uma distância real de 0,78 m — um
-viés de mais de 1 m. Causas plausíveis, sem afirmar qual pesa mais: distância curta
-(campo próximo), o TAG apoiado sobre uma nRF54L15-DK com cabos e conectores metálicos
-ao lado (multipath), antena única, e o algoritmo de referência sem calibração. É esse
-o número que o aluno deve tentar bater com a tabela medida por trena acima — linha de
-visada, TAG na bateria, longe de metal.
+Três coisas que os números dizem, sem precisar de mais teoria:
+
+- **Todos os estimadores leem longe demais**, de +0,9 a +1,5 m no `ifft` — e o viés
+  **não é constante**, então não é um simples offset de calibração para subtrair.
+  Causas plausíveis, sem afirmar qual pesa mais: multipath da sala, antena única,
+  algoritmo de referência sem calibração de atraso de grupo.
+- **O espalhamento cresce com a distância** no `ifft` (0,23 → 0,48 → 0,84 m) e no
+  `rtt` (sempre o mais ruidoso, ~1 m).
+- **O MUSIC reduz o espalhamento, não o viés**: a 5 m, 0,30 m contra 0,84 m do `ifft`,
+  com a média igualmente deslocada. É o ganho realista de um algoritmo melhor sobre os
+  mesmos dados — repetibilidade — e o limite do que um algoritmo sozinho consegue.
 
 O que ler nela: o **desvio** de cada estimador é a sua repetibilidade; a diferença da
 média para a trena é o **viés**. O `rtt` é o mais grosseiro; o `phase_slope` é o mais
