@@ -30,3 +30,13 @@ def synthetic_comb(d_m: float, amp: float = 1000.0) -> np.ndarray:
 @pytest.fixture
 def comb_3m():
     return synthetic_comb(3.0)
+
+
+def write_procedure(f, counter, comb, tq=1, rtt_half_ns=40, rtt_count=1,
+                    fw=(3.0, 3.0, 2.998)):
+    """Escreve uma procedure completa no formato do firmware: 75 linhas IQ com
+    local = comb e remoto = 1+0j (entao comb() == local), e a linha CS."""
+    import cs_csv
+    for idx in range(NCH):
+        f.write(cs_csv.format_iq(counter, 0, idx + 2, comb[idx].real, comb[idx].imag, 1.0, 0.0))
+    f.write(cs_csv.format_cs(counter, 0, tq, fw[0], fw[1], fw[2], rtt_count, rtt_half_ns))
