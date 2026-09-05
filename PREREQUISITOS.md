@@ -149,7 +149,10 @@ Para compilar modelos TFLite → Axon **na nuvem**, use o próprio Edge AI Lab (
 
 ## Módulo Comunicação (`comms/`)
 
-- **nRF Toolbox** no smartphone — opcionalmente Pixel 10 como Channel Sounding initiator.
+- **Python 3.11** com `numpy`, `pyserial` e `pytest` para o lab CS 5 (`pip install -r comms/channel_sounding_iq_music/tools/requirements.txt`). O mesmo ambiente do Edge AI serve.
+- **Trena** (≥ 5 m) por bancada, para os labs CS 2 e CS 5.
+- **SEGGER J-Link** (vem com o toolchain) — o log do TAG só sai por RTT.
+- Smartphone com Channel Sounding (Pixel 9/10 com Android 16 QPR2+, nRF Toolbox ≥ 4.1.4) é **opcional** e só para a demo do instrutor; o Galaxy S26 exige ajustes dos dois lados (ver `comms/channel_sounding_reflector/s26.conf`).
 - **nRF Wi-Fi Provisioner** (Android/iOS) — provisionamento do nRF7002-EBII.
 - Rede Wi-Fi de teste disponível em sala (2.4/5 GHz) e um endpoint TCP acessível (pode ser um PC na mesma rede com `ncat`/Python).
 
