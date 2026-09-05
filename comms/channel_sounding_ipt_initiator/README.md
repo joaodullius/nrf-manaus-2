@@ -57,21 +57,46 @@ nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/wo
 Serial USB da DK, 115200 8N1:
 
 ```
-Filtrando pelo tag EC:EF:40:2D:5E:46 (random)
+I: Filtrando pelo tag EC:EF:40:2D:5E:46 (random)
 ...
-Distance estimates: median: 1.05m, update: 1.02m, time_delta: 44ms
+I: Distance estimates: median: 1.05m, update: 1.02m, time_delta: 44ms
 ```
 
 Repita o experimento A do lab 2 (1 m, 3 m, 5 m) e anote `median` e `time_delta`. O
 que ganhou (latência, setup) e o que perdeu (RTT) é o assunto do lab 4.
 
-## A divergência do curso
+## Várias bancadas na mesma sala
 
-**`src/main.c` — filtro por endereço.** O upstream filtra só pelo nome
-`Nordic CS IPT Reflector` em modo OR — e todos os TAGs da sala têm esse nome. Aqui
-`add_tag_address_filter()` acrescenta o endereço de `CONFIG_LAB_TAG_ADDR_VALUE` e
-`bt_scan_filter_enable()` passa a `match_all = true`. `prj.conf` ganha
-`CONFIG_BT_SCAN_ADDRESS_CNT=1`.
+O IPT roda uma procedure a cada ~30 ms por padrão (`time_delta` na bancada) — o mais
+exigente dos labs para uma sala compartilhada. Seis pares medindo ao mesmo tempo não
+é condição documentada pela Nordic. Se as medidas degradarem, escalone o intervalo de
+procedure por estação:
+
+```
+-- -DEXTRA_CONF_FILE=meu_tag.conf -DCONFIG_LAB_PROCEDURE_INTERVAL=<67 + n*17>
+```
+
+com `n` = número da estação (0 a 5). O valor está em intervalos de conexão de 15 ms:
+67 ≈ 1 s. Zero (default) mantém a escolha do sample. Plano B, se mesmo assim
+degradar: duas ondas de três bancadas.
+
+## As duas divergências do curso
+
+1. **`src/main.c` — filtro por endereço.** O upstream filtra só pelo nome
+   `Nordic CS IPT Reflector` em modo OR — e todos os TAGs da sala têm esse nome. Aqui
+   `add_tag_address_filter()` acrescenta o endereço de `CONFIG_LAB_TAG_ADDR_VALUE` e
+   `bt_scan_filter_enable()` passa a `match_all = true`.
+2. **`src/main.c` — intervalo de procedure.** `CONFIG_LAB_PROCEDURE_INTERVAL`, quando
+   diferente de 0, sobrescreve o intervalo escolhido pelo sample.
+
+E `prj.conf` ganha `CONFIG_BT_SCAN_ADDRESS_CNT=1`, o slot do filtro.
+
+## Pegadinhas
+
+- **Não conecta.** O endereço em `meu_tag.conf` é o do **seu** TAG? A linha
+  `Filtrando pelo tag ...` mostra o que o firmware está usando. Se o TAG estava
+  conectado quando você regravou a DK, ele pode ter parado de anunciar: reset no
+  TAG (ver pegadinhas do lab 1).
 
 ## Fontes
 

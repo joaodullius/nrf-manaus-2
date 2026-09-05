@@ -46,8 +46,10 @@ console por RTT e aumenta o buffer de saída (senão a rajada de boot corta o
 formato `<inf> módulo: mensagem` de outros labs.
 
 ```
-"C:\Program Files\SEGGER\JLink_V924a\JLinkRTTLogger.exe" -Device NRF54L15_M33 -If SWD -Speed 4000 -RTTChannel 0 rtt.log
+"C:\Program Files\SEGGER\JLink_Vxxx\JLinkRTTLogger.exe" -Device NRF54L15_M33 -If SWD -Speed 4000 -RTTChannel 0 rtt.log
 ```
+
+Troque `Vxxx` pela versão instalada em `C:\Program Files\SEGGER\`.
 
 O que esperar, com um initiator conectando (texto do próprio sample):
 
@@ -81,6 +83,11 @@ Se precisar reler, ele está na linha `Identity:` do boot, no RTT.
   grava o TAG; sem ele, grava a DK. Sempre conferir `device-info` antes.
 - **Um initiator antigo esquecido numa DK rouba o TAG** (só aceita 1 conexão).
   `nrfutil device recover` na DK esquecida.
+- **O TAG sumiu depois de regravar a DK (ou de qualquer queda de conexão).** Ao
+  desconectar, o sample faz `sys_reboot()` — e com o J-Link acoplado no `DEBUG OUT`
+  esse reboot nem sempre volta a anunciar. `nrfutil device reset` no TAG (ou tirar e
+  recolocar a bateria) resolve. O sintoma no initiator é ficar parado em
+  `Filtrando pelo tag ...` sem nunca conectar — igualzinho a um endereço errado.
 
 ## Demo do instrutor com smartphone
 
@@ -99,7 +106,7 @@ nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nr
 
 Suporte documentado pela Nordic hoje: Pixel 9 e 10 (Android 16 QPR2+ / 17), nRF Toolbox
 ≥ 4.1.4. O S26 exige o `s26.conf` **e** um ajuste do lado do telefone
-(`min_sub_event_len` ≥ 2250 µs) que o nRF Toolbox da loja não expõe — precisa de um
+(`min_sub_event_len` ≥ 2250 µs; o autor da thread do DevZone usa 12000) que o nRF Toolbox da loja não expõe — precisa de um
 build próprio do app (open source, Kotlin). Se não houver telefone compatível no dia, a
 demo é o par embarcado (labs 1 + 2) projetado na tela.
 

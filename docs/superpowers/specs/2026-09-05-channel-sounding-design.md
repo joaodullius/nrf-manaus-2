@@ -29,7 +29,7 @@ Conferido na árvore instalada, não na documentação.
 
 `zephyr/samples/bluetooth/channel_sounding/` traz `cs_test` e `connected_cs`, mais crus, úteis como apoio de teoria.
 
-**Board targets.** O `platform_allow` dos samples RAS e IPT inclui `nrf54lm20dk/nrf54lm20a/cpuapp` e `nrf54lm20dk/nrf54lm20b/cpuapp`. O board `nrf54l15tag` existe (`zephyr/boards/nordic/nrf54l15tag`, target `nrf54l15tag/nrf54l15/cpuapp`) mas **não** consta do `platform_allow` de nenhum dos quatro — isso é gate de CI/twister, não de build. A Nordic documenta `west build -b nrf54l15tag/nrf54l15/cpuapp` para o `ras_reflector`; para o `ipt_reflector` não há documentação equivalente (item de validação, §9).
+**Board targets.** O `platform_allow` dos samples RAS e IPT inclui `nrf54lm20dk/nrf54lm20a/cpuapp` e `nrf54lm20dk/nrf54lm20b/cpuapp`. O board `nrf54l15tag` existe (`zephyr/boards/nordic/nrf54l15tag`, target `nrf54l15tag/nrf54l15/cpuapp`) mas **não** consta do `platform_allow` de nenhum dos quatro — isso é gate de CI/twister, não de build. A Nordic documenta `west build -b nrf54l15tag/nrf54l15/cpuapp` para o `ras_reflector`; para o `ipt_reflector` não há documentação equivalente (item de validação, §9). A Nordic distribui `boards/nrf54l15tag_nrf54l15_cpuapp.{conf,overlay}` (as duas antenas extras e o antenna switch do TAG) nos quatro samples — é esse par de arquivos que os labs de TAG (1 e 3a) copiam para dentro de `boards/`.
 
 ### 2.1 RAS e IPT — dois caminhos para o mesmo número
 
@@ -161,11 +161,12 @@ Os dois firmwares de TAG (labs 1 e 3) saem com fragmento RTT explícito:
 
 ```
 CONFIG_USE_SEGGER_RTT=y
-CONFIG_LOG_BACKEND_RTT=y
-CONFIG_LOG_BACKEND_UART=n
 CONFIG_CONSOLE=y
 CONFIG_RTT_CONSOLE=y
+CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096
 ```
+
+Os samples rodam em `LOG_MODE_MINIMAL` (via `NCS_SAMPLES_DEFAULTS`): o log é baseado em `printk`, e as linhas saem como `I: ...`, não no formato `<inf> módulo: mensagem` do log completo. O lab 5 força `LOG_MODE_DEFERRED` para separar o log (RTT) do CSV (UART) — é o único firmware do módulo que não roda em modo minimal.
 
 O README traz o comando de leitura por CLI, como já se faz na bancada. E registra o limite, que é conteúdo e não obstáculo: **RTT só existe com o TAG encaixado no `DEBUG OUT`**. Na CR2032 não há log — a evidência de vida passa a ser o LED e a saída do initiator. É a diferença entre bancada e campo.
 
@@ -183,7 +184,7 @@ Acontece duas vezes no bloco (reflector RAS no lab 1, reflector IPT no lab 3, e 
 
 Seis estações, cada uma com **1 nRF54LM20-DK + 1 nRF54L15-TAG** e dois alunos. Nenhum lab precisa de mais de um DK ou mais de um TAG, então as seis rodam em paralelo sem disputa. O lab 5 precisa do PC com Python — já é pré-requisito do Edge AI.
 
-**Risco de RF — não documentado, inferência nossa.** Seis pares fazendo Channel Sounding simultaneamente na mesma sala é uma condição que a Nordic não cobre. Mitigação: os initiators saem com intervalo de procedure escalonado por estação (estação *n*, de 0 a 5, usa `1000 + n×250` ms — de 1000 a 2250 ms), o que espalha as janelas e ainda vira assunto de aula sobre agendamento. Plano B, se degradar: rodar as medições em duas ondas de três estações.
+**Risco de RF — não documentado, inferência nossa.** Seis pares fazendo Channel Sounding simultaneamente na mesma sala é uma condição que a Nordic não cobre. Os initiators dos labs 2 e 3b saem com `CONFIG_LAB_PROCEDURE_INTERVAL=0` (o default do sample) — o escalonamento por estação é **fallback**, não default, aplicado só se a sala degradar: lab 2 usa `50 + n×12` (unidades de 20 ms), lab 3b usa `67 + n×17` (unidades de 15 ms), ambos de ~1000 a ~2300 ms para as estações 0 a 5. Isso espalha as janelas e ainda vira assunto de aula sobre agendamento. Plano B, se mesmo assim degradar: rodar as medições em duas ondas de três estações. O lab 5 é o único que sai com o intervalo já forçado (`CONFIG_LAB_PROCEDURE_INTERVAL=50`, 1 procedure/s) — não por risco de RF, mas pela largura de banda da serial (§5.2 e o README do lab).
 
 ## 7. Demo com o Galaxy S26
 

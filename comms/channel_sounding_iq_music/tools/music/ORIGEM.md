@@ -68,8 +68,8 @@ interpolacao linear de fase desenrolada (`np.unwrap`) e de amplitude entre os
 canais validos vizinhos, antes de montar os dicionarios fase/amplitude. Essa
 interpolacao e exata para um caminho unico (a fase e linear em frequencia) e uma
 aproximacao sob multipath; e valida enquanto `4*dphi < pi` entre canais adjacentes
-usados na interpolacao, ou seja, para distancias de ida-e-volta de ate ~18 m com
-1 MHz de espacamento entre canais.
+usados na interpolacao, ou seja, valida ate ~18 m de distancia (~37 m de caminho de
+ida-e-volta, com 1 MHz de espacamento entre canais).
 
 O adaptador tambem converte o IQ combinado em fase/amplitude por canal e ajusta a
 convencao de ida-e-volta. O teste `tests/test_music_adapter.py` com IQ sintetico a
@@ -88,5 +88,5 @@ reservados, os tres pontos do teste (1 m, 3 m, 7.5 m) caem dentro da tolerancia 
 - Antena unica: o TAG tem duas, mas o firmware do lab usa um caminho.
 - `_fill_reserved_channels` (no adaptador) e exata so para caminho unico; em
   multipath e uma aproximacao. Deixa de valer quando `4*dphi >= pi` entre canais
-  adjacentes usados na interpolacao — na pratica, distancias de ida-e-volta acima
-  de ~18 m com 1 MHz de espacamento entre canais.
+  adjacentes usados na interpolacao — na pratica, acima de ~18 m de distancia
+  (~37 m de caminho de ida-e-volta, com 1 MHz de espacamento entre canais).

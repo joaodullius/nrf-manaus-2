@@ -55,6 +55,10 @@ CS,42,0,1,1.023,1.087,1.349,12,180
    └────────────────────────────── ranging counter
 ```
 
+O firmware roda a **1 procedure/s de propósito**: cada procedure é ~2,7 kB de CSV, e
+a 115200 8N1 (~11,5 kB/s úteis) o teto é ~4 procedures/s — menos que o default do
+sample. O botão é `CONFIG_LAB_PROCEDURE_INTERVAL` (`prj.conf` já traz `=50`, 1 s).
+
 O log do sample (`Filtrando pelo tag`, `CS procedures enabled`, ...) vai para o
 **RTT**, não para a serial — senão intercalaria com o CSV. Se precisar dele,
 `JLinkRTTLogger -Device CORTEX-M33 -RTTSearchRanges "0x20000000 0x80000" -USB <serial da DK>`.
@@ -89,7 +93,7 @@ python cs_compare.py ../capturas/1m.csv
 
 ```
 counter tq  ifft_fw  ifft_np   d_ifft    ps_fw    ps_np   rtt_fw   rtt_np    music
-     42  1    1.023    1.021   -0.002    1.087    1.087    1.349    1.349    0.98x
+     42  1    1.023    1.021   -0.002    1.087    1.087    1.349    1.349     0.98
 ...
  estimador    media   desvio    n
    ifft_fw    x.xxx    x.xxx   nn
@@ -131,8 +135,8 @@ apontamento pela **posição** do canal na lista, não pelo seu número. Por iss
 `music_adapter.py` preenche os três canais reservados (23–25) interpolando fase
 desenrolada e amplitude entre os vizinhos válidos antes de chamar o MUSIC: sem isso,
 o buraco de 3 canais viraria um salto de fase e deslocaria o pico. Essa interpolação
-é exata para um caminho único e uma aproximação sob multipath, válida para
-distâncias de ida-e-volta de até ~18 m.
+é exata para um caminho único e uma aproximação sob multipath, válida até ~18 m de
+distância (≈ 37 m de caminho de ida-e-volta, a partir de 4·Δφ < π).
 
 ## Medição de referência da bancada
 

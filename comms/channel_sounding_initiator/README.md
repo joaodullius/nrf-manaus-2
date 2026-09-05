@@ -66,14 +66,14 @@ Serial USB da DK, **115200 8N1**. A DK enumera duas portas COM; o log sai numa d
 (na bancada, a segunda). Sequência esperada:
 
 ```
-Filtrando pelo tag EC:EF:40:2D:5E:46 (random)
-Connected ...
-CS capability exchange completed.
-CS config creation complete. ID: 0
-CS security enabled.
-CS procedures enabled.
-Latest distance estimates on antenna path 0: ifft: 1.02, phase_slope: 1.11, rtt: 1.35 meters
-Latest distance estimates on antenna path 0: ifft: 0.98, phase_slope: 1.09, rtt: 0.90 meters
+I: Filtrando pelo tag EC:EF:40:2D:5E:46 (random)
+I: Connected ...
+I: CS capability exchange completed.
+I: CS config creation complete. ID: 0
+I: CS security enabled.
+I: CS procedures enabled.
+I: Latest distance estimates on antenna path 0: ifft: 1.02, phase_slope: 1.11, rtt: 1.35 meters
+I: Latest distance estimates on antenna path 0: ifft: 0.98, phase_slope: 1.09, rtt: 0.90 meters
 ```
 
 ## Passo 4 — o experimento: RTT × PBR
@@ -135,7 +135,9 @@ E `prj.conf` ganha `CONFIG_BT_SCAN_ADDRESS_CNT=1`, o slot do filtro.
 - **Gravou o TAG achando que era a DK.** Com o TAG no `DEBUG OUT`, o `west flash` vai
   para o TAG. Tire-o antes.
 - **Não conecta.** O endereço em `meu_tag.conf` é o do **seu** TAG? A linha
-  `Filtrando pelo tag ...` mostra o que o firmware está usando.
+  `Filtrando pelo tag ...` mostra o que o firmware está usando. Se o TAG estava
+  conectado quando você regravou a DK, ele pode ter parado de anunciar: reset no
+  TAG (ver pegadinhas do lab 1).
 - **Conectou e não mede.** Um segundo initiator (outra DK, um telefone) já pegou o
   TAG — ele só aceita uma conexão. Desligue o outro; `nrfutil device recover` numa DK
   esquecida com firmware antigo.

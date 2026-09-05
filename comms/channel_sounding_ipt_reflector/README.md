@@ -37,8 +37,10 @@ labs. O bloco de RTT vive no fim do `boards/nrf54l15tag_nrf54l15_cpuapp.conf`
 da própria Nordic.
 
 ```
-"C:\Program Files\SEGGER\JLink_V924a\JLinkRTTLogger.exe" -Device NRF54L15_M33 -If SWD -Speed 4000 -RTTChannel 0 rtt.log
+"C:\Program Files\SEGGER\JLink_Vxxx\JLinkRTTLogger.exe" -Device NRF54L15_M33 -If SWD -Speed 4000 -RTTChannel 0 rtt.log
 ```
+
+Troque `Vxxx` pela versão instalada em `C:\Program Files\SEGGER\`.
 
 Depois de gravar, **tire o TAG** do `DEBUG OUT`: o próximo passo (lab 3b) grava a DK.
 

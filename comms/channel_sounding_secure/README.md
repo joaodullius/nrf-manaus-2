@@ -69,7 +69,7 @@ spec está no chip:
 | **RTT with Sounding Sequence** | **não** |
 | **Normalized Attack Detection Metric** | **não** |
 | **CS AM Attack Resilience** | **não** |
-| Channel Selection Algorithm #3b | suportado (#3c não) |
+| Channel Selection Algorithm #3c | **não** (os samples usam o #3b) |
 
 Segurança em CS é uma **combinação** do que o rádio faz, do que o algoritmo faz com os
 dois tipos de medida, e do que a aplicação decide com o resultado. O chip entrega os
@@ -80,7 +80,9 @@ dois primeiros até onde a tabela diz; o terceiro é seu.
 1. No lab 2, troque `.rtt_type` em `cs_config_get()` de `BT_CONN_LE_CS_RTT_TYPE_AA_ONLY`
    para `BT_CONN_LE_CS_RTT_TYPE_32_BIT_RANDOM` (o reflector precisa suportar — ele
    suporta; confira `CS capability exchange completed`). Recompile a DK. A distância
-   mudou? O que mudou foi o que um atacante teria de adivinhar.
+   mudou? O que mudou foi o que um atacante teria de adivinhar. Depois, desfaça:
+   `git checkout ../channel_sounding_initiator/src/main.c` — o lab 2 tem de voltar
+   exatamente ao que está no repo.
 2. Compare os logs: a coluna `rtt` do lab 2 e a ausência dela no lab 3. Que produto
    você faria com cada um?
 

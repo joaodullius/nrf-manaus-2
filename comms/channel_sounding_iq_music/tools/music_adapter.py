@@ -41,7 +41,8 @@ def _fill_reserved_channels(comb: np.ndarray):
     distancia. Aqui os buracos INTERIORES (entre o primeiro e o ultimo canal
     valido) sao preenchidos interpolando fase desenrolada e amplitude entre os
     vizinhos validos. Exato para um caminho unico (fase linear); aproximacao em
-    multipath; valido enquanto 4*dphi < pi (~18 m com 1 MHz de espacamento).
+    multipath; valido enquanto 4*dphi < pi — ate ~18 m de distancia (~37 m de
+    caminho de ida-e-volta, com 1 MHz de espacamento entre canais).
 
     Devolve (comb_preenchido, indices_validos_originais).
     """
