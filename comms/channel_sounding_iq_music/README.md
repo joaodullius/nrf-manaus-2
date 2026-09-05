@@ -109,6 +109,16 @@ Três colunas para olhar primeiro:
 - **`rtt_np` = `rtt_fw`** a três casas: é uma média, não há o que divergir.
 - **`music`** — o mesmo IQ, outro algoritmo. Compare média **e desvio** com `ifft_fw`.
 
+## Sem hardware? Use o dataset de referência
+
+[`dataset_referencia/`](dataset_referencia/) traz as quatro capturas reais que geraram a
+tabela no fim deste README (1, 3 e 5 m com trena, mais a montagem de bancada a 0,78 m).
+O `cs_compare.py` roda nelas do mesmo jeito:
+
+```
+python cs_compare.py ../dataset_referencia/ref_3m.csv
+```
+
 ## Passo 5 — ler o algoritmo
 
 Abra `tools/cs_de_numpy.py` e `C:\ncs\v3.4.0\nrf\subsys\bluetooth\cs_de\cs_de.c`
