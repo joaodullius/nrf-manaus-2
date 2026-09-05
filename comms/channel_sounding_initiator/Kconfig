@@ -30,6 +30,20 @@ config LAB_TAG_ADDR_TYPE
 	  "Identity:" do log do tag. Os tags da Nordic usam endereco random
 	  estatico, entao o default costuma servir.
 
+config LAB_PROCEDURE_INTERVAL
+	int "Intervalo entre procedures de CS (em intervalos de conexao; 0 = valor do sample)"
+	default 0
+	range 0 255
+	help
+	  Quantos intervalos de conexao ACL (20 ms neste sample) separam dois
+	  procedures de Channel Sounding. 0 mantem a escolha do sample da Nordic:
+	  5 com ranging data em tempo real, 10 caso contrario (100 ou 200 ms).
+
+	  Seis estacoes medindo ao mesmo tempo na mesma sala nao e uma condicao
+	  que a Nordic documenta. Se as medidas degradarem, escalone: estacao n
+	  (0 a 5) usa 50 + n*12 (1000 a 2200 ms), passado por fragmento ou
+	  -DCONFIG_LAB_PROCEDURE_INTERVAL=<n>.
+
 endmenu
 
 menu "Channel Sounding RAS Initiator sample"

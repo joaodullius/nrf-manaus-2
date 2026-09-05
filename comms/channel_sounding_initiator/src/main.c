@@ -8,10 +8,13 @@
  * Para conferir se divergiu do SDK:
  *   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_initiator/src/main.c
  *
- * DIVERGENCIA DO CURSO (unica): scan_init() e add_tag_address_filter().
- *   O upstream filtra so pelo UUID do Ranging Service, em modo OR. Aqui entra um
- *   filtro pelo endereco de CONFIG_LAB_TAG_ADDR_VALUE e o modo passa a AND —
- *   cada aluno conecta no seu proprio TAG.
+ * DIVERGENCIA DO CURSO (duas):
+ *   1. scan_init() e add_tag_address_filter(). O upstream filtra so pelo UUID
+ *      do Ranging Service, em modo OR. Aqui entra um filtro pelo endereco de
+ *      CONFIG_LAB_TAG_ADDR_VALUE e o modo passa a AND — cada aluno conecta no
+ *      seu proprio TAG.
+ *   2. main(): CONFIG_LAB_PROCEDURE_INTERVAL sobrescreve o intervalo de procedure
+ *      quando diferente de 0 (escalonamento entre bancadas).
  */
 
 /*
@@ -1007,6 +1010,15 @@ int main(void)
 	const uint16_t acl_interval_in_proc_interval_units =
 		scan_params.conn_param->interval_max * 2;
 	uint16_t desired_procedure_interval = realtime_rd ? 5 : 10;
+
+	/* ALTERADO PELO CURSO (nrf-manaus-2): intervalo escalonavel por estacao,
+	 * para varias bancadas medindo na mesma sala. 0 = valor do sample.
+	 */
+	if (CONFIG_LAB_PROCEDURE_INTERVAL > 0) {
+		desired_procedure_interval = CONFIG_LAB_PROCEDURE_INTERVAL;
+		LOG_INF("Intervalo de procedure: %u intervalos de conexao",
+			desired_procedure_interval);
+	}
 	uint16_t desired_max_procedure_length =
 		acl_interval_in_proc_interval_units * (desired_procedure_interval - 1);
 
