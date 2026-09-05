@@ -11,7 +11,9 @@ Para cada procedure completa do arquivo (cs_capture.py):
   - d_ifft                   : ifft_np - ifft_fw  (se nao for ~0, o port nao reproduz o chip)
   - music                    : MUSIC do waves sobre o MESMO IQ (music_adapter.py)
 
-No fim, media, desvio e n por estimador, so das procedures com tone quality OK.
+No fim, media, desvio e n por estimador (d_ifft, ifft_fw, ps_fw, rtt_fw, music), so
+das procedures com tone quality OK. A media do d_ifft no resumo deve ficar perto de
+0 — e o mesmo teste do "port reproduz o chip" da tabela, so que agregado.
 --nfft deve ser o CONFIG_BT_CS_DE_NFFT_SIZE do firmware (512 no lab).
 """
 from __future__ import annotations
@@ -29,7 +31,7 @@ import music_adapter
 
 COLS = ["counter", "tq", "ifft_fw", "ifft_np", "d_ifft", "ps_fw", "ps_np",
         "rtt_fw", "rtt_np", "music"]
-STAT_COLS = ["ifft_fw", "ps_fw", "rtt_fw", "music"]
+STAT_COLS = ["d_ifft", "ifft_fw", "ps_fw", "rtt_fw", "music"]
 
 
 def summarize(procs, nfft: int = 512) -> list[dict]:

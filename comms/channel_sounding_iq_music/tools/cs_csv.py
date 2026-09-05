@@ -12,7 +12,6 @@ Este modulo so le e escreve esse formato. Quem calcula e cs_de_numpy.py.
 """
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
 
 import numpy as np
