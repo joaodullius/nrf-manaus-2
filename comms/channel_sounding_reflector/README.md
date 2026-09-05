@@ -6,8 +6,10 @@ cruas por GATT. Ele **não calcula distância** — quem calcula é o initiator 
 
 > **Origem:** cópia de `nrf/samples/bluetooth/channel_sounding/ras_reflector` do
 > **nRF Connect SDK v3.4.0**. Licença Nordic preservada em [LICENSE](LICENSE).
-> `src/main.c` e `prj.conf` são idênticos ao SDK; o que o curso acrescenta está em
-> `boards/` e nos fragmentos de demo.
+> `src/main.c` e `prj.conf` são idênticos ao SDK. Os arquivos em `boards/` também
+> são da Nordic para o TAG (as duas antenas extras e o antenna switch) — o curso
+> só acrescenta um bloco de RTT ao final do `.conf`. Os fragmentos de demo são a
+> única coisa fora do sample.
 
 ## Hardware
 
@@ -34,10 +36,14 @@ fragmentos extras.
 
 ## Ler o log — só por RTT, só no `DEBUG OUT`
 
-O TAG **não tem UART**. O board não declara console nenhum, e o sample da Nordic não
-escolhe backend de log — compila limpo e fica mudo. O
-[`boards/nrf54l15tag_nrf54l15_cpuapp.conf`](boards/nrf54l15tag_nrf54l15_cpuapp.conf)
-liga o RTT e aumenta os dois buffers de log (senão a rajada de boot corta o `Identity:`).
+O TAG **não tem UART**. O board não declara console nenhum, e o sample roda em modo
+minimal de log (`CONFIG_NCS_SAMPLES_DEFAULTS` implica `LOG_DEFAULT_MINIMAL`) — sem
+console configurado, compila limpo e fica mudo. O bloco de RTT acrescentado ao final
+do [`boards/nrf54l15tag_nrf54l15_cpuapp.conf`](boards/nrf54l15tag_nrf54l15_cpuapp.conf)
+da própria Nordic (o resto do arquivo já configura as duas antenas do TAG) liga o
+console por RTT e aumenta o buffer de saída (senão a rajada de boot corta o
+`Identity:`). Por estar em modo minimal, as linhas saem como `I: mensagem`, não no
+formato `<inf> módulo: mensagem` de outros labs.
 
 ```
 "C:\Program Files\SEGGER\JLink_V924a\JLinkRTTLogger.exe" -Device NRF54L15_M33 -If SWD -Speed 4000 -RTTChannel 0 rtt.log
@@ -56,6 +62,10 @@ I: CS procedures enabled.
 Assim que o TAG sai do `DEBUG OUT` para a bateria, **o log acaba**. A partir daí a
 evidência de vida é o LED 1 (aceso = conectado) e a saída do initiator. É a diferença
 entre bancada e campo — e é assim que um reflector de verdade vive.
+
+As duas antenas do TAG já saem configuradas pelos board files da Nordic; o
+initiator do lab 2 usa só um caminho, então a diferença só aparece mais adiante,
+no lab 5.
 
 ## O endereço do seu TAG
 

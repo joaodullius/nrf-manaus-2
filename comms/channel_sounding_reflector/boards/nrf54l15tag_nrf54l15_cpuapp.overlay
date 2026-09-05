@@ -1,0 +1,36 @@
+/*
+ * ORIGEM: copia de arquivo do SDK — nao e codigo do curso.
+ *   SDK     : nRF Connect SDK v3.4.0
+ *   Upstream: nrf/samples/bluetooth/channel_sounding/ras_reflector/boards/nrf54l15tag_nrf54l15_cpuapp.overlay
+ *   Local   : C:/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_reflector/boards/nrf54l15tag_nrf54l15_cpuapp.overlay
+ *   Copiado : 2026-09-05 — curso nrf-manaus-2, modulo comms/channel_sounding_reflector
+ *
+ * Para conferir se divergiu do SDK:
+ *   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_reflector/boards/nrf54l15tag_nrf54l15_cpuapp.overlay
+ *
+ * DIVERGENCIA DO CURSO: nenhuma.
+ */
+
+/*
+ * Copyright (c) 2025 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+/ {
+	cs_antenna_switch: cs-antenna-config {
+		status = "okay";
+		compatible = "nordic,bt-cs-antenna-switch";
+		ant-gpios = <&gpio1 9 GPIO_ACTIVE_HIGH>,
+			    <&gpio1 10 GPIO_ACTIVE_HIGH>;
+		multiplexing-mode = <0>;
+	};
+};
+
+/* delete other nodes that drive the antenna pins so there is no duplicate access */
+/delete-node/ &sky13348;
+
+&gpio1 {
+	/delete-node/ antenna_switch_v1;
+	/delete-node/ antenna_switch_v2;
+};

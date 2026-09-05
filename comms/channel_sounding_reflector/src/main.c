@@ -9,8 +9,10 @@
  *   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_reflector/src/main.c
  *
  * DIVERGENCIA DO CURSO: nenhuma. O reflector roda como a Nordic entregou.
- *   O que o curso acrescenta esta fora deste arquivo: boards/nrf54l15tag_nrf54l15_cpuapp.conf
- *   (log por RTT, porque o TAG nao tem UART) e os fragmentos demo.conf / s26.conf.
+ *   O que o curso acrescenta esta fora deste arquivo: um bloco de RTT ao final
+ *   de boards/nrf54l15tag_nrf54l15_cpuapp.conf (log, porque o TAG nao tem UART;
+ *   o resto do arquivo e o board file da Nordic para as duas antenas do TAG)
+ *   e os fragmentos demo.conf / s26.conf.
  */
 
 /*
