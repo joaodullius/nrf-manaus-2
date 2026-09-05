@@ -26,6 +26,21 @@ config LAB_TAG_ADDR_TYPE
 	  "random" ou "public", conforme aparece entre parenteses na linha
 	  "Identity:" do log do tag.
 
+config LAB_PROCEDURE_INTERVAL
+	int "Intervalo entre procedures de CS (em intervalos de conexao; 0 = valor do sample)"
+	default 0
+	range 0 255
+	help
+	  Quantos intervalos de conexao ACL (15 ms neste sample: conexao de 12
+	  unidades) separam dois procedures de Channel Sounding. 0 mantem a
+	  escolha do sample: uma procedure a cada 2 intervalos, ~30 ms de
+	  time_delta na bancada.
+
+	  Seis estacoes medindo ao mesmo tempo na mesma sala nao e uma condicao
+	  que a Nordic documenta. Se as medidas degradarem, escalone: estacao n
+	  (0 a 5) usa 67 + n*17 (cerca de 1000 a 2300 ms), passado por fragmento
+	  ou -DCONFIG_LAB_PROCEDURE_INTERVAL=<n>.
+
 endmenu
 
 source "Kconfig.zephyr"
