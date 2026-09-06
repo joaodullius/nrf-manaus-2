@@ -599,11 +599,23 @@ nRF5340. Levantado na documentação de hardware das nossas duas placas, o quadr
 Para voltar ao funcionamento normal da EB II depois da medida: jumper em P10, ou refazer o
 curto de SB10.
 
+**O P14 mede só o nRF54LM20B, e não pega o nRF7002.** Isso não é dedução, está na
+documentação de hardware da DK. O P14 fica em série com o domínio **VDD:nRF**, que alimenta
+apenas o SoC — tanto que a DK continua com serial, LEDs e botões funcionando quando o SoC é
+alimentado por ali de fora. O domínio **VDD:IO**, que é o que chega à EB II pelos pinos de
+alimentação do conector de expansão, é um **seguidor de tensão bufferizado** do VDD:nRF, feito
+de propósito para que correntes de fuga não sejam puxadas do SoC durante medidas de baixo
+consumo. Ou seja, VDD:IO fica **fora** do caminho de corrente do P14.
+
+A confirmação vem por um detalhe da própria doc: a memória flash externa é alimentada por
+VDD:IO por padrão e **não** entra na conta do P14; para incluí-la é preciso cortar SB23 e
+fechar SB24, e a doc avisa que aí sim o consumo dela "é somado à corrente do SoC medida em
+P14". Se fosse preciso mexer em solder bridge para somar a flash, nada mais do lado VDD:IO
+entra por acidente.
+
 **A consequência de projeto é grande, e precisa ser decidida antes do lab 11.** A corrente que
-muda entre DTIM, listen interval e TWT é a do **companion**, não a do hospedeiro. Medir em P14
-no LM20-DK mostra o nRF54LM20B, que quase não varia com o regime de economia do Wi-Fi. Ou seja,
-o ponto sem solda mede a coisa errada, e o ponto certo **exige cortar um solder bridge em cada
-EB II**.
+muda entre DTIM, listen interval e TWT é a do **companion**, e o P14 não a enxerga. O ponto sem
+solda mede a coisa errada, e o ponto certo **exige cortar o SB10 na EB II**.
 
 Três saídas, em ordem de preferência:
 
