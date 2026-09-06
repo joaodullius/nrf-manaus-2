@@ -194,6 +194,13 @@ Documentado pela Nordic em *nRF7002 EB II → Requirements → Prerequisites*.
   nossa, o shield deixa de reroteiar nessa placa: o console volta para a `uart20` (segunda
   VCOM) e o `sw3` volta a existir. A doc "latest" já descreve esse comportamento novo. Na
   v3.4.0, que é a do curso, vale o reroteamento.
+- **Caminho de projeto curto, senão o build quebra.** Os objetos da biblioteca de segurança
+  (`cracen`) têm um hash de diretório no caminho, e no Windows isso estoura o limite de tamanho
+  de caminho se o projeto estiver fundo. O sintoma engana: o build morre num passo de
+  arquivamento, com `arm-zephyr-eabi-ar: ... .obj: No such file or directory`, como se o
+  compilador tivesse falhado. Não tem nada a ver com o código. Mantenha o repositório perto da
+  raiz — `C:\work
+rf-manaus-2` funciona; um clone dentro de várias pastas aninhadas, não.
 - **O botão 4 some.** O overlay apaga o nó `button_3` e o alias `sw3`. Sobram os botões 1–3
   (`sw0`–`sw2`) e os quatro LEDs.
 - **Não dá para somar o microfone PDM dos labs de Edge AI.** O `pdm20` do `07_ww_kws` usa
