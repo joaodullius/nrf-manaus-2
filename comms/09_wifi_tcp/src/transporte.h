@@ -28,11 +28,13 @@
  *   -EBADMSG       erro de APLICACAO, nao de conexao: o transporte
  *                  continua de pe, mas a mensagem foi rejeitada por quem
  *                  esta do outro lado (por exemplo, HTTP respondendo um
- *                  status diferente do esperado a um POST/GET). So o TCP
- *                  puro nunca devolve isso -- ele nao tem uma nocao de
- *                  "aplicacao" separada da conexao. Reabrir o transporte
- *                  NAO resolve esse caso; quem chama so deve registrar e
- *                  seguir (a proxima chamada periodica tenta de novo).
+ *                  status diferente do esperado a um POST/GET). So o HTTP
+ *                  devolve isso -- e o unico dos tres com um status de
+ *                  resposta para carregar essa distincao; TCP e MQTT (este
+ *                  em QoS 0, sem PUBACK) nao tem como separar "aplicacao"
+ *                  de "conexao". Reabrir o transporte NAO resolve esse
+ *                  caso; quem chama so deve registrar e seguir (a proxima
+ *                  chamada periodica tenta de novo).
  *   outro negativo  erro de rede -- motivo para reabrir, igual ao
  *                  -ECONNRESET.
  */
