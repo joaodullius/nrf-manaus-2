@@ -129,7 +129,7 @@ Resumo de memória:
 
 | Região | Usado | Região total | % usado |
 |---|---|---|---|
-| FLASH | 555100 B | 2036 KB | 26,63% |
+| FLASH | 555168 B | 2036 KB | 26,63% |
 | RAM | 187856 B | 511 KB | 35,90% |
 
 ## Testes automáticos (PC, sem hardware)
@@ -210,3 +210,19 @@ saída é a mesma: hotspot alternativo, PC e DK os dois nele.
   tempo um envio concorrente de telemetria ou do botão. É escolha de projeto — a
   exclusão mútua entre as threads que compartilham o mesmo socket prioriza corretude
   sobre regularidade — não sintoma de problema de rede ou do kit.
+
+## Pegadinhas
+
+- **O firewall do Windows bloqueia o servidor sem avisar ninguém.** Achado na bancada:
+  com `CONFIG_LAB_SERVIDOR_IP` e `CONFIG_LAB_PORTA` corretos, a conexão ainda falha com
+  `-116` (`ETIMEDOUT`) porque o Windows tem uma regra de bloqueio de entrada para o
+  Python no perfil de rede Private. O sintoma engana dos dois lados: no PC,
+  `wifi_server.py` fica ouvindo e nada chega, sem nenhum erro; no kit, o log do
+  firmware aponta para `CONFIG_LAB_SERVIDOR_IP`/`CONFIG_LAB_PORTA` (a mensagem que
+  aparece depois de 5 tentativas), que já estavam certos. Conserto, em PowerShell como
+  administrador:
+
+  ```powershell
+  New-NetFirewallRule -DisplayName "Lab 9 Wi-Fi TCP (curso nrf-manaus-2)" `
+    -Direction Inbound -Action Allow -Protocol TCP -LocalPort 9000 -Profile Private
+  ```

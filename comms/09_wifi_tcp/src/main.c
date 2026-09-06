@@ -154,8 +154,9 @@ static void abrir_com_backoff(void)
 		tentativas++;
 		if (!ja_conectou_alguma_vez && tentativas == RECONEXAO_TENTATIVAS_AVISO_CONFIG) {
 			LOG_ERR("Sem conseguir conectar depois de %u tentativas -- confira "
-				"CONFIG_LAB_SERVIDOR_IP e CONFIG_LAB_PORTA, e se o PC e o "
-				"kit estao na mesma rede", tentativas);
+				"CONFIG_LAB_SERVIDOR_IP e CONFIG_LAB_PORTA, se o PC e o "
+				"kit estao na mesma rede, e se o firewall do PC deixa o "
+				"servidor receber conexao nessa porta", tentativas);
 		}
 
 		LOG_WRN("Falha ao abrir o transporte (%d); nova tentativa em %u ms",
