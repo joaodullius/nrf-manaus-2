@@ -1,0 +1,4 @@
+# Dependencia de desenvolvimento: rodar os testes com pytest.
+# wifi_server.py e payload_ref.py usam so a biblioteca padrao do Python
+# (socket, threading, json, argparse) -- nao ha dependencia de execucao.
+pytest
