@@ -112,6 +112,40 @@ não digita um SSID de memória.
 LEDs: LED1 acende quando a DK entra em modo AP (provisionamento em andamento); LED2
 acende quando a DK conecta na rede provisionada.
 
+## O certificado de servidor
+
+O provisionamento roda HTTPS na porta 443, então o firmware precisa de um
+certificado de servidor. O sample traz um autoassinado de desenvolvimento,
+registrado em tempo de boot — o log mostra `Registering self-signed server
+certificate` logo na inicialização.
+
+O certificado embutido em `certs/server_certificate.pem` tem `CN=wifiprov.local`,
+Subject Alternative Name `DNS:wifiprov.local` e `DNS:*.wifiprov.local`, válido de
+22/mai/2024 a 20/mai/2034 (chave EC `prime256v1`/P-256, a mesma curva que o
+`prj.conf` habilita via `CONFIG_PSA_WANT_ECC_SECP_R1_256`). O hostname bate com o
+`CONFIG_NET_HOSTNAME="wifiprov"` do `prj.conf` — é por isso que o SNI do handshake
+TLS confere com o nome que o cliente resolve por mDNS.
+
+**A chave privada é pública.** `certs/server_private_key.pem` já está no SDK da
+Nordic e agora neste repo — qualquer pessoa com acesso a um dos dois tem a chave.
+Ela serve para este laboratório e para nada além disso: em produto real, cada
+dispositivo tem seu próprio par, gerado e provisionado fora da árvore de código, e
+chave privada nunca entra em repositório.
+
+**Quando regenerar é obrigatório:** se `CONFIG_NET_HOSTNAME` mudar, o certificado
+precisa ser refeito com o SAN apontando para o novo hostname, senão o SNI falha no
+handshake TLS — documentado no `README.rst` do sample. Comando para gerar um par
+novo, autoassinado, com o SAN correto:
+
+```
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
+  -keyout server_private_key.pem -out server_certificate.pem -days 3650 -nodes \
+  -subj "/CN=<novo-hostname>.local" \
+  -addext "subjectAltName=DNS:<novo-hostname>.local,DNS:*.<novo-hostname>.local"
+```
+
+Os dois arquivos gerados substituem os que estão em `certs/`.
+
 ## Passo 2 — preparar o lado do PC
 
 O schema protobuf do sample não é versionado como Python pronto — ele é gerado do
@@ -176,3 +210,6 @@ Anotar cada saída observada (mensagens do console, conteúdo da listagem do
   `nrf54lm20dk/nrf54lm20b/cpuapp` com `-D08_wifi_provisioning_SHIELD="nrf7002eb2"
   -D08_wifi_provisioning_SNIPPET=nrf70-wifi`, sem `.conf` de board para a variante B;
   `protoc` 25.3 gerando `common_pb2.py` sem erro
+- Medição local, 2026-09-06 — `openssl x509` sobre `certs/server_certificate.pem`:
+  `CN=wifiprov.local`, SAN `DNS:wifiprov.local`/`DNS:*.wifiprov.local`, validade
+  22/mai/2024–20/mai/2034, chave EC `prime256v1`
