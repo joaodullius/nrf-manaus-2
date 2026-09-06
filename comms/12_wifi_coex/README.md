@@ -61,13 +61,19 @@ CONFIG_WIFI_CREDENTIALS_STATIC_SSID=""
 CONFIG_WIFI_CREDENTIALS_STATIC_PASSWORD=""
 ```
 
-Cada aluno preenche o seu localmente com a rede da sala e compila com o
-`EXTRA_CONF_FILE` **escopado pela imagem** — o sysbuild deste lab nomeia a imagem
-`12_wifi_coex`, igual ao nome da pasta:
+Cada aluno preenche o seu localmente com a rede da sala e compila com:
 
 ```
 -D12_wifi_coex_EXTRA_CONF_FILE=minha_rede.conf
 ```
+
+Opções de Kconfig e arquivos de fragmento como este, no sysbuild, já valem para a
+**aplicação principal** com ou sem o prefixo de imagem — as duas formas são
+equivalentes (`-DEXTRA_CONF_FILE=minha_rede.conf`, sem prefixo, funciona igual;
+confirmado compilando os dois jeitos no lab 7: binário byte a byte idêntico). O
+curso usa a forma prefixada aqui só por consistência visual com o `SHIELD` e o
+`SNIPPET` do Passo 1 — onde o prefixo **é** obrigatório, por um motivo diferente
+(ver a seção abaixo).
 
 **Nunca commitar a senha real.** Antes de qualquer commit, esvaziar o arquivo de
 volta:
@@ -105,6 +111,18 @@ target (diferente das entradas para nRF5340, que usam `ble_coex_SHIELD=` porque 
 uma segunda imagem, `ipc_radio`, no núcleo de rede). A nRF54LM20 é single-core como os
 labs 6–11: por convenção do curso, o `SHIELD` e o `SNIPPET` seguem escopados pela
 imagem, cujo nome no sysbuild é o nome da pasta do lab — `12_wifi_coex`.
+
+Aqui o prefixo importa de verdade — diferente do `EXTRA_CONF_FILE` da seção
+anterior. `SHIELD` e `SNIPPET` sem prefixo de imagem, no sysbuild, valem para
+**todas** as imagens do build, não só a principal; num sample com mais de uma
+imagem (o próprio `ble_coex`, no nRF5340, soma a imagem `ipc_radio` do núcleo de
+rede) isso pode aplicar um shield ou snippet incompatível na imagem errada e
+quebrar o build. Já uma opção de Kconfig ou um arquivo de fragmento, sem
+prefixo, já significa "aplicação principal" por padrão — não precisa do
+prefixo para chegar lá. Como este é o lab com shield **duplo** da frente, é o
+melhor lugar para fixar essa diferença: o prefixo é obrigatório para `SHIELD`/
+`SNIPPET` (o valor pode ir parar na imagem errada sem ele), e opcional — só por
+consistência — para `EXTRA_CONF_FILE` e demais opções de Kconfig.
 
 **A coexistência liga e desliga é decidida em tempo de compilação**, não por botão ou
 shell em runtime: é o Kconfig `CONFIG_MPSL_CX` (confirmado no `README.rst` original do
