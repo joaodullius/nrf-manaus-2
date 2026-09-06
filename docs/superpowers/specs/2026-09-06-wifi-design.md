@@ -260,10 +260,25 @@ A rede da sala não foi definida, então cada lab declara do que depende:
 |---|---|---|
 | 6, 7 | um AP qualquer | SoftAP da própria DK |
 | 8 | nada | é o próprio AP |
-| 9, 10 | AP + PC na mesma rede | PC conectado ao SoftAP da DK |
+| 9, 10 | AP + PC na mesma rede | hotspot do celular ou do PC (ver nota) |
 | 11 (TWT) | **AP Wi-Fi 6 com TWT** | **nenhum** — sem o AP, o lab não roda |
 | 12 (coex) | um AP qualquer + um par BLE | SoftAP + o TAG do CS como par |
 | 13 (location) | scan de APs; **internet no PC** | nenhum para a internet do PC; o kit não precisa |
+
+**Nota sobre o plano B dos labs 9 e 10 — correcao de uma afirmacao errada desta spec.** A
+versao anterior desta tabela dizia que o plano B era o PC se conectar ao SoftAP da propria DK.
+Isso nao funciona: o firmware desses labs e **estacao**, nao ponto de acesso, e nao ha build de
+SoftAP para eles. Fazer valer exigiria uma variante a mais de firmware, que nao esta no plano.
+
+O plano B real e mais simples e nao custa codigo: subir um hotspot — celular do instrutor ou
+compartilhamento de conexao do proprio PC —, conectar o PC e a DK nele, e apontar
+`minha_rede.conf` e `CONFIG_LAB_SERVIDOR_IP` para essa rede. Nao muda uma linha de firmware nem
+do servidor, so a rede a que os dois se associam.
+
+O mesmo caminho resolve o **isolamento de cliente**, que e a falha mais provavel numa rede
+corporativa: o AP da sala entrega IP aos dois mas impede que eles se falem, e o sintoma engana,
+porque tudo parece conectado. Se o kit associa, pega IP, e o servidor nunca ve conexao, suspeite
+disso antes de procurar erro no codigo.
 
 ### 3.6 Tudo que vem de fora entra no repo, com fonte
 
