@@ -28,12 +28,29 @@ def montar(seq: int, uptime_ms: int, temp_cc: int, rssi_dbm: int, botao: bool) -
     }, separators=(",", ":")) + "\n"
 
 
+def _tipo_valido(campo: str, valor) -> bool:
+    """Confere se o valor de um campo tem o tipo esperado. bool e subclasse
+    de int em Python, entao precisa ser tratado antes dos campos numericos
+    para nao aceitar 0/1 no lugar de true/false, nem True/False no lugar
+    de um numero.
+    """
+    if campo == "botao":
+        return isinstance(valor, bool)
+    if campo == "temp_c":
+        return isinstance(valor, (int, float)) and not isinstance(valor, bool)
+    # seq, uptime_ms, rssi_dbm
+    return isinstance(valor, int) and not isinstance(valor, bool)
+
+
 def parse(linha: str):
-    """Devolve o dicionario da amostra, ou None se a linha nao for uma."""
+    """Devolve o dicionario da amostra, ou None se a linha nao for uma
+    (JSON invalido, campo faltando, ou campo com o tipo errado)."""
     try:
         d = json.loads(linha)
     except (ValueError, TypeError):
         return None
     if not isinstance(d, dict) or any(c not in d for c in CAMPOS):
+        return None
+    if any(not _tipo_valido(c, d[c]) for c in CAMPOS):
         return None
     return {c: d[c] for c in CAMPOS}

@@ -1,0 +1,68 @@
+{
+  "_descricao": "Vetores de referencia do formato do payload do lab 9. Usados por test_payload.py (so Python) e test_payload_c.py (travessia C-Python), para o contrato ficar num lugar so.",
+  "casos": [
+    {
+      "nome": "todos_os_campos",
+      "seq": 7,
+      "uptime_ms": 1234,
+      "temp_cc": 2537,
+      "rssi_dbm": -52,
+      "botao": false,
+      "esperado": {"seq": 7, "uptime_ms": 1234, "temp_c": 25.37, "rssi_dbm": -52, "botao": false}
+    },
+    {
+      "nome": "temperatura_negativa_meio_grau",
+      "seq": 1,
+      "uptime_ms": 0,
+      "temp_cc": -450,
+      "rssi_dbm": -70,
+      "botao": true,
+      "esperado": {"seq": 1, "uptime_ms": 0, "temp_c": -4.5, "rssi_dbm": -70, "botao": true}
+    },
+    {
+      "nome": "parse_inverso",
+      "seq": 99,
+      "uptime_ms": 5,
+      "temp_cc": 100,
+      "rssi_dbm": -1,
+      "botao": true,
+      "esperado": {"seq": 99, "uptime_ms": 5, "temp_c": 1.0, "rssi_dbm": -1, "botao": true}
+    },
+    {
+      "nome": "valor_negativo_fora_da_zona_de_risco",
+      "seq": 42,
+      "uptime_ms": 99999,
+      "temp_cc": -200,
+      "rssi_dbm": -90,
+      "botao": false,
+      "esperado": {"seq": 42, "uptime_ms": 99999, "temp_c": -2.0, "rssi_dbm": -90, "botao": false}
+    },
+    {
+      "nome": "temp_cc_zero_fronteira_do_sinal",
+      "seq": 2,
+      "uptime_ms": 10,
+      "temp_cc": 0,
+      "rssi_dbm": 0,
+      "botao": false,
+      "esperado": {"seq": 2, "uptime_ms": 10, "temp_c": 0.0, "rssi_dbm": 0, "botao": false}
+    },
+    {
+      "nome": "fracionario_com_arredondamento",
+      "seq": 3,
+      "uptime_ms": 20,
+      "temp_cc": 12345,
+      "rssi_dbm": 10,
+      "botao": true,
+      "esperado": {"seq": 3, "uptime_ms": 20, "temp_c": 123.45, "rssi_dbm": 10, "botao": true}
+    }
+  ],
+  "truncamento": {
+    "_descricao": "buf_len propositalmente menor que a linha inteira, para exercitar o retorno -ENOMEM de payload_montar() no lado C.",
+    "seq": 1,
+    "uptime_ms": 0,
+    "temp_cc": 0,
+    "rssi_dbm": 0,
+    "botao": false,
+    "buf_len": 4
+  }
+}
