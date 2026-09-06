@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import math
 import numpy as np
 import pytest
 
@@ -61,3 +62,34 @@ def test_summarize_one_path_leaves_extra_columns_nan(captura_3m):
     rows = cs_compare.summarize(cs_csv.read_procedures(captura_3m))
     assert all(np.isnan(r["music_2ap"]) for r in rows)
     assert cs_compare.stats(rows)["music_2ap"][2] == 0
+
+
+def test_escolhe_ifft_min_pega_o_mais_curto():
+    class P:
+        def __init__(self, d):
+            self.fw = {"ifft": d}
+    assert cs_compare.escolhe_ifft_min([P(4.8), P(5.6)]) == pytest.approx(4.8)
+    assert cs_compare.escolhe_ifft_min([P(float("nan")), P(5.6)]) == pytest.approx(5.6)
+    assert np.isnan(cs_compare.escolhe_ifft_min([P(float("nan"))]))
+
+
+def test_escolhe_ifft_potencia_pega_o_canal_mais_forte():
+    class P:
+        def __init__(self, d):
+            self.fw = {"ifft": d}
+    fraco = synthetic_comb(3.0, amp=100.0)
+    forte = synthetic_comb(3.0, amp=1000.0)
+    # o caminho forte e o segundo: a regra tem de devolver o ifft DELE
+    assert cs_compare.escolhe_ifft_potencia([P(9.9), P(4.2)], [fraco, forte]) == pytest.approx(4.2)
+    assert cs_compare.escolhe_ifft_potencia([P(4.2), P(9.9)], [forte, fraco]) == pytest.approx(4.2)
+
+
+def test_selecao_entra_no_summarize(tmp_path):
+    p = tmp_path / "sel.csv"
+    comb = synthetic_comb(3.0)
+    with open(p, "w") as f:
+        write_procedure(f, 30, comb, fw=(5.6, 3.0, 2.998), ap=0)
+        write_procedure(f, 30, comb, fw=(4.8, 3.0, 2.998), ap=1)
+    r = cs_compare.summarize(cs_csv.read_procedures(p))[0]
+    assert r["ifft_min"] == pytest.approx(4.8)
+    assert math.isfinite(r["ifft_pot"])

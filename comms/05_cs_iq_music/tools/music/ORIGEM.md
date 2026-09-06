@@ -119,22 +119,22 @@ antena (A1-B1 e A1-B2) na mesma procedure. Duas formas de combinar:
   `NORMALIZE_COV = True` divide cada covariancia pelo seu traco, para que a antena
   de maior ganho nao domine a media.
 
-O resultado medido na bancada esta no README do lab (secao "Duas antenas"), em
-duas distancias, e nenhuma das duas combinacoes ganha: a 1 m os dois caminhos sao
-redundantes (correlacao +0,94) e combinar so acrescenta ruido; a 3 m eles sao
-independentes (+0,10), mas o segundo le 1,07 m mais longe, e as duas combinacoes
-puxam a estimativa para ele — o erro mediano do MUSIC sai de 1,06 m no caminho bom
-para 1,56 m (media das covariancias) ou 2,03 m (soma dos espectros).
+O resultado medido na bancada esta no README do lab (secao "Duas antenas"). A
+combinacao cega dos dois caminhos NAO ganha do melhor caminho sozinho em nenhuma
+condicao: ela fica entre os dois, ou empata com o melhor. O que ganha e ESCOLHER o
+caminho com criterio — e isso o lab faz no ifft (ifft_min, ifft_pot em
+cs_compare.py), nao no MUSIC. Mesmo assim, o MUSIC combinado e muito melhor que o
+MUSIC com um caminho so (erro medio 1,37 m contra 2,83 nas quatro condicoes em
+visada), porque o caminho unico pode ser justamente a antena mal orientada.
 
 ## Limites conhecidos
 
 - `_N_SIGNALS = 1`: assume um caminho dominante. Em multipath forte o pico pode
   cair no caminho refletido.
 - Sem calibracao de fase entre initiator e reflector — o `cs_de` tambem nao faz.
-- Antena unica por default no lab 2; no lab 5, `CONFIG_LAB_ANTENNA_PATHS`
-  escolhe 1 ou 2 caminhos. Medido a 1 m e a 3 m, em linha de visada: dois caminhos
-  custam dispersao e nao melhoram a estimativa (ver README do lab). Falta medir com
-  obstrucao, que e onde a diversidade deveria pagar.
+- No lab 5 o default e 2 caminhos de antena (`CONFIG_LAB_ANTENNA_PATHS`). O
+  MUSIC combinado nao supera o melhor caminho, mas evita ficar refem de uma
+  antena mal orientada (ver README do lab, secao "Duas antenas").
 - `_fill_reserved_channels` (no adaptador) e exata so para caminho unico; em
   multipath e uma aproximacao. Deixa de valer quando `4*dphi >= pi` entre canais
   adjacentes usados na interpolacao — na pratica, acima de ~18 m de distancia

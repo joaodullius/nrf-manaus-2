@@ -17,6 +17,8 @@ ap 0 (o mesmo par A1-B1 do lab 2) e entram mais tres, da MESMA procedure:
   - music_ap1 : MUSIC so no segundo caminho
   - music_2ap : MUSIC com os dois caminhos, somando os pseudo-espectros
   - music_cov : MUSIC com os dois caminhos, media das covariancias (o canonico)
+  - ifft_min  : o MENOR dos ifft dos caminhos (multipath so acrescenta percurso)
+  - ifft_pot  : o ifft do caminho com mais potencia no IQ combinado
 Com um caminho elas ficam NaN e fora do resumo.
 
 No fim, media, desvio e n por estimador, so das procedures com tone quality OK em
@@ -39,9 +41,43 @@ import music_adapter
 
 COLS = ["counter", "tq", "ifft_fw", "ifft_np", "d_ifft", "ps_fw", "ps_np",
         "rtt_fw", "rtt_np", "music", "ifft_ap1", "music_ap1", "music_2ap",
-        "music_cov"]
+        "music_cov", "ifft_min", "ifft_pot"]
 STAT_COLS = ["d_ifft", "ifft_fw", "ps_fw", "rtt_fw", "music",
-             "ifft_ap1", "music_ap1", "music_2ap", "music_cov"]
+             "ifft_ap1", "music_ap1", "music_2ap", "music_cov",
+             "ifft_min", "ifft_pot"]
+
+
+def escolhe_ifft_min(aps) -> float:
+    """O MENOR ifft entre os caminhos de antena.
+
+    Multipath e obstrucao so ACRESCENTAM percurso: um caminho refletido chega
+    depois do direto, nunca antes. Entao, entre duas antenas que medem o mesmo
+    alvo, a leitura mais curta e a que menos se perdeu em reflexao. E a mesma
+    logica da busca por um pico mais curto dentro do cs_de.c, um nivel acima.
+
+    O limite dessa regra: se um refletor forte ficar ENTRE as antenas (um corpo,
+    por exemplo), o caminho que travar nele le mais curto que o proprio alvo, e a
+    regra escolhe justamente o errado. Ver a secao da obstrucao no README.
+    """
+    v = [a.fw["ifft"] for a in aps if math.isfinite(a.fw["ifft"])]
+    return min(v) if v else math.nan
+
+
+def escolhe_ifft_potencia(aps, combs) -> float:
+    """O ifft do caminho com mais potencia no IQ combinado.
+
+    Escolhe pela qualidade do canal (soma de |IQ|^2 nos 75 tons), sem olhar a
+    distancia estimada — ao contrario do ifft_min, nao pode ser enganada por um
+    valor de distancia, so por uma antena que recebe forte de um caminho errado.
+    """
+    melhor, pot_max = math.nan, -1.0
+    for a, comb in zip(aps, combs):
+        if not math.isfinite(a.fw["ifft"]):
+            continue
+        pot = float(np.sum(np.abs(np.asarray(comb, complex)) ** 2))
+        if pot > pot_max:
+            melhor, pot_max = a.fw["ifft"], pot
+    return melhor
 
 
 def summarize(procs, nfft: int = 512) -> list[dict]:
@@ -59,7 +95,7 @@ def summarize(procs, nfft: int = 512) -> list[dict]:
             "rtt_fw": p.fw["rtt"], "rtt_np": e["rtt"],
             "music": music_adapter.music_m(comb),
             "ifft_ap1": math.nan, "music_ap1": math.nan, "music_2ap": math.nan,
-            "music_cov": math.nan,
+            "music_cov": math.nan, "ifft_min": math.nan, "ifft_pot": math.nan,
         }
         if len(aps) >= 2:                            # segundo caminho: A1-B2
             row["ifft_ap1"] = aps[1].fw["ifft"]
@@ -67,6 +103,8 @@ def summarize(procs, nfft: int = 512) -> list[dict]:
             combs = [a.comb() for a in aps]
             row["music_2ap"] = music_adapter.music_multi_m(combs)
             row["music_cov"] = music_adapter.music_cov_m(combs)
+            row["ifft_min"] = escolhe_ifft_min(aps)
+            row["ifft_pot"] = escolhe_ifft_potencia(aps, combs)
         rows.append(row)
     return rows
 
@@ -90,7 +128,8 @@ def imprimir(rows, st) -> None:
     print("{:>10} {:>8} {:>8} {:>4}".format("estimador", "media", "desvio", "n"))
     for c in STAT_COLS:
         m, s, n = st[c]
-        if n == 0 and c in ("ifft_ap1", "music_ap1", "music_2ap", "music_cov"):
+        if n == 0 and c in ("ifft_ap1", "music_ap1", "music_2ap", "music_cov",
+                            "ifft_min", "ifft_pot"):
             continue                                 # captura com um caminho so
         print(f"{c:>10} {m:8.3f} {s:8.3f} {n:4d}")
 

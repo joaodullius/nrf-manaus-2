@@ -46,7 +46,7 @@ config LAB_PROCEDURE_INTERVAL
 
 config LAB_ANTENNA_PATHS
 	int "Caminhos de antena por procedure (1 ou 2)"
-	default 1
+	default 2
 	range 1 2
 	help
 	  A LM20-DK tem uma antena; o nRF54L15-TAG tem duas. Com 2, cada
@@ -55,11 +55,16 @@ config LAB_ANTENNA_PATHS
 	  sobre a MESMA medida. Com 1, e o mesmo par do lab 2 (A1-B1).
 	  O TAG nao muda: quem escolhe e o initiator.
 
-	  O default e 1 porque foi o que mediu melhor na bancada: com 2
-	  caminhos, o primeiro piora (o procedure passa a dividir o tempo entre
-	  os dois) e o segundo nao compensa. O experimento esta no README, na
-	  secao "Duas antenas" — e o dataset de referencia ja tem uma captura
-	  com 2 caminhos, entao da para refazer a analise sem regravar nada.
+	  O default e 2. Com 1 caminho voce fica refem de UMA antena, e qual das
+	  duas e a boa muda com a geometria: na bancada, a 5 m, o caminho default
+	  errou 2,6 m enquanto o outro errava 0,56 m — e girar o TAG inverteu qual
+	  era qual. Com 2 caminhos o cs_compare.py pode escolher entre eles
+	  (colunas ifft_min e ifft_pot), e o erro do pior caso cai.
+
+	  O custo existe: com 2 caminhos o procedure divide o tempo entre eles e a
+	  dispersao por caminho piora. Compensa. O experimento inteiro esta no
+	  README, na secao "Duas antenas", e o dataset de referencia tem as
+	  capturas, entao da para refazer a analise sem regravar nada.
 
 endmenu
 

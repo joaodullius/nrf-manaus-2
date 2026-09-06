@@ -14,7 +14,7 @@ Implementação e validação das principais tecnologias de conectividade e loca
 | [`02_cs_initiator/`](02_cs_initiator/) | **CS 2** — Initiator RAS no LM20-DK: `ifft`, `phase_slope` e `rtt` lado a lado. Filtra pelo endereço do TAG do aluno (mesmo `meu_tag.conf` do Edge AI). Experimento com trena e obstrução | nRF54LM20-DK | ✅ |
 | [`03_cs_ipt/reflector/`](03_cs_ipt/reflector/) + [`03_cs_ipt/initiator/`](03_cs_ipt/initiator/) | **CS 3** — O mesmo par com IPT: a contribuição do reflector viaja na fase do tom, não por GATT. A coluna `rtt` some; `time_delta` cai | TAG + LM20-DK | ✅ |
 | [`04_cs_seguranca/`](04_cs_seguranca/) | **CS 4** — Roteiro: ACL cifrada, CS Security Enable, RTT como limite físico contra relé, o que o IPT abre mão, o que o SDC não suporta | par do CS 2 | ✅ (conforme o tempo) |
-| [`05_cs_iq_music/`](05_cs_iq_music/) | **CS 5** — IQ para o PC: port do `cs_de` em NumPy reproduz o chip; MUSIC (skig/waves, MIT) sobre o mesmo IQ; medição de referência com trena | LM20-DK + TAG + PC | ✅ (conforme o tempo) |
+| [`05_cs_iq_music/`](05_cs_iq_music/) | **CS 5** — IQ para o PC: port do `cs_de` em NumPy reproduz o chip; MUSIC (skig/waves, MIT) sobre o mesmo IQ; dois caminhos de antena e a escolha entre eles; obstrução; painel ao vivo (`cs_dash.py`). Tese: o firmware fornece os dados, a distância é do algoritmo | LM20-DK + TAG + PC | ✅ (conforme o tempo) |
 | `wifi_provisioning/` | Provisionamento de dispositivo Wi-Fi 6+ com circuito companion | nRF54LM20-DK + nRF7002-EBII | planejado |
 | `wifi_tcp_client/` | Envio de dados via socket TCP/IP sobre Wi-Fi | nRF54LM20-DK + nRF7002-EBII | planejado |
 | `ntn_nbiot/` | Comunicação NB-IoT via satélite (NTN) — teste ao vivo dependente de janela de passada | nRF9151-SMA-DK | planejado |
