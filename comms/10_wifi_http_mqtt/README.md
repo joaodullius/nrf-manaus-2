@@ -1,0 +1,307 @@
+# Wi-Fi · Lab 10 — HTTP e MQTT sobre o mesmo payload
+
+Este lab não tem firmware próprio: ele **recompila o firmware do lab 9**
+(`comms/09_wifi_tcp/`) escolhendo outra opção da choice `LAB_TRANSPORTE` do
+Kconfig. O `src/main.c` não muda uma linha — monta a mesma amostra, chama os
+mesmos quatro nomes (`transporte_abrir/enviar/receber/fechar`). O que muda é
+qual implementação de `src/transporte.c` entra no binário: TCP puro (lab 9),
+HTTP (POST por amostra) ou MQTT (publish/subscribe). É a tese do bloco —
+**um payload, três transportes** — fechada com número medido em vez de
+afirmação.
+
+## O que muda (e o que não muda)
+
+| | TCP (lab 9) | HTTP | MQTT |
+|---|---|---|---|
+| Formato da amostra | `src/payload.c`, igual nos três | igual | igual |
+| Uplink (telemetria) | `send()` no socket já aberto | `POST /telemetria` | `PUBLISH` no tópico `CONFIG_LAB_MQTT_TOPICO` |
+| Downlink (comando de LED) | linha `LED 1`/`LED 0` no mesmo socket, empurrada pelo servidor a qualquer momento | `GET /comando` — o kit tem que perguntar | `SUBSCRIBE` em `<tópico>/comando`, empurrado pelo broker |
+| Conexão | um socket aberto o tempo todo | uma conexão nova por requisição (sem estado entre chamadas) | um socket aberto o tempo todo, para o broker |
+| Ferramenta de PC | `../09_wifi_tcp/tools/wifi_server.py` | `tools/wifi_http_server.py` | `tools/wifi_mqtt_sub.py` + broker (mosquitto) |
+
+Nenhuma das duas variantes novas reescreve o payload: `tools/payload_ref.py`
+não existe nesta pasta de propósito — é o mesmo módulo do lab 9
+(`../09_wifi_tcp/tools/payload_ref.py`), que os dois scripts deste lab
+importam por caminho relativo.
+
+## Kconfig novo (em `comms/09_wifi_tcp/Kconfig`)
+
+```
+choice LAB_TRANSPORTE
+    ...
+config LAB_TRANSPORTE_HTTP
+    bool "HTTP (POST por amostra)"
+    select HTTP_CLIENT
+
+config LAB_TRANSPORTE_MQTT
+    bool "MQTT (publish/subscribe)"
+    select MQTT_LIB
+    select MQTT_CLEAN_SESSION
+endchoice
+
+config LAB_MQTT_TOPICO
+    string "Topico MQTT"
+    default "nrf-manaus/telemetria"
+    depends on LAB_TRANSPORTE_MQTT
+```
+
+`CONFIG_HTTP_CLIENT` e `CONFIG_MQTT_LIB`/`CONFIG_MQTT_CLEAN_SESSION` entram
+via `select` na opção da choice, **não** como `CONFIG_X=y` solto no
+`prj.conf`. Se fossem soltos no `prj.conf`, valeriam para as três variantes
+ao mesmo tempo — a comparação de FLASH da tabela abaixo deixaria de ser
+justa, porque a build TCP pagaria o custo do cliente HTTP e da biblioteca
+MQTT sem usar nenhum dos dois. Com `select`, cada biblioteca só entra no
+binário quando o transporte correspondente é o escolhido.
+
+`CONFIG_LAB_PORTA` (já existia no lab 9) passou a servir três papéis
+dependendo do transporte: porta do TCP puro, porta do `wifi_http_server.py`,
+ou porta do broker MQTT. O padrão (9000) só faz sentido para TCP — para
+HTTP e MQTT, passe a porta certa na linha de build (ver abaixo).
+
+## Compilar as três variantes
+
+Com `minha_rede.conf` preenchido (mesma convenção do lab 9) e o IP do PC em
+mãos:
+
+```bash
+cd C:\ncs\v3.4.0
+
+# TCP (igual ao lab 9, porta 9000)
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/09_wifi_tcp/build_TCP C:/work/nrf-manaus-2/comms/09_wifi_tcp -- -D09_wifi_tcp_SHIELD="nrf7002eb2" -D09_wifi_tcp_SNIPPET=nrf70-wifi -D09_wifi_tcp_EXTRA_CONF_FILE=minha_rede.conf -D09_wifi_tcp_CONFIG_LAB_SERVIDOR_IP=\"<ip-do-pc>\" -D09_wifi_tcp_CONFIG_LAB_TRANSPORTE_TCP=y
+
+# HTTP (wifi_http_server.py, porta 8000)
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/09_wifi_tcp/build_HTTP C:/work/nrf-manaus-2/comms/09_wifi_tcp -- -D09_wifi_tcp_SHIELD="nrf7002eb2" -D09_wifi_tcp_SNIPPET=nrf70-wifi -D09_wifi_tcp_EXTRA_CONF_FILE=minha_rede.conf -D09_wifi_tcp_CONFIG_LAB_SERVIDOR_IP=\"<ip-do-pc>\" -D09_wifi_tcp_CONFIG_LAB_TRANSPORTE_HTTP=y -D09_wifi_tcp_CONFIG_LAB_PORTA=8000
+
+# MQTT (broker mosquitto, porta 1883)
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/09_wifi_tcp/build_MQTT C:/work/nrf-manaus-2/comms/09_wifi_tcp -- -D09_wifi_tcp_SHIELD="nrf7002eb2" -D09_wifi_tcp_SNIPPET=nrf70-wifi -D09_wifi_tcp_EXTRA_CONF_FILE=minha_rede.conf -D09_wifi_tcp_CONFIG_LAB_SERVIDOR_IP=\"<ip-do-pc>\" -D09_wifi_tcp_CONFIG_LAB_TRANSPORTE_MQTT=y -D09_wifi_tcp_CONFIG_LAB_PORTA=1883
+```
+
+Os três builds ficam em `comms/09_wifi_tcp/build_TCP`, `build_HTTP` e
+`build_MQTT` — caminho curto de propósito (Constraints globais da frente).
+Gravar com `west flash -d <pasta do build>`, igual ao lab 9.
+
+## FLASH e RAM medidos
+
+Mesmo board (`nrf54lm20dk/nrf54lm20b/cpuapp`), mesmo `prj.conf` de base,
+única variável é `CONFIG_LAB_TRANSPORTE_*`:
+
+| Transporte | FLASH | % FLASH (2036 KB) | RAM | % RAM (511 KB) |
+|---|---|---|---|---|
+| TCP | 555172 B | 26,63% | 187856 B | 35,90% |
+| HTTP | 566844 B | 27,19% | 188104 B | 35,95% |
+| MQTT | 560524 B | 26,89% | 188576 B | 36,04% |
+
+As três cabem com folga (RAM entre 35,90% e 36,04% dos 511 KB — a diferença
+entre elas é pequena, ~0,14 ponto percentual). **O MQTT não precisou virar
+referência lida**: a build completa, com o cliente MQTT (buffers de 256
+bytes cada para RX e TX, ver `src/transporte.c`) e a assinatura do tópico de
+comando, sobe só 720 B de RAM sobre o TCP puro. HTTP custa mais FLASH que os
+outros dois (+11672 B sobre o TCP, o parser HTTP embutido do Zephyr) mas
+quase nada de RAM a mais (+248 B) — o grosso do custo de HTTP é código, não
+estado.
+
+## Comparação de pilha e heap com o precedente da Nordic
+
+Nenhuma das duas variantes novas usa TLS: `CONFIG_MAIN_STACK_SIZE` continua
+em 5200 (o mesmo valor que o próprio lab 9 já usa, herdado do
+`nrf/samples/wifi/sta`) e nenhum heap de mbedTLS foi tocado. O precedente que
+se aplicaria a uma variante com TLS — `nrf/samples/wifi/provisioning/softap`,
+que sobe `CONFIG_MAIN_STACK_SIZE` para 6200 e ainda define
+`CONFIG_WIFI_NM_WPA_SUPPLICANT_THREAD_STACK_SIZE=8192` e
+`CONFIG_MBEDTLS_HEAP_SIZE=49152` — **não se aplica aqui**, porque este lab
+optou por manter HTTP e MQTT sem TLS.
+
+**Essa é uma escolha deliberada, não uma omissão**: o objetivo do lab 10 é
+comparar transporte (como o mesmo payload viaja), não criptografia. TLS
+somaria uma variável nova (handshake, certificados, heap) a uma comparação
+que já tem três braços — a tabela de FLASH/RAM acima deixaria de isolar "o
+que cada transporte custa" e passaria a misturar isso com "o que TLS custa
+em cada um deles", que é uma pergunta diferente e, para HTTP e MQTT, também
+diferente entre si (HTTPS via `http_client_req()` com socket TLS vs. MQTT
+sobre `MQTT_TRANSPORT_SECURE`). Um lab de segurança de transporte, com o
+precedente do `softap` (pilha 6200, heap mbedTLS 49152), é trabalho
+separado.
+
+As threads que chamam `transporte_*` (`telemetria_id`, `botao_id`,
+`recepcao_id`, todas em `src/main.c`, com pilhas de 2048/1024/2048 bytes)
+**não foram alteradas nesta task** — `main.c` está fora do escopo de
+arquivos desta task (só `Kconfig`, `src/transporte.c` e `prj.conf` mudaram).
+Ver "Preocupações" no relatório da task sobre o que isso significa para a
+bancada.
+
+## Bytes por amostra — medido em loopback
+
+Sem hardware nesta tarefa (quem grava e mede na bancada é o instrutor), os
+bytes de aplicação de cada transporte foram medidos com o código real rodando
+em loopback (127.0.0.1): o `ServidorHTTP` real deste lab respondendo a uma
+requisição HTTP montada byte a byte igual ao que
+`zephyr/subsys/net/lib/http/http_client.c` produz para os campos que
+`src/transporte.c` preenche (conferido lendo o fonte da biblioteca); e um
+cliente `paho-mqtt` real, com a mesma sequência do firmware (CONNECT,
+SUBSCRIBE no tópico de comando, PUBLISH no tópico de telemetria), falando
+com um mosquitto real através de um proxy TCP local que grava os bytes e
+recorta os pacotes MQTT pelo cabeçalho fixo. **Não inclui os cabeçalhos de
+Ethernet/IP/TCP-UDP** — esses são iguais nos três transportes e não fazem
+parte do que muda entre eles; uma captura de Wireshark na bancada real soma
+esse overhead fixo por igual às três linhas da tabela.
+
+Amostra representativa usada na medição:
+`{"seq":42,"uptime_ms":123456,"temp_c":25.37,"rssi_dbm":-52,"botao":false}\n`
+(74 bytes).
+
+| Transporte | Uplink por amostra | Downlink (por consulta/evento) |
+|---|---|---|
+| TCP | 74 B (só o `send()`, sem resposta de aplicação) | 6 B (`LED 1\n`/`LED 0\n`), só quando o operador manda um comando — sem custo quando não manda |
+| HTTP | 269 B (176 B de requisição `POST` + 93 B de resposta `200 OK`) | 147 B **a cada consulta** de `GET /comando` (46 B de requisição + 101 B de resposta `204`), mesmo sem comando pendente |
+| MQTT | 99 B (pacote `PUBLISH`; `CONNECT` 32 B + `SUBSCRIBE` 36 B são custo único de conexão, não por amostra) | 38 B (pacote `PUBLISH` em `<tópico>/comando` — o nome do tópico completo viaja em toda publicação, por isso custa mais que o payload `LED 1` sozinho), só quando alguém publica |
+
+TCP e MQTT ficam próximos no uplink (74 B vs. 99 B — a diferença é o
+cabeçalho fixo do `PUBLISH` mais o nome do tópico, que viaja em toda
+publicação porque este lab usa QoS 0 sem tópico curto/alias). HTTP é o mais
+caro dos três, e não só no uplink: cada amostra custa 269 B (quase 3,6× o
+TCP) e ainda paga 147 B **por segundo** de polling no downlink, tenha ou não
+comando pendente — é o número que sustenta a seção seguinte.
+
+## Por que o downlink separa os três
+
+TCP e MQTT são simétricos: o comando chega **empurrado**, sem o kit
+perguntar — TCP porque o servidor escreve na mesma conexão aberta a
+qualquer momento (`enviar_comando()` do `wifi_server.py` do lab 9), MQTT
+porque o broker entrega uma mensagem publicada no tópico assinado assim que
+ela existe (`SUBSCRIBE` feito uma vez, em `transporte_abrir()`). Nos dois
+casos, não haver comando pendente não custa banda nenhuma.
+
+HTTP não tem como fazer isso: não existe um jeito de o servidor iniciar uma
+conexão para o kit (o kit não está ouvindo em porta nenhuma, e frequentemente
+está atrás de NAT/DHCP). A única saída é o kit perguntar — `GET /comando`,
+em `transporte_receber()` (`src/transporte.c`) — e cada pergunta custa 147 B
+mesmo quando a resposta é "nada" (`204 No Content`). Com a thread de
+recepção perguntando a cada 1 s (`thread_recepcao()`, `src/main.c`,
+`K_SECONDS(1)`), isso é **147 B/s de tráfego constante só para descobrir que
+não há novidade** — contra zero do TCP e do MQTT no mesmo cenário. É o
+argumento concreto, não uma preferência de estilo: HTTP request/response não
+tem primitiva de push: o preço do polling é estrutural do protocolo, não um
+detalhe de implementação deste lab.
+
+## Ferramentas de PC
+
+### `tools/wifi_http_server.py`
+
+```bash
+cd comms/10_wifi_http_mqtt/tools
+pip install -r requirements.txt
+python wifi_http_server.py --porta 8000
+```
+
+`POST /telemetria` imprime a amostra; `GET /comando` devolve o comando
+pendente (`200`, corpo `LED 1` ou `LED 0`) ou `204` se não houver nenhum —
+consumido na hora (o mesmo comando não aparece de novo no próximo `GET`).
+Teclas: `l` liga o LED 2, `d` apaga, `q` sai. A classe `ServidorHTTP`
+(`porta`, `ao_receber`) é o que os testes exercitam sem hardware, mesmo
+padrão do `Servidor` do lab 9: `porta=0` deixa o SO escolher a porta,
+`porta_real` devolve a efetiva.
+
+### `tools/wifi_mqtt_sub.py`
+
+Precisa de um broker MQTT rodando — este curso usa o **mosquitto** local
+(`C:\Program Files\mosquitto`, já instalado e verificado nesta bancada):
+
+```bash
+"C:\Program Files\mosquitto\mosquitto.exe" -p 1883
+```
+
+Sem um arquivo de configuração, o mosquitto sobe com o padrão de fábrica
+(aceita conexão anônima em `localhost`) — suficiente para este lab. Em outro
+terminal:
+
+```bash
+cd comms/10_wifi_http_mqtt/tools
+pip install -r requirements.txt
+python wifi_mqtt_sub.py --host localhost --porta 1883 --topico nrf-manaus/telemetria
+```
+
+Assina `nrf-manaus/telemetria`, imprime cada amostra válida e publica em
+`nrf-manaus/telemetria/comando` pelo teclado (`l`/`d`/`q`, mesmo esquema dos
+outros dois servidores). A classe `AssinanteMQTT` (`host`, `porta`,
+`topico`, `ao_receber`) é o que os testes exercitam contra um mosquitto real
+subido pelo próprio teste — sem mock de MQTT.
+
+### O firewall do Windows (mesma pegadinha do lab 9, portas diferentes)
+
+O lab 9 já documenta (`../09_wifi_tcp/README.md`, seção "Pegadinhas") que o
+Windows bloqueia por padrão a entrada de conexão para um processo Python
+ouvindo no perfil de rede Private, mesmo com IP e porta corretos — o sintoma
+engana dos dois lados (nada chega, nenhum erro aparece). Os dois servidores
+deste lab sofrem do mesmo problema, cada um na sua porta:
+
+```powershell
+New-NetFirewallRule -DisplayName "Lab 10 Wi-Fi HTTP (curso nrf-manaus-2)" `
+  -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8000 -Profile Private
+
+New-NetFirewallRule -DisplayName "Lab 10 Wi-Fi MQTT (curso nrf-manaus-2)" `
+  -Direction Inbound -Action Allow -Protocol TCP -LocalPort 1883 -Profile Private
+```
+
+A segunda regra é para o **mosquitto**, não para o Python: é o broker quem
+escuta a porta 1883 e aceita a conexão do kit, `wifi_mqtt_sub.py` só fala
+com o broker via loopback. Sem essa regra, o sintoma é o mesmo do lab 9: o
+kit tenta conectar, o broker está de pé e ouvindo, e a conexão nunca chega.
+
+## Testes automáticos (PC, sem hardware)
+
+```bash
+cd comms/10_wifi_http_mqtt/tools
+python -m pytest -q
+```
+
+`10 passed` nesta bancada:
+
+- `tests/test_http_server.py` (6 testes) sobe um `ServidorHTTP(porta=0)` de
+  verdade e conversa com ele por HTTP de verdade, cobrindo o caminho feliz
+  (`POST` válido chama `ao_receber`) e os casos ruins: JSON inválido e campo
+  faltando (nenhum dos dois chama `ao_receber`, e devolvem `400`), rota
+  desconhecida (`404`) e o consumo do comando pendente (`GET /comando`
+  devolve o comando uma vez só — a segunda chamada logo em seguida devolve
+  `204`).
+- `tests/test_mqtt_sub.py` (4 testes) sobe um **mosquitto real** num
+  processo à parte (porta livre escolhida pelo SO, sem arquivo de
+  configuração) e um `AssinanteMQTT` de verdade contra ele — sem mock de
+  MQTT. Cobre o caminho feliz (mensagem válida chega e é interpretada), o
+  caso ruim central (uma mensagem inválida publicada no meio de duas válidas
+  não aparece em `ao_receber` **e não derruba a assinatura** — a próxima
+  mensagem válida ainda chega), que `publicar_comando()` publica no tópico
+  `<tópico>/comando` de verdade (conferido por um assinante de teste
+  independente) e que conectar numa porta fechada devolve `False` sem
+  levantar exceção (em vez de um traceback cru na cara de quem só quer saber
+  se o broker está de pé). **Pulados com mensagem clara** se o mosquitto não
+  for encontrado no PATH nem em `C:\Program Files\mosquitto` — mesmo
+  critério de `../09_wifi_tcp/tools/tests/test_payload_c.py` para um
+  compilador de host ausente.
+
+## Roteiro de bancada (a fazer pelo instrutor — grava e mede)
+
+1. Gravar as três variantes (uma DK por vez, ou revezando), com o servidor
+   certo rodando no PC a cada troca:
+   - `build_TCP` → `python ../09_wifi_tcp/tools/wifi_server.py --porta 9000`
+   - `build_HTTP` → `python tools/wifi_http_server.py --porta 8000`
+   - `build_MQTT` → mosquitto na porta 1883, depois
+     `python tools/wifi_mqtt_sub.py --porta 1883`
+2. Em cada uma, conferir os três gestos já validados no lab 9 (botão →
+   amostra imediata com `"botao":true`; tecla `l`/`d` no servidor → LED 2
+   acende/apaga; queda de conexão → reconecta sozinho) — o firmware e o
+   comportamento de reconexão são os mesmos, só o transporte muda.
+3. Capturar com Wireshark ou `tcpdump` no PC durante uma amostra de cada
+   variante, para confirmar os números da tabela "Bytes por amostra" contra
+   tráfego de Wi-Fi de verdade (a medição deste README é em loopback — ver a
+   ressalva na própria seção).
+4. Se algum transporte estourar pilha (sintoma: `USAGE FAULT` na serial que
+   parece bug de código, não erro de rede) — ver "Preocupações" no relatório
+   da task: as pilhas das threads que chamam `transporte_*` não foram
+   alteradas nesta task, e não há bancada para confirmar a folga de HTTP e
+   MQTT sobre elas antes desta entrega.
+
+## Plano B — sem rede utilizável na sala, ou com isolamento de cliente
+
+Mesmo remédio do lab 9 (`../09_wifi_tcp/README.md`, seção "Plano B"): não
+muda nada de firmware nem de servidor, só a rede à qual PC e kit se
+associam. Vale para os três transportes deste lab.

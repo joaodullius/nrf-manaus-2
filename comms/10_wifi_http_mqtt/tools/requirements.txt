@@ -1,0 +1,10 @@
+# Dependencias de execucao e de teste do lab 10.
+#
+# wifi_http_server.py usa so a biblioteca padrao do Python (http.server,
+# threading, argparse) -- nenhuma dependencia de execucao alem disso.
+#
+# wifi_mqtt_sub.py precisa de um cliente MQTT: paho-mqtt.
+paho-mqtt>=2.0
+
+# Dependencia de desenvolvimento: rodar os testes com pytest.
+pytest

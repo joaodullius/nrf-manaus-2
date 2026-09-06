@@ -10,8 +10,13 @@ config LAB_SERVIDOR_IP
 	  IPv4 do PC que roda o tools/wifi_server.py. Vazio faz o build falhar.
 
 config LAB_PORTA
-	int "Porta TCP do servidor"
+	int "Porta do servidor no PC"
 	default 9000
+	help
+	  Porta do TCP puro (padrao 9000), do wifi_http_server.py (lab 10,
+	  padrao 8000) ou do broker MQTT (lab 10, mosquitto, padrao 1883) --
+	  depende do LAB_TRANSPORTE escolhido abaixo. Precisa bater com a
+	  ferramenta de PC que vai atender essa porta.
 
 config LAB_INTERVALO_MS
 	int "Intervalo entre amostras de telemetria (ms)"
@@ -27,7 +32,35 @@ choice LAB_TRANSPORTE
 config LAB_TRANSPORTE_TCP
 	bool "TCP puro"
 
+config LAB_TRANSPORTE_HTTP
+	bool "HTTP (POST por amostra)"
+	select HTTP_CLIENT
+	help
+	  select em vez de CONFIG_HTTP_CLIENT=y no prj.conf de proposito: assim
+	  o simbolo (e o codigo de subsys/net/lib/http que ele traz) so entra
+	  no binario quando este transporte e o escolhido -- as outras duas
+	  variantes nao pagam esse custo de FLASH, o que preserva a
+	  comparacao de tamanho do lab 10.
+
+config LAB_TRANSPORTE_MQTT
+	bool "MQTT (publish/subscribe)"
+	select MQTT_LIB
+	select MQTT_CLEAN_SESSION
+	help
+	  Mesmo raciocinio do LAB_TRANSPORTE_HTTP acima: select em vez de
+	  CONFIG_MQTT_LIB=y/CONFIG_MQTT_CLEAN_SESSION=y soltos no prj.conf,
+	  para o cliente MQTT so entrar no binario quando MQTT e o transporte
+	  escolhido.
+
 endchoice
+
+config LAB_MQTT_TOPICO
+	string "Topico MQTT"
+	default "nrf-manaus/telemetria"
+	depends on LAB_TRANSPORTE_MQTT
+	help
+	  Topico onde a telemetria e publicada. O downlink (comandos de LED)
+	  usa "<este topico>/comando" -- ver src/transporte.c.
 
 endmenu
 
