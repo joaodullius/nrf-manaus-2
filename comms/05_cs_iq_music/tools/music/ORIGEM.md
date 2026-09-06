@@ -119,10 +119,12 @@ antena (A1-B1 e A1-B2) na mesma procedure. Duas formas de combinar:
   `NORMALIZE_COV = True` divide cada covariancia pelo seu traco, para que a antena
   de maior ganho nao domine a media.
 
-O resultado medido na bancada esta no README do lab (secao "Duas antenas"): a
-1 m em linha de visada os dois caminhos sao correlacionados demais (+0,69) para
-haver diversidade a explorar, e nenhuma das duas combinacoes bate o melhor
-caminho sozinho.
+O resultado medido na bancada esta no README do lab (secao "Duas antenas"), em
+duas distancias, e nenhuma das duas combinacoes ganha: a 1 m os dois caminhos sao
+redundantes (correlacao +0,94) e combinar so acrescenta ruido; a 3 m eles sao
+independentes (+0,10), mas o segundo le 1,07 m mais longe, e as duas combinacoes
+puxam a estimativa para ele — o erro mediano do MUSIC sai de 1,06 m no caminho bom
+para 1,56 m (media das covariancias) ou 2,03 m (soma dos espectros).
 
 ## Limites conhecidos
 
@@ -130,8 +132,9 @@ caminho sozinho.
   cair no caminho refletido.
 - Sem calibracao de fase entre initiator e reflector — o `cs_de` tambem nao faz.
 - Antena unica por default no lab 2; no lab 5, `CONFIG_LAB_ANTENNA_PATHS`
-  escolhe 1 ou 2 caminhos. Medido: dois caminhos nao melhoraram a estimativa
-  a 1 m em linha de visada (ver README do lab).
+  escolhe 1 ou 2 caminhos. Medido a 1 m e a 3 m, em linha de visada: dois caminhos
+  custam dispersao e nao melhoram a estimativa (ver README do lab). Falta medir com
+  obstrucao, que e onde a diversidade deveria pagar.
 - `_fill_reserved_channels` (no adaptador) e exata so para caminho unico; em
   multipath e uma aproximacao. Deixa de valer quando `4*dphi >= pi` entre canais
   adjacentes usados na interpolacao — na pratica, acima de ~18 m de distancia

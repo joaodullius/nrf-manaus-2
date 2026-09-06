@@ -222,7 +222,8 @@ caminho de antena, sem calibração.
 
 O nRF54L15-TAG tem **duas antenas** e o reflector do lab 1 já as configura; a
 LM20-DK tem uma. O par 1 × 2 dá **dois caminhos de antena** (A1-B1 e A1-B2), e é o
-*initiator* quem decide usar um ou dois — o TAG não muda:
+*initiator* quem decide usar um ou dois — o TAG não muda, e não precisa ser
+regravado para alternar:
 
 ```
 west build ... -- -DEXTRA_CONF_FILE=meu_tag.conf -DCONFIG_LAB_ANTENNA_PATHS=2
@@ -236,56 +237,85 @@ MUSIC; ver `tools/music/ORIGEM.md`). O `rtt` vem `nan` nas linhas de `ap 1`: os
 tempos acumulados são os mesmos nos dois caminhos, e o `cs_de` só preenche a
 estimativa de RTT no primeiro.
 
-A pergunta óbvia é se dois caminhos medem melhor que um. Dá para responder com
-trena: as duas capturas abaixo são do **mesmo TAG parado a 1,00 m**, uma logo após
-a outra, trocando só o firmware do initiator.
+### O que foi medido
+
+Duas distâncias, quatro capturas versionadas. Em cada distância, as duas
+configurações foram medidas **na mesma posição, uma logo após a outra**, trocando só
+o firmware do initiator. Cada linha é a mediana de ~100 procedures; a dispersão é a
+**MAD** (desvio absoluto mediano, escalado para comparar com o desvio padrão), que
+não se deixa inflar por meia dúzia de procedures ruins.
+
+**1,00 m — TAG apoiado sobre uma nRF54L15-DK**
 
 | | ifft | phase_slope | MUSIC |
 |---|---|---|---|
-| **1 caminho** (`ref_1m_tag_na_dk_1ap.csv`) | 2,436 ± 0,069 · **MAD 0,039** | 2,636 ± 0,061 · **MAD 0,040** | 2,579 ± 0,028 · **MAD 0,033** |
-| 2 caminhos · `ap 0` | 2,385 ± 0,122 · MAD 0,076 | 2,600 ± 0,315 · MAD 0,156 | 2,604 ± 0,060 · MAD 0,049 |
-| 2 caminhos · `ap 1` | 2,334 ± 0,137 · MAD 0,052 | — | 2,579 ± 0,073 · MAD 0,048 |
-| 2 caminhos · soma dos espectros | — | — | 2,596 ± 0,064 · MAD 0,048 |
-| 2 caminhos · média das covariâncias | — | — | 2,592 ± 0,065 · MAD 0,047 |
+| **1 caminho** | +1,45 · MAD **0,039** | +1,64 · MAD **0,040** | +1,58 · MAD **0,033** |
+| 2 caminhos · `ap 0` | +1,44 · MAD 0,076 | +1,65 · MAD 0,156 | +1,60 · MAD 0,049 |
+| 2 caminhos · `ap 1` | +1,38 · MAD 0,052 | — | +1,57 · MAD 0,048 |
+| 2 caminhos · combinados | — | — | +1,59 · MAD 0,047 |
 
-n ≈ 99 procedures por linha. **MAD** é o desvio absoluto mediano (escalado para
-comparar com o desvio padrão): algumas procedures ruins inflam o desvio e não a MAD,
-então é ela que compara repetibilidade com honestidade — a própria tabela mostra o
-efeito no `phase_slope` de dois caminhos (0,315 contra MAD 0,156).
+**3,00 m — TAG na bateria, linha de visada**
 
-Três leituras, e nenhuma é a que se esperava:
+| | ifft | phase_slope | MUSIC |
+|---|---|---|---|
+| **1 caminho** | +1,11 · MAD **0,037** | +1,66 · MAD **0,119** | +1,07 · MAD **0,035** |
+| 2 caminhos · `ap 0` | +1,08 · MAD 0,047 | +1,61 · MAD 0,259 | +1,06 · MAD 0,049 |
+| 2 caminhos · `ap 1` | **+2,01** · MAD 0,043 | — | **+2,10** · MAD 0,051 |
+| 2 caminhos · combinados | — | — | +1,56 · MAD 0,043 |
 
-- **Ligar o segundo caminho piora o primeiro.** O `ifft` do `ap 0` sai com o dobro
-  da dispersão do mesmo `ifft` com um caminho só (MAD 0,076 contra 0,039); no
-  `phase_slope` é 4× (0,156 contra 0,040). A explicação provável — e é hipótese
-  nossa, não algo que a doc do SDC confirme — é que o subevent tem um orçamento de
-  tempo fixo e, com dois caminhos, ele é dividido entre os dois. O que o dado
-  sustenta: os steps de RTT por procedure não mudam (19,2 contra 18,8), então o que
-  encolheu foi a medida de **tom** por caminho, não a de tempo.
-- **Os dois caminhos não são independentes.** A correlação entre a estimativa do
-  `ap 0` e a do `ap 1`, procedure a procedure, é **+0,94** no MUSIC (+0,63 no
-  `ifft`). A 1 m em linha de visada as duas antenas veem praticamente o mesmo canal
-  — não há diversidade a explorar.
-- **Nenhuma combinação recupera.** Soma de espectros (MAD 0,048), média das
-  covariâncias (0,047) e média simples das duas distâncias (0,048) empatam entre si
-  e ficam **piores que um caminho só** (0,033). Combinar duas medidas correlacionadas
-  e mais ruidosas não faz milagre.
+Os números são o **viés** (mediana do lido menos a trena). Confirmado em três rodadas
+alternadas por distância (1 → 2 → 1 → 2 → 1 → 2 caminhos, ~100 procedures cada); o
+repo versiona uma rodada de cada.
 
-O viés não muda: ~+1,4 m nas duas configurações. E o `ap 1` lê sistematicamente
-2,6 cm (MUSIC) a 5 cm (`ifft`) mais perto que o `ap 0` — é o comprimento elétrico
-diferente da segunda antena, um offset fixo, não ruído.
+![Um caminho de antena contra dois, em duas distâncias](cs_antenas.png)
 
-![Um caminho de antena contra dois, na mesma posição](cs_antenas.png)
+### Três leituras
 
-Por isso `CONFIG_LAB_ANTENNA_PATHS` tem **default 1**. Dois caminhos custam
-precisão e, aqui, não devolvem nada.
+- **Ligar o segundo caminho custa dispersão no primeiro.** É grande e reprodutível
+  no `phase_slope`: MAD 0,040 → 0,156 a 1 m, e 0,119 → 0,259 a 3 m. No `ifft` e no
+  MUSIC é claro a 1 m (0,039 → 0,076 e 0,033 → 0,049) e pequeno a 3 m (0,037 →
+  0,047 e 0,035 → 0,049), da mesma ordem da variação entre rodadas. A explicação
+  provável — hipótese nossa, não algo que a doc do SDC confirme — é que o subevent
+  tem orçamento de tempo fixo e, com dois caminhos, ele é dividido. O que o dado
+  sustenta: os steps de RTT por procedure não mudam (19,2 contra 18,8), então
+  encolheu a medida de **tom**, não a de tempo.
+- **O segundo caminho nunca é melhor, e pode ser muito pior.** A 1 m ele empata com
+  o primeiro (diferença de −0,03 m). A 3 m ele lê **1,07 m mais longe** — e com a
+  mesma repetibilidade do primeiro (MAD 0,043 contra 0,047). É um erro *estável*,
+  não ruído: a segunda antena se fixa num caminho mais longo.
+- **Nenhuma combinação recupera.** A 1 m as duas combinações empatam com o pior dos
+  caminhos (MAD 0,047–0,048 contra 0,033 de um caminho só). A 3 m elas pioram a
+  **exatidão**: o erro mediano do MUSIC sai de 1,06 m (`ap 0`) para 1,56 m com a
+  média das covariâncias e 2,03 m com a soma dos espectros, porque as duas puxam a
+  estimativa para o caminho errado.
 
-**O que este experimento não diz.** Uma sala, 1 m, linha de visada, um par de kits.
-Diversidade de antena existe justamente para o caso oposto — multipath forte,
-obstrução, o caminho direto atenuado num dos lados —, e é aí que a correlação entre
-os caminhos cai e a combinação passa a valer. O experimento honesto é repetir a
-tabela com o corpo de alguém entre o TAG e a DK, ou com o TAG encostado em metal
-(o experimento B do lab 2). O código já está pronto para isso: é só capturar com
+### O que muda com a distância
+
+A relação entre os dois caminhos **não é uma constante do hardware**. A correlação
+entre a estimativa do `ap 0` e a do `ap 1`, procedure a procedure, é **+0,94 a 1 m**
+e **+0,10 a 3 m**. São dois regimes opostos, e nenhum ajuda:
+
+- **A 1 m os caminhos são redundantes.** As duas antenas veem praticamente o mesmo
+  canal, então combinar não acrescenta informação — só ruído.
+- **A 3 m os caminhos são independentes** (é a diversidade que se procurava!), mas
+  um deles está 1 m errado. Diversidade só paga quando os caminhos são independentes
+  **e** comparavelmente bons; aqui, misturar um caminho bom com um ruim dá um
+  resultado no meio.
+
+Isso também desmente a leitura fácil de que o desvio do `ap 1` seria um offset fixo
+da segunda antena: ele muda de −0,03 m para +1,07 m entre as duas medidas. Não é
+comprimento elétrico — é geometria, orientação e o que cada antena enxerga.
+
+Por isso `CONFIG_LAB_ANTENNA_PATHS` tem **default 1**: nas duas distâncias, dois
+caminhos custam dispersão e não devolvem exatidão.
+
+**O que este experimento não diz.** As duas distâncias diferem também na
+**montagem** (1 m com o TAG apoiado numa DK, 3 m com o TAG na bateria), então não dá
+para atribuir a diferença à distância sozinha. E as duas são linha de visada, numa
+sala só. Diversidade de antena existe justamente para o caso oposto — multipath
+forte, obstrução, o caminho direto atenuado num dos lados. O experimento que falta é
+repetir a tabela com o corpo de alguém entre o TAG e a DK, ou com o TAG encostado em
+metal (o experimento B do lab 2). O código já está pronto: é só capturar com
 `CONFIG_LAB_ANTENNA_PATHS=2` e rodar o `cs_compare.py`.
 
 ## Onde ir a partir daqui
