@@ -153,8 +153,45 @@ Para compilar modelos TFLite → Axon **na nuvem**, use o próprio Edge AI Lab (
 - **Trena** (≥ 5 m) por bancada, para os labs CS 2 e CS 5.
 - **SEGGER J-Link** (vem com o toolchain) — o log do TAG só sai por RTT.
 - Smartphone com Channel Sounding (Pixel 9/10 com Android 16 QPR2+, nRF Toolbox ≥ 4.1.4) é **opcional** e só para a demo do instrutor; o Galaxy S26 exige ajustes dos dois lados (ver `comms/01_cs_reflector/s26.conf`).
-- **nRF Wi-Fi Provisioner** (Android/iOS) — provisionamento do nRF7002-EBII.
-- Rede Wi-Fi de teste disponível em sala (2.4/5 GHz) e um endpoint TCP acessível (pode ser um PC na mesma rede com `ncat`/Python).
+- **nRF Wi-Fi Provisioner** (Android/iOS) — só para a demo de provisionamento por BLE do
+  instrutor; o lab de provisionamento é por SoftAP e usa o navegador do próprio notebook.
+- Rede Wi-Fi de teste em sala (2.4/5 GHz) e um endpoint TCP acessível — **desejável, não
+  obrigatório**: os labs têm plano B com a própria DK em SoftAP, e o PC do aluno se conecta
+  a ela. Wi-Fi corporativo com portal cativo ou WPA2-Enterprise não serve.
+
+### Blobs de firmware do nRF70 — passo obrigatório, uma vez por instalação do SDK
+
+O driver do nRF7002 precisa de binários proprietários que **não vêm no clone do SDK**. Sem
+eles, qualquer build de Wi-Fi falha no CMake por arquivo ausente:
+
+```bash
+# no terminal do nRF Connect (o mesmo ambiente do west):
+west blobs fetch nrf_wifi
+```
+
+Baixa cinco binários (`default`, `scan_only`, `radio_test`, `system_with_raw`,
+`offloaded_raw_tx`) para `modules/lib/nrf_wifi/zephyr/blobs/`. Precisa de internet, roda em
+segundos e vale para todos os projetos daquela instalação.
+
+> **Vale também para quem só usa VS Code.** A extensão instala SDK e toolchain mas **não**
+> busca os blobs — verificado nesta bancada: a instalação feita pelo toolchain manager estava
+> com zero binários. No VS Code, abra `nRF Connect: Open Terminal` e rode o comando ali.
+> Conferir com `west blobs list nrf_wifi`.
+
+Documentado pela Nordic em *nRF7002 EB II → Requirements → Prerequisites*.
+
+### Armadilhas da nRF7002-EB II no nRF54LM20-DK (verificadas na árvore do v3.4.0)
+
+- **A EB II encaixa no conector P17 (Expansion)** do LM20-DK.
+- **O console muda de porta.** O overlay do shield na v3.4.0 desabilita a `uart20` e move o
+  console para a `uart30` (`/* UART20 conflicts with EB-II shield */`). Ou seja: com o shield
+  acoplado, o log sai em **outra VCOM**. A documentação online "latest" afirma o contrário
+  para o LM20 — descreve uma versão diferente da que usamos; confie no overlay da sua árvore.
+- **O botão 4 some.** O overlay apaga o nó `button_3` e o alias `sw3`. Sobram os botões 1–3
+  (`sw0`–`sw2`) e os quatro LEDs.
+- **Não dá para somar o microfone PDM dos labs de Edge AI.** O `pdm20` do `07_ww_kws` usa
+  `P1.04` (PDM_CLK) e `P1.05` (PDM_DIN), que são exatamente o `BUCKEN` e o `IRQ` do nRF7002.
+  Microfone e companion não coexistem no mesmo kit sem mudar a fiação.
 
 ---
 
