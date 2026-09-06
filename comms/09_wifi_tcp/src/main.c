@@ -4,7 +4,8 @@
  * CONFIG_LAB_INTERVALO_MS e manda uma amostra pelo transporte configurado
  * (transporte.h). O botao sw0 manda uma amostra extra, imediata, com
  * "botao":true. Uma linha "LED 1"/"LED 0" vinda do servidor acende ou apaga
- * o led1.
+ * o LED 2 (led1 no devicetree; ver o comentario acima de LED1_NODE para a
+ * diferenca de numeracao).
  */
 #include <errno.h>
 #include <stdint.h>
@@ -41,6 +42,13 @@ static const struct device *const temp_dev = DEVICE_DT_GET(TEMP_NODE);
  * apaga o botao e o alias): o botao do lab e o sw0.
  */
 #define SW0_NODE DT_ALIAS(sw0)
+
+/* O alias do devicetree e "led1" (indice 0-based: led0, led1, led2, led3),
+ * mas a serigrafia da placa numera os LEDs a partir de 1 -- entao led1 e o
+ * "LED 2" que o aluno ve gravado ao lado do LED. Usar "LED 2" em todo log e
+ * comentario voltado para quem esta lendo o console ou o README; "led1"
+ * fica so para o codigo (nome da variavel, do no do devicetree).
+ */
 #define LED1_NODE DT_ALIAS(led1)
 
 static const struct gpio_dt_spec botao = GPIO_DT_SPEC_GET(SW0_NODE, gpios);
@@ -296,8 +304,16 @@ static void thread_recepcao(void)
 
 		if (strncmp(linha, "LED 1", 5) == 0) {
 			gpio_pin_set_dt(&led1, 1);
+			LOG_INF("LED 2 aceso (comando do servidor)");
 		} else if (strncmp(linha, "LED 0", 5) == 0) {
 			gpio_pin_set_dt(&led1, 0);
+			LOG_INF("LED 2 apagado (comando do servidor)");
+		} else {
+			/* Truncado de proposito: uma linha invalida pode vir
+			 * mais comprida (lixo, servidor com bug) do que faz
+			 * sentido despejar inteira no log.
+			 */
+			LOG_WRN("Linha nao reconhecida do servidor: \"%.32s\"", linha);
 		}
 	}
 }
@@ -369,7 +385,7 @@ static void configurar_botao(void)
 static void configurar_led(void)
 {
 	if (!gpio_is_ready_dt(&led1)) {
-		LOG_ERR("LED led1 nao esta pronto");
+		LOG_ERR("LED 2 nao esta pronto");
 		return;
 	}
 

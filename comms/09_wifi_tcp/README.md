@@ -129,7 +129,7 @@ Resumo de memória:
 
 | Região | Usado | Região total | % usado |
 |---|---|---|---|
-| FLASH | 555320 B | 2036 KB | 26,64% |
+| FLASH | 555512 B | 2036 KB | 26,64% |
 | RAM | 191952 B | 511 KB | 36,68% |
 
 ## Testes automáticos (PC, sem hardware)
