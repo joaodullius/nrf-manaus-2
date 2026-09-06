@@ -341,11 +341,19 @@ int transporte_enviar(const char *buf, size_t len)
 	k_mutex_unlock(&transporte_mutex);
 
 	if (ret < 0) {
+		/* Erro de rede (connect/send/recv/timeout dentro do
+		 * http_client_req()) -- motivo para reabrir, como no TCP.
+		 */
 		return ret;
 	}
 	if (ctx.status_code != 200) {
+		/* A conexao funcionou (chegou uma resposta HTTP de verdade);
+		 * o servidor so nao aceitou a amostra. E erro de aplicacao,
+		 * nao de transporte -- -EBADMSG, nao -ECONNRESET, para quem
+		 * chama nao reabrir uma conexao que nao esta quebrada.
+		 */
 		LOG_WRN("Servidor respondeu %u ao POST /telemetria", ctx.status_code);
-		return -ECONNRESET;
+		return -EBADMSG;
 	}
 	return (int)len;
 }
@@ -386,21 +394,38 @@ int transporte_receber(char *buf, size_t len, k_timeout_t espera)
 	k_mutex_unlock(&transporte_mutex);
 
 	if (ret < 0) {
+		/* Erro de rede -- motivo para reabrir, como no TCP. */
 		return ret;
 	}
 
-	if (ctx.status_code == 204 || ctx.corpo_len == 0) {
-		/* Nada pendente: dorme o resto do intervalo pedido antes de
-		 * devolver "nada chegou", para o GET nao ser disparado de
-		 * novo imediatamente -- sem isso, o polling martela o
-		 * servidor a cada iteracao da thread de recepcao.
+	if (ctx.status_code == 204) {
+		/* Nada pendente (caso normal do polling): dorme o resto do
+		 * intervalo pedido antes de devolver "nada chegou", para o
+		 * GET nao ser disparado de novo imediatamente -- sem isso, o
+		 * polling martela o servidor a cada iteracao da thread de
+		 * recepcao.
 		 */
 		k_sleep(K_MSEC(espera_ms));
 		return 0;
 	}
 	if (ctx.status_code != 200) {
+		/* Erro de aplicacao (404, 500...) -- confere o status ANTES
+		 * de olhar o tamanho do corpo: uma resposta de erro sem
+		 * corpo (comum, e o caso do proprio wifi_http_server.py
+		 * deste curso) nao pode cair no "corpo vazio" abaixo e ser
+		 * confundida com "nada pendente". -EBADMSG, nao -ECONNRESET:
+		 * a conexao esta boa, so a consulta que falhou.
+		 */
 		LOG_WRN("Servidor respondeu %u ao GET /comando", ctx.status_code);
-		return -ECONNRESET;
+		return -EBADMSG;
+	}
+	if (ctx.corpo_len == 0) {
+		/* 200 com corpo vazio: tambem nada pendente, so que o
+		 * servidor confirmou em vez de responder 204 -- mesmo
+		 * tratamento do 204 acima.
+		 */
+		k_sleep(K_MSEC(espera_ms));
+		return 0;
 	}
 
 	return (int)ctx.corpo_len;
@@ -421,10 +446,7 @@ void transporte_fechar(void)
  * TCP e do HTTP, aqui o socket some por baixo da API: e o mqtt_client que
  * cria e guarda o descritor (client.transport.tcp.sock), e as chamadas
  * (mqtt_publish, mqtt_subscribe, mqtt_input, mqtt_live) so falam com esse
- * descritor internamente. O mutex protege a mesma coisa que nos outros dois
- * transportes -- a struct mqtt_client (`cliente`, abaixo) e os buffers
- * associados a ela, compartilhados entre as tres threads que chamam
- * enviar()/receber().
+ * descritor internamente.
  *
  * Publica em CONFIG_LAB_MQTT_TOPICO com QoS 0 (no maximo uma vez, sem PUBACK)
  * -- combina com o payload deste lab, que ja e best-effort (perder uma
@@ -443,6 +465,21 @@ void transporte_fechar(void)
  * transporte_receber() a cada 1 s (thread_recepcao() em src/main.c), o
  * cliente MQTT e bombeado nesse ritmo mesmo quando nao ha comando algum
  * pendente.
+ *
+ * DOIS "slots" (mqtt_slot, abaixo), nao um cliente unico: cada slot tem seu
+ * proprio mqtt_client e seus proprios buffers de RX/TX, e so um deles esta
+ * "ativo" (slot_ativo) por vez. transporte_abrir() monta e conecta o slot
+ * INATIVO -- inclusive a espera do CONNACK, que pode levar ate
+ * MQTT_CONNACK_TIMEOUT_MS -- inteiramente FORA do mutex, porque nenhum
+ * enviar()/receber() em andamento em outra thread toca nesse slot (so no
+ * ativo). So a troca final de slot_ativo entra no mutex, e e instantanea.
+ * E o mesmo padrao que o TCP ja usa (conectar fora do mutex, so trocar o
+ * descritor sob exclusao) -- aqui em nivel de slot inteiro em vez de um
+ * unico int, porque o "descritor" do MQTT e a struct mqtt_client inteira
+ * (buffers inclusos), nao um numero que da para copiar em uma instrucao.
+ * Sem isso, uma reconexao MQTT travava transporte_enviar()/receber() de
+ * QUALQUER thread pelo tempo inteiro da espera do CONNACK (ate 5 s) --
+ * porque o mutex ficava preso do inicio ao fim de transporte_abrir().
  */
 
 #include <errno.h>
@@ -461,8 +498,6 @@ LOG_MODULE_REGISTER(lab_transporte, CONFIG_LOG_DEFAULT_LEVEL);
 static K_MUTEX_DEFINE(transporte_mutex);
 
 #define MQTT_BUF_LEN 256
-static uint8_t mqtt_rx_buf[MQTT_BUF_LEN];
-static uint8_t mqtt_tx_buf[MQTT_BUF_LEN];
 
 /* Tempo esperando o CONNACK depois do mqtt_connect() -- so manda o pacote
  * CONNECT; a confirmacao chega de forma assincrona, via mqtt_input(), igual
@@ -477,45 +512,79 @@ static uint8_t mqtt_tx_buf[MQTT_BUF_LEN];
  */
 #define MQTT_CLIENT_ID "nrf-manaus-2-lab10"
 
-static struct mqtt_client cliente;
-static struct net_sockaddr_in endereco_broker;
+struct mqtt_slot {
+	struct mqtt_client cliente;
+	struct net_sockaddr_in endereco_broker;
+	uint8_t rx_buf[MQTT_BUF_LEN];
+	uint8_t tx_buf[MQTT_BUF_LEN];
+	bool conectado;
+	char comando_buf[64];
+	size_t comando_len;
+	bool comando_pendente;
+};
+
+static struct mqtt_slot slots[2];
+
+/* So trocar sob o mutex; so ler sob o mutex tambem (enviar()/receber()
+ * capturam o ponteiro numa variavel local logo apos travar, e usam so essa
+ * copia local dali em diante).
+ */
+static struct mqtt_slot *slot_ativo = &slots[0];
+
 static char topico_comando[sizeof(CONFIG_LAB_MQTT_TOPICO) + sizeof("/comando")];
 
-static bool conectado;
-static char comando_buf[64];
-static size_t comando_len;
-static bool comando_pendente;
+/* O evento chega com o `client` que o gerou -- e assim que sabemos em qual
+ * dos dois slots mexer, mesmo quando o slot em questao ainda nao e o ativo
+ * (o caso do CONNACK durante uma reconexao, que acontece no slot novo antes
+ * da troca).
+ */
+static struct mqtt_slot *slot_do_cliente(struct mqtt_client *client)
+{
+	if (client == &slots[0].cliente) {
+		return &slots[0];
+	}
+	if (client == &slots[1].cliente) {
+		return &slots[1];
+	}
+	return NULL;
+}
 
 static void evt_handler(struct mqtt_client *client, const struct mqtt_evt *evt)
 {
+	struct mqtt_slot *slot = slot_do_cliente(client);
+
+	if (slot == NULL) {
+		return;
+	}
+
 	switch (evt->type) {
 	case MQTT_EVT_CONNACK:
-		conectado = (evt->result == 0);
-		if (!conectado) {
+		slot->conectado = (evt->result == 0);
+		if (!slot->conectado) {
 			LOG_ERR("Broker recusou o CONNECT MQTT (%d)", evt->result);
 		}
 		break;
 
 	case MQTT_EVT_DISCONNECT:
 		LOG_WRN("MQTT desconectado (%d)", evt->result);
-		conectado = false;
+		slot->conectado = false;
 		break;
 
 	case MQTT_EVT_PUBLISH: {
 		size_t n = evt->param.publish.message.payload.len;
 		int ret;
 
-		if (n >= sizeof(comando_buf)) {
+		if (n >= sizeof(slot->comando_buf)) {
 			LOG_WRN("Comando MQTT truncado (%zu > %zu bytes)", n,
-				sizeof(comando_buf) - 1);
-			n = sizeof(comando_buf) - 1;
+				sizeof(slot->comando_buf) - 1);
+			n = sizeof(slot->comando_buf) - 1;
 		}
 
-		ret = mqtt_readall_publish_payload(client, (uint8_t *)comando_buf, n);
+		ret = mqtt_readall_publish_payload(client, (uint8_t *)slot->comando_buf, n);
 		if (ret == 0) {
-			comando_buf[n] = '\0';
-			comando_len = n;
-			comando_pendente = true;
+			slot->comando_buf[n] = '\0';
+			slot->comando_len = n;
+			slot->comando_pendente = true;
 		} else {
 			LOG_WRN("Falha ao ler o payload do comando MQTT (%d)", ret);
 		}
@@ -527,24 +596,31 @@ static void evt_handler(struct mqtt_client *client, const struct mqtt_evt *evt)
 	}
 }
 
-/* So chamar com o mutex ja adquirido. */
-static void fechar_interno(void)
+/* Desliga um slot especifico (nao necessariamente o ativo). Chamavel com ou
+ * sem o mutex -- so mexe em campos do slot indicado, nunca em slot_ativo.
+ */
+static void abortar_slot(struct mqtt_slot *slot)
 {
-	mqtt_abort(&cliente);
-	conectado = false;
-	comando_pendente = false;
+	mqtt_abort(&slot->cliente);
+	slot->conectado = false;
+	slot->comando_pendente = false;
 }
 
 int transporte_abrir(void)
 {
+	/* O slot que NAO e o ativo agora -- e nele que a reconexao inteira
+	 * acontece, sem tocar no que enviar()/receber() de outras threads
+	 * possam estar usando neste instante (o slot_ativo atual).
+	 */
+	struct mqtt_slot *novo = (slot_ativo == &slots[0]) ? &slots[1] : &slots[0];
 	struct mqtt_topic topico;
 	struct mqtt_subscription_list lista;
 	int64_t inicio;
 	int ret;
 
-	endereco_broker.sin_family = NET_AF_INET;
-	endereco_broker.sin_port = net_htons(CONFIG_LAB_PORTA);
-	ret = net_addr_pton(NET_AF_INET, CONFIG_LAB_SERVIDOR_IP, &endereco_broker.sin_addr);
+	novo->endereco_broker.sin_family = NET_AF_INET;
+	novo->endereco_broker.sin_port = net_htons(CONFIG_LAB_PORTA);
+	ret = net_addr_pton(NET_AF_INET, CONFIG_LAB_SERVIDOR_IP, &novo->endereco_broker.sin_addr);
 	if (ret < 0) {
 		LOG_ERR("CONFIG_LAB_SERVIDOR_IP invalido: %s", CONFIG_LAB_SERVIDOR_IP);
 		return ret;
@@ -552,46 +628,46 @@ int transporte_abrir(void)
 
 	snprintf(topico_comando, sizeof(topico_comando), "%s/comando", CONFIG_LAB_MQTT_TOPICO);
 
-	k_mutex_lock(&transporte_mutex, K_FOREVER);
+	/* Daqui ate a troca de slot_ativo, so o slot `novo` e tocado -- nada
+	 * compartilhado com o slot ativo atual, entao roda fora do mutex.
+	 */
+	novo->conectado = false;
+	novo->comando_pendente = false;
 
-	fechar_interno();
+	mqtt_client_init(&novo->cliente);
+	novo->cliente.broker = &novo->endereco_broker;
+	novo->cliente.evt_cb = evt_handler;
+	novo->cliente.client_id.utf8 = (uint8_t *)MQTT_CLIENT_ID;
+	novo->cliente.client_id.size = sizeof(MQTT_CLIENT_ID) - 1;
+	novo->cliente.rx_buf = novo->rx_buf;
+	novo->cliente.rx_buf_size = sizeof(novo->rx_buf);
+	novo->cliente.tx_buf = novo->tx_buf;
+	novo->cliente.tx_buf_size = sizeof(novo->tx_buf);
+	novo->cliente.transport.type = MQTT_TRANSPORT_NON_SECURE;
 
-	mqtt_client_init(&cliente);
-	cliente.broker = &endereco_broker;
-	cliente.evt_cb = evt_handler;
-	cliente.client_id.utf8 = (uint8_t *)MQTT_CLIENT_ID;
-	cliente.client_id.size = sizeof(MQTT_CLIENT_ID) - 1;
-	cliente.rx_buf = mqtt_rx_buf;
-	cliente.rx_buf_size = sizeof(mqtt_rx_buf);
-	cliente.tx_buf = mqtt_tx_buf;
-	cliente.tx_buf_size = sizeof(mqtt_tx_buf);
-	cliente.transport.type = MQTT_TRANSPORT_NON_SECURE;
-
-	ret = mqtt_connect(&cliente);
+	ret = mqtt_connect(&novo->cliente);
 	if (ret < 0) {
 		LOG_ERR("Falha ao mandar o CONNECT MQTT (%d)", ret);
-		k_mutex_unlock(&transporte_mutex);
 		return ret;
 	}
 
 	inicio = k_uptime_get();
-	while (!conectado && (k_uptime_get() - inicio) < MQTT_CONNACK_TIMEOUT_MS) {
+	while (!novo->conectado && (k_uptime_get() - inicio) < MQTT_CONNACK_TIMEOUT_MS) {
 		struct zsock_pollfd pfd = {
-			.fd = cliente.transport.tcp.sock,
+			.fd = novo->cliente.transport.tcp.sock,
 			.events = ZSOCK_POLLIN,
 		};
 		int32_t restante = (int32_t)(MQTT_CONNACK_TIMEOUT_MS -
 					      (k_uptime_get() - inicio));
 
 		if (zsock_poll(&pfd, 1, restante) > 0) {
-			mqtt_input(&cliente);
+			mqtt_input(&novo->cliente);
 		}
 	}
 
-	if (!conectado) {
+	if (!novo->conectado) {
 		LOG_ERR("Tempo esgotado esperando o CONNACK do broker MQTT");
-		fechar_interno();
-		k_mutex_unlock(&transporte_mutex);
+		abortar_slot(novo);
 		return -ETIMEDOUT;
 	}
 
@@ -609,11 +685,23 @@ int transporte_abrir(void)
 	lista.list_count = 1;
 	lista.message_id = 1;
 
-	ret = mqtt_subscribe(&cliente, &lista);
+	ret = mqtt_subscribe(&novo->cliente, &lista);
 	if (ret < 0) {
 		LOG_WRN("Falha ao assinar %s (%d)", topico_comando, ret);
 	}
 
+	/* So agora, com o slot novo pronto (conectado e assinado), a troca --
+	 * essa parte sim precisa da exclusao: desliga o slot antigo e assume
+	 * o novo como slot_ativo atomicamente, para enviar()/receber() nunca
+	 * verem um estado inconsistente entre os dois. Mesma sequencia do
+	 * TCP (fechar_interno() e so depois o swap, os dois sob o mesmo
+	 * lock/unlock).
+	 */
+	k_mutex_lock(&transporte_mutex, K_FOREVER);
+	if (slot_ativo != novo) {
+		abortar_slot(slot_ativo);
+	}
+	slot_ativo = novo;
 	k_mutex_unlock(&transporte_mutex);
 
 	LOG_INF("MQTT conectado em %s:%d, publicando em %s", CONFIG_LAB_SERVIDOR_IP,
@@ -624,11 +712,13 @@ int transporte_abrir(void)
 int transporte_enviar(const char *buf, size_t len)
 {
 	struct mqtt_publish_param param = {0};
+	struct mqtt_slot *slot;
 	int ret;
 
 	k_mutex_lock(&transporte_mutex, K_FOREVER);
 
-	if (!conectado) {
+	slot = slot_ativo;
+	if (!slot->conectado) {
 		k_mutex_unlock(&transporte_mutex);
 		return -ENOTCONN;
 	}
@@ -639,7 +729,7 @@ int transporte_enviar(const char *buf, size_t len)
 	param.message.payload.data = (uint8_t *)buf;
 	param.message.payload.len = len;
 
-	ret = mqtt_publish(&cliente, &param);
+	ret = mqtt_publish(&slot->cliente, &param);
 
 	k_mutex_unlock(&transporte_mutex);
 
@@ -651,6 +741,7 @@ int transporte_enviar(const char *buf, size_t len)
 
 int transporte_receber(char *buf, size_t len, k_timeout_t espera)
 {
+	struct mqtt_slot *slot;
 	struct zsock_pollfd pfd;
 	int timeout_ms;
 	int ret;
@@ -658,12 +749,13 @@ int transporte_receber(char *buf, size_t len, k_timeout_t espera)
 
 	k_mutex_lock(&transporte_mutex, K_FOREVER);
 
-	if (!conectado) {
+	slot = slot_ativo;
+	if (!slot->conectado) {
 		k_mutex_unlock(&transporte_mutex);
 		return -ENOTCONN;
 	}
 
-	pfd.fd = cliente.transport.tcp.sock;
+	pfd.fd = slot->cliente.transport.tcp.sock;
 	pfd.events = ZSOCK_POLLIN;
 	pfd.revents = 0;
 
@@ -676,10 +768,10 @@ int transporte_receber(char *buf, size_t len, k_timeout_t espera)
 		return ret;
 	}
 	if (ret > 0) {
-		ret = mqtt_input(&cliente);
+		ret = mqtt_input(&slot->cliente);
 		if (ret < 0) {
 			LOG_WRN("Falha ao processar dado MQTT recebido (%d)", ret);
-			conectado = false;
+			slot->conectado = false;
 			k_mutex_unlock(&transporte_mutex);
 			return -ECONNRESET;
 		}
@@ -690,15 +782,15 @@ int transporte_receber(char *buf, size_t len, k_timeout_t espera)
 	 * isso periodicamente, o broker derruba a conexao por keepalive
 	 * mesmo com a rede saudavel.
 	 */
-	ret = mqtt_live(&cliente);
+	ret = mqtt_live(&slot->cliente);
 	if (ret < 0 && ret != -EAGAIN) {
 		LOG_WRN("Falha no keepalive MQTT (%d)", ret);
-		conectado = false;
+		slot->conectado = false;
 		k_mutex_unlock(&transporte_mutex);
 		return ret;
 	}
 
-	if (!conectado) {
+	if (!slot->conectado) {
 		/* mqtt_input()/mqtt_live() podem ter processado um
 		 * MQTT_EVT_DISCONNECT no meio da chamada -- o broker fechou a
 		 * sessao.
@@ -707,14 +799,14 @@ int transporte_receber(char *buf, size_t len, k_timeout_t espera)
 		return -ECONNRESET;
 	}
 
-	if (!comando_pendente) {
+	if (!slot->comando_pendente) {
 		k_mutex_unlock(&transporte_mutex);
 		return 0;
 	}
 
-	n = MIN(comando_len, len);
-	memcpy(buf, comando_buf, n);
-	comando_pendente = false;
+	n = MIN(slot->comando_len, len);
+	memcpy(buf, slot->comando_buf, n);
+	slot->comando_pendente = false;
 
 	k_mutex_unlock(&transporte_mutex);
 	return (int)n;
@@ -723,7 +815,7 @@ int transporte_receber(char *buf, size_t len, k_timeout_t espera)
 void transporte_fechar(void)
 {
 	k_mutex_lock(&transporte_mutex, K_FOREVER);
-	fechar_interno();
+	abortar_slot(slot_ativo);
 	k_mutex_unlock(&transporte_mutex);
 }
 

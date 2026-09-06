@@ -203,7 +203,16 @@ static void montar_e_enviar(bool botao_pressionado)
 	}
 
 	ret = transporte_enviar(linha, (size_t)n);
-	if (ret < 0) {
+	if (ret == -EBADMSG) {
+		/* Erro de aplicacao (por exemplo HTTP respondendo status
+		 * diferente de 200 ao POST /telemetria) -- a conexao em si
+		 * nao caiu, entao reconectar nao consertaria nada. So
+		 * registra e segue: a proxima amostra periodica tenta de
+		 * novo por conta propria.
+		 */
+		LOG_WRN("Servidor rejeitou a amostra %u (erro de aplicacao, sem reconectar)",
+			amostra.seq);
+	} else if (ret < 0) {
 		LOG_ERR("Falha ao enviar a amostra %u (%d); reconectando", amostra.seq, ret);
 		reconectar_transporte();
 	}
@@ -236,6 +245,17 @@ static void thread_recepcao(void)
 			/* Tempo esgotado: nada chegou, conexao presumida viva. */
 			continue;
 		}
+		if (n == -EBADMSG) {
+			/* Erro de aplicacao (por exemplo HTTP respondendo
+			 * status diferente de 200/204 ao GET /comando) -- a
+			 * conexao continua de pe, so a consulta que falhou.
+			 * Reconectar aqui nao resolveria um erro do lado do
+			 * servidor, so tenta de novo na proxima consulta.
+			 */
+			LOG_WRN("Servidor respondeu erro de aplicacao ao consultar comando "
+				"(sem reconectar)");
+			continue;
+		}
 		if (n < 0) {
 			if (n == -ECONNRESET) {
 				LOG_WRN("Servidor fechou a conexao; reconectando");
@@ -256,9 +276,34 @@ static void thread_recepcao(void)
 	}
 }
 
-K_THREAD_DEFINE(telemetria_id, 2048, thread_telemetria, NULL, NULL, NULL, 7, 0, -1);
-K_THREAD_DEFINE(botao_id, 1024, thread_botao, NULL, NULL, NULL, 7, 0, -1);
-K_THREAD_DEFINE(recepcao_id, 2048, thread_recepcao, NULL, NULL, NULL, 7, 0, -1);
+/* As tres pilhas abaixo tem que caber o pior caminho dos TRES transportes
+ * (Kconfig LAB_TRANSPORTE), nao so o TCP -- o binario so tem um deles
+ * compilado por vez, mas main.c e o mesmo para os tres, entao a pilha
+ * precisa sobrar para qualquer um que for escolhido.
+ *
+ * O caminho mais fundo e o HTTP: transporte_enviar()/receber()
+ * (src/transporte.c) abrem uma conexao e chamam http_client_req() do
+ * Zephyr, que sozinha reserva um buffer local de 192 bytes
+ * (MAX_SEND_BUF_LEN, zephyr/subsys/net/lib/http/http_client.c) por cima da
+ * pilha ja gasta por payload_montar()/transporte_*() e pela propria pilha
+ * de rede (zsock_connect/send/recv). O sample de referencia do Zephyr para
+ * essa mesma API (zephyr/samples/net/sockets/http_client/prj.conf) reserva
+ * 3072 bytes de CONFIG_MAIN_STACK_SIZE so para isso -- e o piso usado aqui
+ * para as tres threads. O MQTT (mqtt_publish()/mqtt_input(), mais raso que
+ * o HTTP) e o TCP (so zsock_send/recv) folgam confortavelmente dentro do
+ * mesmo numero.
+ *
+ * telemetria_id e botao_id chamam exatamente a mesma funcao
+ * (montar_e_enviar() -> transporte_enviar(), acima) -- por isso as duas
+ * levam o mesmo tamanho. Nao ha caminho que justifique a diferenca que
+ * existia antes (2048 vs. 1024): botao_id com metade da pilha de
+ * telemetria_id, apesar de percorrer o mesmo codigo, era so uma pilha
+ * pequena demais que ainda nao tinha estourado por o botao ser apertado bem
+ * menos vezes que o tick periodico da telemetria.
+ */
+K_THREAD_DEFINE(telemetria_id, 3072, thread_telemetria, NULL, NULL, NULL, 7, 0, -1);
+K_THREAD_DEFINE(botao_id, 3072, thread_botao, NULL, NULL, NULL, 7, 0, -1);
+K_THREAD_DEFINE(recepcao_id, 3072, thread_recepcao, NULL, NULL, NULL, 7, 0, -1);
 
 static void botao_pressionado_cb(const struct device *dev, struct gpio_callback *cb,
 				  uint32_t pins)
