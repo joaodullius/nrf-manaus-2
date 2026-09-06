@@ -157,6 +157,11 @@ para medir o binário — não a rede da sala):
 A diferença é pequena (556 B de FLASH, 24 B de RAM) — é só o driver `mpsl_cx` sendo
 compilado ou não; o resto do binário (Wi-Fi, BLE, zperf, throughput) é idêntico.
 
+71,49% de RAM ainda deixa cerca de **145,7 KiB livres** dos 511 KB da região — folga
+confortável. É o percentual mais alto da frente de Wi-Fi até aqui (o lab 9, por
+exemplo, usa 36%) porque este é o único lab que mantém as duas pilhas de rádio — Wi-Fi
+e BLE — abertas e ativas ao mesmo tempo, em vez de uma de cada vez.
+
 ## Passo 2 — bancada
 
 > **A confirmar na bancada.**
