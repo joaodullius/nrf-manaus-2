@@ -3,13 +3,24 @@
 """Formato do payload do lab 9 — codigo do curso (nrf-manaus-2).
 
 Uma linha JSON por amostra. E a MESMA estrutura que o firmware monta em
-src/payload.c; este modulo existe para o servidor do PC e para os testes, e
-para o aluno poder ler o formato sem abrir o C.
+src/payload.c -- e de proposito que existem duas implementacoes do mesmo
+formato, uma em C e outra aqui: o firmware roda no kit e so pode ser C; o
+servidor do PC (wifi_server.py) e os testes rodam em Python. Manter as duas
+manualmente sincronizadas seria facil de deixar divergir sem ninguem notar;
+por isso tests/test_payload_c.py compila payload.c de verdade num binario de
+host e compara, byte a byte, com o que montar() produz aqui -- e essa
+comparacao, nao os testes so em Python contra eles mesmos, que prova que as
+duas implementacoes concordam.
 
     {"seq":7,"uptime_ms":1234,"temp_c":25.37,"rssi_dbm":-52,"botao":false}
 
-temp_c vem do firmware em centesimos de grau (int) para nao precisar de float
-na serializacao embarcada; aqui vira grau com duas casas.
+temp_c chega do firmware como centesimos de grau, um inteiro (temp_cc), nao
+como ponto flutuante: o firmware desliga o suporte a float no cbprintf
+(CONFIG_CBPRINTF_FP_SUPPORT=n, em prj.conf) para nao pagar o custo de flash
+desse suporte so para formatar uma temperatura, e monta a linha com divisao e
+resto inteiros em vez de "%f" (ver src/payload.c). montar() aqui faz o
+caminho inverso, de volta para grau com duas casas -- o lado do PC nao tem
+essa restricao de espaco.
 """
 from __future__ import annotations
 

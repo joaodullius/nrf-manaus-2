@@ -6,6 +6,27 @@ Roda no PC do instrutor/aluno. Aceita conexoes TCP da DK, le uma linha JSON
 por amostra (formato em payload_ref.py), imprime cada uma e manda comandos de
 LED de volta pelo teclado.
 
+Tres decisoes de design que nao aparecem so de olhar a assinatura das
+funcoes -- os detalhes mecanicos ficam junto de cada uma, abaixo:
+
+- Uma thread por conexao aceita (aceitar_para_sempre()), nao uma conexao
+  servida ate o fim antes de aceitar a proxima. O firmware reconecta sozinho
+  depois de uma queda de Wi-Fi, e a conexao antiga costuma morrer sem
+  fechamento limpo (sem FIN, as vezes sem nem RST). Numa versao "uma conexao
+  por vez", essa conexao morta prende o servidor para sempre, e a reconexao
+  do firmware fica parada na fila do listen() sem ser atendida.
+- Tempo limite de leitura por conexao (TEMPO_LIMITE_LEITURA_S), que tem que
+  ficar acima do maior intervalo de telemetria que o Kconfig do firmware
+  permite. Sem um limite, uma conexao morta sem FIN nem RST nunca gera um
+  erro de rede -- recv() ficaria bloqueado ali para sempre; um limite menor
+  que o intervalo de telemetria derrubaria conexoes saudaveis.
+- Acumulo num buffer, cortado pelo delimitador '\\n', em vez de tratar cada
+  recv() como uma amostra inteira. TCP e um fluxo de bytes sem fronteira de
+  mensagem: um recv() pode devolver uma linha incompleta, uma linha inteira,
+  varias de uma vez, ou uma linha inteira mais um pedaco da proxima --
+  depende de como a rede fragmentou os dados naquela hora, nao do que o
+  firmware mandou de uma vez so.
+
 Uso:
     python wifi_server.py --porta 9000
 
@@ -29,13 +50,10 @@ TAMANHO_LEITURA = 4096
 # gargalo.
 BACKLOG = 8
 
-# Tempo sem nenhum byte de uma conexao antes de considera-la morta e fechar.
-# O valor existe para o caso de uma queda de associacao Wi-Fi que nunca manda
-# FIN nem RST -- sem um limite de tempo, recv() ficaria bloqueado nessa
-# conexao para sempre. Tem que ficar acima do maior CONFIG_LAB_INTERVALO_MS
-# que o Kconfig do firmware permite (range 200..60000, ou seja ate 60 s de
-# intervalo entre amostras) -- 90 s da folga confortavel sobre esse pior
-# caso legitimo. Quem mudar um dos dois numeros tem que olhar o outro.
+# Por que esse tempo limite existe: ver o docstring do modulo, acima. O
+# valor: CONFIG_LAB_INTERVALO_MS no Kconfig do firmware aceita ate 60000 (60
+# s entre amostras); 90 s da folga confortavel sobre esse pior caso legitimo.
+# Quem mudar um dos dois numeros tem que olhar o outro.
 TEMPO_LIMITE_LEITURA_S = 90.0
 
 
@@ -46,12 +64,8 @@ class Servidor:
     guarda a porta efetiva depois do bind, o que torna os testes
     deterministicos sem depender de uma porta fixa disponivel na maquina.
 
-    Aceita mais de uma conexao ao mesmo tempo por design, nao por acidente:
-    o firmware reconecta sozinho depois de uma queda de Wi-Fi, e a conexao
-    antiga (morta, sem fechamento limpo) pode continuar existindo por um
-    tempo depois que a nova ja chegou. O servidor precisa aceitar essa
-    conexao nova imediatamente -- nunca esperar a antiga terminar primeiro,
-    porque ela pode nunca terminar sozinha. enviar_comando() sempre manda
+    Aceita mais de uma conexao ao mesmo tempo por design, nao por acidente
+    (ver o "por que" no docstring do modulo). enviar_comando() sempre manda
     para a conexao aceita mais recentemente.
     """
 
@@ -82,18 +96,12 @@ class Servidor:
 
     def aceitar_para_sempre(self) -> None:
         """Aceita conexoes continuamente, uma thread por conexao aceita, ate
-        o socket do servidor ser fechado (fechar()).
+        o socket do servidor ser fechado (fechar()) -- o "por que" dessa
+        separacao (aceitar nunca serve) esta no docstring do modulo.
 
-        O laco aqui NUNCA serve uma conexao -- so aceita e delega para uma
-        thread nova, e volta a aceitar imediatamente. E essa separacao que
-        garante que uma conexao antiga travada (sem FIN nem RST, o caso real
-        de uma queda de associacao Wi-Fi) nao impede o servidor de aceitar a
-        reconexao do firmware: antes dessa separacao, servir uma conexao ate
-        o fim e so depois aceitar a proxima deixava o servidor preso na
-        antiga, com a nova parada na fila do listen() sem ser atendida. Um
-        erro de leitura numa conexao (por exemplo um RST abrupto) e tratado
-        dentro de _servir_conexao_aceita e nunca chega a este laco -- erro
-        de leitura de uma conexao e problema so dela, nunca do aceite.
+        Um erro de leitura numa conexao (por exemplo um RST abrupto) e
+        tratado dentro de _servir_conexao_aceita e nunca chega a este laco --
+        erro de leitura de uma conexao e problema so dela, nunca do aceite.
         """
         while True:
             try:
@@ -129,6 +137,8 @@ class Servidor:
                 if not dados:
                     # O outro lado fechou a conexao de forma limpa (FIN).
                     return
+                # Acumula e corta pelo delimitador -- ver o "por que" (TCP
+                # nao preserva fronteira de mensagem) no docstring do modulo.
                 buffer += dados
                 while b"\n" in buffer:
                     linha, buffer = buffer.split(b"\n", 1)
