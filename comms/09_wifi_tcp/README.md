@@ -73,14 +73,21 @@ pip install -r requirements.txt   # só pytest, para os testes
 python wifi_server.py --porta 9000
 ```
 
-Aceita uma conexão por vez, imprime cada amostra numa linha alinhada, e lê o teclado:
-`l` liga o LED 2, `d` apaga, `q` sai. A classe `Servidor` (`porta`, `ao_receber`) é o
-que os testes exercitam sem hardware: `porta=0` deixa o SO escolher uma porta livre e
-`porta_real` devolve a efetiva, o que torna o teste determinístico; `ao_receber` é
-chamado com o dicionário de cada amostra válida (linhas que `payload_ref.parse()`
-rejeita são descartadas, sem derrubar a conexão). `enviar_comando(texto)` manda
-`texto + "\n"` para o cliente conectado — vira um no-op silencioso se não houver
-cliente no momento.
+Imprime cada amostra numa linha alinhada e lê o teclado: `l` liga o LED 2, `d` apaga,
+`q` sai. A classe `Servidor` (`porta`, `ao_receber`) é o que os testes exercitam sem
+hardware: `porta=0` deixa o SO escolher uma porta livre e `porta_real` devolve a
+efetiva, o que torna o teste determinístico; `ao_receber` é chamado com o dicionário de
+cada amostra válida (linhas que `payload_ref.parse()` rejeita são descartadas, sem
+derrubar a conexão). `enviar_comando(texto)` manda `texto + "\n"` para a conexão aceita
+mais recentemente — vira um no-op silencioso se não houver cliente no momento.
+
+O servidor aceita mais de uma conexão ao mesmo tempo de propósito: uma queda de
+associação Wi-Fi não fecha a conexão de forma limpa (sem `FIN`, às vezes sem nem um
+`RST`), e o firmware reconecta sozinho antes que o servidor tenha qualquer chance de
+perceber que a conexão antiga morreu. `aceitar_para_sempre()` só aceita e delega cada
+conexão para uma thread própria — nunca espera uma conexão terminar para aceitar a
+próxima — e cada conexão tem um limite de 30 s sem receber nada antes de ser dada como
+morta e fechada.
 
 ## Os três gestos do lab
 
@@ -119,13 +126,16 @@ cd comms/09_wifi_tcp/tools
 python -m pytest -q
 ```
 
-`16 passed, 8 skipped` nesta bancada: os 8 pulados são a travessia C↔Python
+`18 passed, 8 skipped` nesta bancada: os 8 pulados são a travessia C↔Python
 (`tests/test_payload_c.py`), por falta de compilador de host utilizável — ver
 `tools/README.md` para a ordem de busca e a mensagem de skip. Os testes de
 `wifi_server.py` (`tests/test_server.py`) sobem um `Servidor(porta=0)` de verdade e
 conversam com ele por um socket local, cobrindo o caminho feliz e os casos ruins:
-linha partida em dois pedaços, duas amostras no mesmo pacote, linha malformada e
-cliente que desconecta no meio.
+linha partida em dois pedaços, duas amostras no mesmo pacote, linha malformada, cliente
+que desconecta de forma limpa no meio e — o caso realista de uma queda de Wi-Fi —
+cliente derrubado com `RST` abrupto (via `SO_LINGER` zero, sem hardware), conferindo
+que o servidor continua aceitando conexões novas depois, mesmo com a conexão derrubada
+ainda não coletada.
 
 ## Roteiro de bancada
 
