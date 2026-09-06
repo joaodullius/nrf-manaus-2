@@ -603,7 +603,14 @@ Nada aqui foi rodado em hardware ainda, além do build de fumaça do §2.1.
 
 1. ~~**Console na `uart30`**~~ — **fechado em 2026-09-06.** Console na `uart30`, primeira
    VCOM; sem shield fica na `uart20`, segunda VCOM. Medido nas duas condições. Ver §2.3.
-2. **Ponto de medicao do PPK2 no LM20-DK + EB II** — as instrucoes publicadas sao do nRF7002
+2. **Varredura de DTIM com o PPK2 na rede do instrutor** — medir a corrente média para
+   valores diferentes de *DTIM period* configurados no roteador, fechando a escada do §7.1 com
+   corrente e não só com latência. **Duas dependências:** o ponto de medição do PPK2 nesta
+   combinação (item 3) e o roteador expor o período de DTIM na administração. A ONT Askey da
+   bancada pode não expor — ONT de operadora costuma não expor. Confirmar antes de planejar a
+   medida; se não expuser, a varredura fica só no listen interval, que é todo do lado da
+   estação.
+3. **Ponto de medicao do PPK2 no LM20-DK + EB II** — as instrucoes publicadas sao do nRF7002
    DK. Levantar onde medir nesta combinacao e o que o ponto escolhido abrange (so o companion,
    ou companion mais host). Ver §7.2.
 3. **`provisioning/softap` na variante B** — `platform_allow` lista, mas `boards/` só tem
