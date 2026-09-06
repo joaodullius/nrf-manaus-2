@@ -84,8 +84,8 @@ em *nRF7002 EB II → Requirements → Prerequisites*. Registrado em `PREREQUISI
 
 Todas custam tempo de aula se descobertas em sala:
 
-**O console muda de porta.** O overlay do shield na v3.4.0 desabilita a `uart20` e move
-console, shell e mcumgr para a `uart30`:
+**O console troca de UART, não de VCOM.** O overlay do shield na v3.4.0 desabilita a
+`uart20` e move console, shell e mcumgr para a `uart30`:
 
 ```dts
 /* UART20 conflicts with EB-II shield; use UART30 */
@@ -93,9 +93,13 @@ console, shell e mcumgr para a `uart30`:
 chosen { zephyr,console = &uart30; ... };
 ```
 
-Com a EB II acoplada, **o log sai em outra VCOM**. A documentação online "latest" afirma o
-contrário para o LM20 (*"não é afetado, UART20 continua sendo o console"*) — descreve uma
-versão diferente da que usamos. Item de validação em bancada (§8).
+**Medido na bancada (2026-09-06):** o prompt sai na **primeira VCOM**, a de sempre; a
+segunda fica muda. A troca de UART é real — o `device list` mostra só a `uart30`, a `uart20`
+some — mas `uart20` (P1.16/P1.17) e `uart30` (P0.06/P0.07) desembocam na mesma vcom 0 do chip
+de interface. A hipótese inicial de que o log migraria de VCOM está **descartada por medição**.
+
+O que sobra de consequência real: imagens com e sem shield usam UARTs diferentes, então trocar
+o firmware da placa sem recompilar para o alvo certo deixa o console mudo.
 
 **O botão 4 some.** O mesmo overlay apaga o nó `button_3` e o alias `sw3`. Restam os botões
 1–3 (`sw0`–`sw2`) e os quatro LEDs (P1.22/25/27/28, nenhum na lista da EB II).
@@ -389,8 +393,8 @@ imagem no sysbuild (`<app>_SHIELD`), como nos `sample.yaml` da Nordic.
 
 ### 5.3 Console
 
-Com a EB II acoplada, o console está na **`uart30`** (§2.3) — outra VCOM. Todo README abre
-com esse aviso, e o `PREREQUISITOS.md` já o registra.
+Com a EB II acoplada, o console está na **`uart30`** (§2.3), saindo na mesma primeira VCOM.
+Todo README abre com esse aviso, e o `PREREQUISITOS.md` já o registra.
 
 ## 6. Bancada
 
@@ -409,6 +413,34 @@ com esse aviso, e o `PREREQUISITOS.md` já o registra.
 - par BLE para o lab 12 — pode ser o nRF54L15-TAG do Channel Sounding
 - rede da sala **a definir**; todos os labs têm plano B **menos o 11** (§3.5)
 
+### 6.1 O AP de desenvolvimento, e por que ele não substitui o EX3000
+
+A bancada de preparação usa a ONT da casa: **Askey RTF8225VW-SV** (Vivo Fibra, SW
+`BR_SG_g2.5_RTF_TEF004_V3.9`, HW REV4), dual-band 2.4/5 GHz.
+
+Medido em 2026-09-06 com o firmware do lab 6:
+
+| Banda | Canal | `Link Mode` | `TWT` | `wifi twt quick_setup` |
+|---|---|---|---|---|
+| 2.4 GHz | 6 | WIFI 6 (802.11ax/HE) | Not supported | `Peer not TWT capable` |
+| 5 GHz | 52 | UNKNOWN | Not supported | `Peer not TWT capable` |
+
+O power save do nRF7002 estava ligado (`Legacy power save`, wake-up por DTIM) antes de cada
+tentativa, o que descarta falso negativo do lado do DK.
+
+**A conclusão vale como material de aula, não só como nota de bancada:** este é um AP
+802.11ax de verdade — a associação em 2.4 GHz negocia HE — e ainda assim não anuncia TWT
+Responder. TWT é **opcional** no 802.11ax. "AP Wi-Fi 6" não implica "AP com TWT", e o aluno
+pode conferir isso na própria rede dele com um comando. O EX3000 continua obrigatório para o
+lab 11.
+
+Duas ressalvas do mesmo teste, que os READMEs devem carregar:
+
+- O `Link Mode` do 5 GHz veio `UNKNOWN` em conexões repetidas, mesmo com o link assentado.
+  Não é evidência de que aquela BSS não seja ax — é campo não preenchido pelo driver.
+- O `Current PHY TX rate` reporta valor absurdo logo após conectar (537179,8 Mbps observado).
+  Não serve como métrica em nenhum lab.
+
 ## 7. Material
 
 Deck **M2-04** (Wi-Fi), no mesmo toolkit dos M2-01/02/03: companion IC e o que o nRF7002 é,
@@ -418,8 +450,8 @@ os blobs, provisionamento, e a tabela dos três transportes (§3.2) com os núme
 
 Nada aqui foi rodado em hardware ainda, além do build de fumaça do §2.1.
 
-1. **Console na `uart30`** — a árvore diz que sim, a doc "latest" diz que não. Confirmar em
-   qual VCOM sai o log com o shield acoplado.
+1. ~~**Console na `uart30`**~~ — **fechado em 2026-09-06.** Console na `uart30`, saindo na
+   primeira VCOM. Ver §2.3.
 2. **`provisioning/softap` na variante B** — `platform_allow` lista, mas `boards/` só tem
    `.conf` da variante A. Compila? Precisa de um `.conf` novo?
 3. **Fluxo completo do `provision.py`** — `protoc`, certificado, `/prov/networks`,

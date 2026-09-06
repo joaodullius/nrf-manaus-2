@@ -180,13 +180,15 @@ segundos e vale para todos os projetos daquela instalação.
 
 Documentado pela Nordic em *nRF7002 EB II → Requirements → Prerequisites*.
 
-### Armadilhas da nRF7002-EB II no nRF54LM20-DK (verificadas na árvore do v3.4.0)
+### Armadilhas da nRF7002-EB II no nRF54LM20-DK (medidas na bancada)
 
 - **A EB II encaixa no conector P17 (Expansion)** do LM20-DK.
-- **O console muda de porta.** O overlay do shield na v3.4.0 desabilita a `uart20` e move o
-  console para a `uart30` (`/* UART20 conflicts with EB-II shield */`). Ou seja: com o shield
-  acoplado, o log sai em **outra VCOM**. A documentação online "latest" afirma o contrário
-  para o LM20 — descreve uma versão diferente da que usamos; confie no overlay da sua árvore.
+- **O console troca de UART, não de VCOM.** O overlay do shield na v3.4.0 desabilita a
+  `uart20` e move o console para a `uart30` (`/* UART20 conflicts with EB-II shield */`) — o
+  `device list` da placa gravada confirma que só a `uart30` fica registrada. Mas as duas UARTs
+  saem na **mesma primeira VCOM** do chip de interface, e é lá que o prompt aparece; a segunda
+  VCOM fica muda. O que isso custa na prática: um firmware compilado sem o shield e outro com
+  o shield usam UARTs diferentes, então trocar de imagem sem recompilar deixa o console mudo.
 - **O botão 4 some.** O overlay apaga o nó `button_3` e o alias `sw3`. Sobram os botões 1–3
   (`sw0`–`sw2`) e os quatro LEDs.
 - **Não dá para somar o microfone PDM dos labs de Edge AI.** O `pdm20` do `07_ww_kws` usa
