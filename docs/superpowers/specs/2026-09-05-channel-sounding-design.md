@@ -96,11 +96,11 @@ Isso cobre os samples do NCS (Nordic 5-Clause), o Python do waves (MIT) e qualqu
 
 | # | Lab | Board target | Base |
 |---|---|---|---|
-| 1 | `channel_sounding_reflector/` | `nrf54l15tag/nrf54l15/cpuapp` | `ras_reflector` |
-| 2 | `channel_sounding_initiator/` | `nrf54lm20dk/nrf54lm20b/cpuapp` | `ras_initiator` |
-| 3 | `channel_sounding_ipt_reflector/` + `channel_sounding_ipt_initiator/` | TAG + LM20-DK | `ipt_reflector` + `ipt_initiator` |
+| 1 | `01_cs_reflector/` | `nrf54l15tag/nrf54l15/cpuapp` | `ras_reflector` |
+| 2 | `02_cs_initiator/` | `nrf54lm20dk/nrf54lm20b/cpuapp` | `ras_initiator` |
+| 3 | `03_cs_ipt/reflector/` + `03_cs_ipt/initiator/` | TAG + LM20-DK | `ipt_reflector` + `ipt_initiator` |
 | 4 | segurança — sem firmware novo | par do lab 2 | `ras_*` |
-| 5 | `channel_sounding_iq_music/` | LM20-DK + PC | lab 2 + Python (`cs_de` reimplementado, `cs_music.py` do waves) |
+| 5 | `05_cs_iq_music/` | LM20-DK + PC | lab 2 + Python (`cs_de` reimplementado, `cs_music.py` do waves) |
 
 **Lab 1 — reflector no TAG, CS default.** O dispositivo simples: anuncia o Ranging Service, acende o LED ao conectar. Sai com RTT (§5.2). Gravado por fio no `DEBUG OUT` da DK (§5.3).
 

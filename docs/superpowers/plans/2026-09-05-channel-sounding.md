@@ -39,26 +39,26 @@
 ```
 comms/
   README.md                                   (modificar: tabela de labs + fontes)
-  channel_sounding_reflector/                 Lab 1 — ras_reflector no TAG
+  01_cs_reflector/                 Lab 1 — ras_reflector no TAG
     CMakeLists.txt  prj.conf  Kconfig.sysbuild  LICENSE  README.md
     src/main.c                                (cópia + ORIGEM, sem divergência)
     boards/nrf54l15tag_nrf54l15_cpuapp.conf   (RTT + buffers de log — curso)
     android_ranging.conf                      (cópia do SDK)
     demo.conf  s26.conf                       (curso — só para a demo do instrutor)
-  channel_sounding_initiator/                 Lab 2 — ras_initiator no LM20-DK
+  02_cs_initiator/                 Lab 2 — ras_initiator no LM20-DK
     CMakeLists.txt  prj.conf  Kconfig  Kconfig.sysbuild  LICENSE  README.md
     meu_tag.conf  .gitignore
     src/main.c                                (cópia + filtro por endereço + intervalo)
     rtt_only.conf  pbr_only.conf              (variação opcional do README)
-  channel_sounding_ipt_reflector/             Lab 3a — ipt_reflector no TAG
+  03_cs_ipt/reflector/             Lab 3a — ipt_reflector no TAG
     CMakeLists.txt  prj.conf  Kconfig.sysbuild  LICENSE  README.md
     src/main.c  boards/nrf54l15tag_nrf54l15_cpuapp.conf
-  channel_sounding_ipt_initiator/             Lab 3b — ipt_initiator no LM20-DK
+  03_cs_ipt/initiator/             Lab 3b — ipt_initiator no LM20-DK
     CMakeLists.txt  prj.conf  Kconfig  Kconfig.sysbuild  LICENSE  README.md
     meu_tag.conf  .gitignore  src/main.c      (cópia + filtro por endereço)
-  channel_sounding_secure/                    Lab 4 — só roteiro
+  04_cs_seguranca/                    Lab 4 — só roteiro
     README.md
-  channel_sounding_iq_music/                  Lab 5 — IQ → PC
+  05_cs_iq_music/                  Lab 5 — IQ → PC
     CMakeLists.txt  prj.conf  Kconfig  Kconfig.sysbuild  LICENSE  README.md
     meu_tag.conf  .gitignore
     src/main.c                                (lab 2 + despejo CSV)
@@ -79,7 +79,7 @@ Responsabilidades: cada `src/main.c` é o sample da Nordic com o mínimo de dive
 ### Task 1: Lab 1 — reflector RAS no TAG, com RTT
 
 **Files:**
-- Create: `comms/channel_sounding_reflector/CMakeLists.txt`, `prj.conf`, `Kconfig.sysbuild`, `LICENSE`, `README.md`, `src/main.c`, `boards/nrf54l15tag_nrf54l15_cpuapp.conf`, `android_ranging.conf`
+- Create: `comms/01_cs_reflector/CMakeLists.txt`, `prj.conf`, `Kconfig.sysbuild`, `LICENSE`, `README.md`, `src/main.c`, `boards/nrf54l15tag_nrf54l15_cpuapp.conf`, `android_ranging.conf`
 
 **Interfaces:**
 - Produces: firmware que anuncia com `CONFIG_BT_DEVICE_NAME="Nordic CS Reflector"` (default do SDK) e o UUID do Ranging Service; log por RTT. Consumido pelos labs 2 e 5 (initiators RAS) e pela demo (Task 2).
@@ -88,11 +88,11 @@ Responsabilidades: cada `src/main.c` é o sample da Nordic com o mínimo de dive
 
 ```bash
 cd /c/work/nrf-manaus-2
-mkdir -p comms/channel_sounding_reflector/src comms/channel_sounding_reflector/boards
+mkdir -p comms/01_cs_reflector/src comms/01_cs_reflector/boards
 S=/c/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_reflector
-cp $S/CMakeLists.txt $S/prj.conf $S/Kconfig.sysbuild $S/android_ranging.conf comms/channel_sounding_reflector/
-cp $S/src/main.c comms/channel_sounding_reflector/src/main.c
-cp edge_ai/03_central_uart/LICENSE comms/channel_sounding_reflector/LICENSE
+cp $S/CMakeLists.txt $S/prj.conf $S/Kconfig.sysbuild $S/android_ranging.conf comms/01_cs_reflector/
+cp $S/src/main.c comms/01_cs_reflector/src/main.c
+cp edge_ai/03_central_uart/LICENSE comms/01_cs_reflector/LICENSE
 ```
 
 - [ ] **Step 2: Cabeçalho `ORIGEM:` em `src/main.c` e `prj.conf`**
@@ -105,7 +105,7 @@ Inserir no topo de `src/main.c`, antes do bloco de copyright da Nordic (trocar `
  *   SDK     : nRF Connect SDK v3.4.0
  *   Upstream: nrf/samples/bluetooth/channel_sounding/ras_reflector/src/main.c
  *   Local   : C:/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_reflector/src/main.c
- *   Copiado : AAAA-MM-DD — curso nrf-manaus-2, modulo comms/channel_sounding_reflector
+ *   Copiado : AAAA-MM-DD — curso nrf-manaus-2, modulo comms/01_cs_reflector
  *
  * Para conferir se divergiu do SDK:
  *   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_reflector/src/main.c
@@ -124,7 +124,7 @@ Inserir no topo de `prj.conf`:
 #   SDK     : nRF Connect SDK v3.4.0
 #   Upstream: nrf/samples/bluetooth/channel_sounding/ras_reflector/prj.conf
 #   Local   : C:/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_reflector/prj.conf
-#   Copiado : AAAA-MM-DD — curso nrf-manaus-2, modulo comms/channel_sounding_reflector
+#   Copiado : AAAA-MM-DD — curso nrf-manaus-2, modulo comms/01_cs_reflector
 #
 # Para conferir se divergiu do SDK:
 #   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_reflector/prj.conf
@@ -138,7 +138,7 @@ Inserir no topo de `android_ranging.conf` o mesmo bloco, com `Upstream: .../ras_
 
 - [ ] **Step 3: Fragmento de board com RTT (a única saída de log do TAG)**
 
-Criar `comms/channel_sounding_reflector/boards/nrf54l15tag_nrf54l15_cpuapp.conf`:
+Criar `comms/01_cs_reflector/boards/nrf54l15tag_nrf54l15_cpuapp.conf`:
 
 ```
 #
@@ -170,15 +170,15 @@ CONFIG_SEGGER_RTT_BUFFER_SIZE_UP=4096
 
 ```bash
 cd /c/ncs/v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild -d /c/work/nrf-manaus-2/comms/channel_sounding_reflector/build_tag /c/work/nrf-manaus-2/comms/channel_sounding_reflector
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild -d /c/work/nrf-manaus-2/comms/01_cs_reflector/build_tag /c/work/nrf-manaus-2/comms/01_cs_reflector
 ```
 
-Expected: build termina sem erro; existe `build_tag/channel_sounding_reflector/zephyr/zephyr.hex` (ou `build_tag/merged.hex`).
+Expected: build termina sem erro; existe `build_tag/01_cs_reflector/zephyr/zephyr.hex` (ou `build_tag/merged.hex`).
 
 - [ ] **Step 5: Conferir que o RTT entrou no build**
 
 ```bash
-grep -E "^CONFIG_(LOG_BACKEND_RTT|LOG_BACKEND_UART|USE_SEGGER_RTT|BT_CHANNEL_SOUNDING|BT_RAS_RRSP)=" /c/work/nrf-manaus-2/comms/channel_sounding_reflector/build_tag/channel_sounding_reflector/zephyr/.config
+grep -E "^CONFIG_(LOG_BACKEND_RTT|LOG_BACKEND_UART|USE_SEGGER_RTT|BT_CHANNEL_SOUNDING|BT_RAS_RRSP)=" /c/work/nrf-manaus-2/comms/01_cs_reflector/build_tag/01_cs_reflector/zephyr/.config
 ```
 
 Expected (exatamente estas linhas, em qualquer ordem):
@@ -196,7 +196,7 @@ TAG encaixado no `DEBUG OUT` da nRF54LM20-DK. Conferir antes que o debugger vê 
 
 ```bash
 cd /c/ncs/v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d /c/work/nrf-manaus-2/comms/channel_sounding_reflector/build_tag
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d /c/work/nrf-manaus-2/comms/01_cs_reflector/build_tag
 "/c/Program Files/SEGGER/JLink_V924a/JLinkRTTLogger.exe" -USB 1051898754 -Device NRF54L15_M33 -If SWD -Speed 4000 -RTTChannel 0 /c/Users/joaod/AppData/Local/Temp/claude/rtt_reflector.log
 ```
 
@@ -204,7 +204,7 @@ Expected no log (após reset): o banner do Zephyr, a linha `<inf> bt_hci_core: I
 
 - [ ] **Step 7: README do lab**
 
-Criar `comms/channel_sounding_reflector/README.md`:
+Criar `comms/01_cs_reflector/README.md`:
 
 ```markdown
 # Channel Sounding · Lab 1 — Reflector no nRF54L15-TAG
@@ -234,8 +234,8 @@ que faz "gravar a DK" nessa hora gravar o TAG por engano. Confira com
 
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/channel_sounding_reflector/build_tag C:/work/nrf-manaus-2/comms/channel_sounding_reflector
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/channel_sounding_reflector/build_tag
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/01_cs_reflector/build_tag C:/work/nrf-manaus-2/comms/01_cs_reflector
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/01_cs_reflector/build_tag
 ```
 
 No VS Code: build configuration com board target `nrf54l15tag/nrf54l15/cpuapp`, sem
@@ -296,9 +296,9 @@ Ver [`demo.conf`](demo.conf) e [`s26.conf`](s26.conf). Não faz parte do lab do 
 
 ```bash
 cd /c/work/nrf-manaus-2
-git add comms/channel_sounding_reflector
+git add comms/01_cs_reflector
 git commit -F - <<'EOF'
-channel_sounding_reflector: reflector RAS no TAG, copia do SDK v3.4.0
+01_cs_reflector: reflector RAS no TAG, copia do SDK v3.4.0
 
 Copia do ras_reflector com cabecalho ORIGEM, sem divergencia no codigo.
 O TAG nao tem UART e o sample nao escolhe backend de log: o fragmento
@@ -314,8 +314,8 @@ EOF
 ### Task 2: Lab 1 — fragmentos da demo com o Galaxy S26
 
 **Files:**
-- Create: `comms/channel_sounding_reflector/demo.conf`, `comms/channel_sounding_reflector/s26.conf`
-- Modify: `comms/channel_sounding_reflector/README.md` (seção "Demo do instrutor")
+- Create: `comms/01_cs_reflector/demo.conf`, `comms/01_cs_reflector/s26.conf`
+- Modify: `comms/01_cs_reflector/README.md` (seção "Demo do instrutor")
 
 **Interfaces:**
 - Consumes: o build da Task 1 e o `android_ranging.conf` copiado do SDK.
@@ -360,8 +360,8 @@ CONFIG_BT_CTLR_SDC_MAX_CONN_EVENT_LEN_DEFAULT=1250
 
 ```bash
 cd /c/ncs/v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild -d /c/work/nrf-manaus-2/comms/channel_sounding_reflector/build_tag_demo /c/work/nrf-manaus-2/comms/channel_sounding_reflector -- "-DEXTRA_CONF_FILE=android_ranging.conf;demo.conf;s26.conf"
-grep -E "^CONFIG_(BT_DEVICE_NAME|BT_CTLR_SDC_MAX_CONN_EVENT_LEN_DEFAULT|BT_BONDABLE|BT_RAS_MAX_ANTENNA_PATHS)=" /c/work/nrf-manaus-2/comms/channel_sounding_reflector/build_tag_demo/channel_sounding_reflector/zephyr/.config
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild -d /c/work/nrf-manaus-2/comms/01_cs_reflector/build_tag_demo /c/work/nrf-manaus-2/comms/01_cs_reflector -- "-DEXTRA_CONF_FILE=android_ranging.conf;demo.conf;s26.conf"
+grep -E "^CONFIG_(BT_DEVICE_NAME|BT_CTLR_SDC_MAX_CONN_EVENT_LEN_DEFAULT|BT_BONDABLE|BT_RAS_MAX_ANTENNA_PATHS)=" /c/work/nrf-manaus-2/comms/01_cs_reflector/build_tag_demo/01_cs_reflector/zephyr/.config
 ```
 
 Expected:
@@ -383,7 +383,7 @@ Não faz parte do lab do aluno. O telefone é o initiator (Android `RangingManag
 TAG é o reflector, e o app mostra a distância na tela.
 
 ```
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/channel_sounding_reflector/build_tag_demo C:/work/nrf-manaus-2/comms/channel_sounding_reflector -- "-DEXTRA_CONF_FILE=android_ranging.conf;demo.conf;s26.conf"
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/01_cs_reflector/build_tag_demo C:/work/nrf-manaus-2/comms/01_cs_reflector -- "-DEXTRA_CONF_FILE=android_ranging.conf;demo.conf;s26.conf"
 ```
 
 | Fragmento | O que faz |
@@ -403,9 +403,9 @@ demo é o par embarcado (labs 1 + 2) projetado na tela.
 
 ```bash
 cd /c/work/nrf-manaus-2
-git add comms/channel_sounding_reflector
+git add comms/01_cs_reflector
 git commit -F - <<'EOF'
-channel_sounding_reflector: fragmentos da demo com smartphone (demo.conf, s26.conf)
+01_cs_reflector: fragmentos da demo com smartphone (demo.conf, s26.conf)
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01LurGbU8nMm9xZDvXheodHb
@@ -416,7 +416,7 @@ EOF
 ### Task 3: Lab 2 — initiator RAS no LM20-DK com filtro por endereço do TAG
 
 **Files:**
-- Create: `comms/channel_sounding_initiator/CMakeLists.txt`, `prj.conf`, `Kconfig`, `Kconfig.sysbuild`, `LICENSE`, `meu_tag.conf`, `.gitignore`, `src/main.c`
+- Create: `comms/02_cs_initiator/CMakeLists.txt`, `prj.conf`, `Kconfig`, `Kconfig.sysbuild`, `LICENSE`, `meu_tag.conf`, `.gitignore`, `src/main.c`
 
 **Interfaces:**
 - Consumes: reflector da Task 1 anunciando o UUID do Ranging Service.
@@ -426,11 +426,11 @@ EOF
 
 ```bash
 cd /c/work/nrf-manaus-2
-mkdir -p comms/channel_sounding_initiator/src
+mkdir -p comms/02_cs_initiator/src
 S=/c/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_initiator
-cp $S/CMakeLists.txt $S/prj.conf $S/Kconfig $S/Kconfig.sysbuild comms/channel_sounding_initiator/
-cp $S/src/main.c comms/channel_sounding_initiator/src/main.c
-cp edge_ai/03_central_uart/LICENSE comms/channel_sounding_initiator/LICENSE
+cp $S/CMakeLists.txt $S/prj.conf $S/Kconfig $S/Kconfig.sysbuild comms/02_cs_initiator/
+cp $S/src/main.c comms/02_cs_initiator/src/main.c
+cp edge_ai/03_central_uart/LICENSE comms/02_cs_initiator/LICENSE
 ```
 
 - [ ] **Step 2: `CMakeLists.txt` — falhar cedo sem endereço**
@@ -558,7 +558,7 @@ Inserir no topo (trocar a data):
 #   SDK     : nRF Connect SDK v3.4.0
 #   Upstream: nrf/samples/bluetooth/channel_sounding/ras_initiator/prj.conf
 #   Local   : C:/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_initiator/prj.conf
-#   Copiado : AAAA-MM-DD — curso nrf-manaus-2, modulo comms/channel_sounding_initiator
+#   Copiado : AAAA-MM-DD — curso nrf-manaus-2, modulo comms/02_cs_initiator
 #
 # Para conferir se divergiu do SDK:
 #   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_initiator/prj.conf
@@ -586,7 +586,7 @@ Inserir no topo (trocar a data):
  *   SDK     : nRF Connect SDK v3.4.0
  *   Upstream: nrf/samples/bluetooth/channel_sounding/ras_initiator/src/main.c
  *   Local   : C:/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_initiator/src/main.c
- *   Copiado : AAAA-MM-DD — curso nrf-manaus-2, modulo comms/channel_sounding_initiator
+ *   Copiado : AAAA-MM-DD — curso nrf-manaus-2, modulo comms/02_cs_initiator
  *
  * Para conferir se divergiu do SDK:
  *   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_initiator/src/main.c
@@ -668,7 +668,7 @@ static int scan_init(struct bt_scan_init_param *p_param)
 
 - [ ] **Step 6: `meu_tag.conf` e `.gitignore`**
 
-Criar `comms/channel_sounding_initiator/meu_tag.conf`:
+Criar `comms/02_cs_initiator/meu_tag.conf`:
 
 ```
 #
@@ -692,13 +692,13 @@ CONFIG_LAB_TAG_ADDR_VALUE=""
 CONFIG_LAB_TAG_ADDR_TYPE="random"
 ```
 
-Criar `comms/channel_sounding_initiator/.gitignore`:
+Criar `comms/02_cs_initiator/.gitignore`:
 
 ```
 # NOTA: meu_tag.conf NAO entra aqui de proposito. Ele e rastreado e vem no repo
 # com o endereco vazio — e o template que cada aluno preenche, e o CMakeLists.txt
 # falha de proposito quando esta vazio, com a mensagem de onde achar o endereco.
-# So nao commite o SEU endereco: 'git checkout comms/channel_sounding_initiator/meu_tag.conf'
+# So nao commite o SEU endereco: 'git checkout comms/02_cs_initiator/meu_tag.conf'
 # antes do commit, ou deixe-o fora do 'git add'.
 ```
 
@@ -706,7 +706,7 @@ Criar `comms/channel_sounding_initiator/.gitignore`:
 
 ```bash
 cd /c/ncs/v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d /c/work/nrf-manaus-2/comms/channel_sounding_initiator/build_lm20 /c/work/nrf-manaus-2/comms/channel_sounding_initiator 2>&1 | grep -A3 "CONFIG_LAB_TAG_ADDR_VALUE nao definido"
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d /c/work/nrf-manaus-2/comms/02_cs_initiator/build_lm20 /c/work/nrf-manaus-2/comms/02_cs_initiator 2>&1 | grep -A3 "CONFIG_LAB_TAG_ADDR_VALUE nao definido"
 ```
 
 Expected: a mensagem `CONFIG_LAB_TAG_ADDR_VALUE nao definido.` seguida de `Este initiator so conecta no TAG ...`, e o build termina com erro.
@@ -717,8 +717,8 @@ Preencher `meu_tag.conf` com o endereço do TAG da bancada (lido no RTT na Task 
 
 ```bash
 cd /c/ncs/v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d /c/work/nrf-manaus-2/comms/channel_sounding_initiator/build_lm20 /c/work/nrf-manaus-2/comms/channel_sounding_initiator -- -DEXTRA_CONF_FILE=meu_tag.conf
-grep -E "^CONFIG_(LAB_TAG_ADDR_VALUE|BT_SCAN_ADDRESS_CNT|SAMPLE_RAS_INITIATOR_STEP_MODE_2_SUB_MODE_1|BT_CS_DE)=" /c/work/nrf-manaus-2/comms/channel_sounding_initiator/build_lm20/channel_sounding_initiator/zephyr/.config
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d /c/work/nrf-manaus-2/comms/02_cs_initiator/build_lm20 /c/work/nrf-manaus-2/comms/02_cs_initiator -- -DEXTRA_CONF_FILE=meu_tag.conf
+grep -E "^CONFIG_(LAB_TAG_ADDR_VALUE|BT_SCAN_ADDRESS_CNT|SAMPLE_RAS_INITIATOR_STEP_MODE_2_SUB_MODE_1|BT_CS_DE)=" /c/work/nrf-manaus-2/comms/02_cs_initiator/build_lm20/02_cs_initiator/zephyr/.config
 ```
 
 Expected: build sem erro e as quatro linhas:
@@ -735,7 +735,7 @@ TAG **fora** do `DEBUG OUT`, na bateria, com o firmware da Task 1. Conferir com 
 
 ```bash
 cd /c/ncs/v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d /c/work/nrf-manaus-2/comms/channel_sounding_initiator/build_lm20
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d /c/work/nrf-manaus-2/comms/02_cs_initiator/build_lm20
 ```
 
 Abrir a serial USB da DK (115200 8N1; a DK enumera duas COM — na bancada o log sai na **vcom1**, COM22; se ficar muda, tentar a outra).
@@ -750,11 +750,11 @@ com três números da ordem da distância real entre TAG e DK. Anotar no relato 
 
 ```bash
 cd /c/work/nrf-manaus-2
-sed -i 's/^CONFIG_LAB_TAG_ADDR_VALUE=.*/CONFIG_LAB_TAG_ADDR_VALUE=""/' comms/channel_sounding_initiator/meu_tag.conf
-grep -q 'CONFIG_LAB_TAG_ADDR_VALUE=""' comms/channel_sounding_initiator/meu_tag.conf && echo "meu_tag.conf limpo"
-git add comms/channel_sounding_initiator
+sed -i 's/^CONFIG_LAB_TAG_ADDR_VALUE=.*/CONFIG_LAB_TAG_ADDR_VALUE=""/' comms/02_cs_initiator/meu_tag.conf
+grep -q 'CONFIG_LAB_TAG_ADDR_VALUE=""' comms/02_cs_initiator/meu_tag.conf && echo "meu_tag.conf limpo"
+git add comms/02_cs_initiator
 git commit -F - <<'EOF'
-channel_sounding_initiator: initiator RAS no LM20-DK com filtro pelo TAG do aluno
+02_cs_initiator: initiator RAS no LM20-DK com filtro pelo TAG do aluno
 
 Copia do ras_initiator do SDK v3.4.0. Divergencia unica em src/main.c:
 add_tag_address_filter() e scan em modo AND (UUID do RAS E endereco de
@@ -773,8 +773,8 @@ Expected da primeira linha: `meu_tag.conf limpo`.
 ### Task 4: Lab 2 — intervalo de procedure por estação, variações só-RTT/só-PBR e README
 
 **Files:**
-- Modify: `comms/channel_sounding_initiator/Kconfig`, `comms/channel_sounding_initiator/src/main.c`
-- Create: `comms/channel_sounding_initiator/rtt_only.conf`, `pbr_only.conf`, `README.md`
+- Modify: `comms/02_cs_initiator/Kconfig`, `comms/02_cs_initiator/src/main.c`
+- Create: `comms/02_cs_initiator/rtt_only.conf`, `pbr_only.conf`, `README.md`
 
 **Interfaces:**
 - Produces: `CONFIG_LAB_PROCEDURE_INTERVAL` (int, default 0 = valor do sample). A Task 8 copia este `main.c` já com esta divergência.
@@ -859,13 +859,13 @@ Preencher `meu_tag.conf` com o endereço da bancada e:
 
 ```bash
 cd /c/ncs/v3.4.0
-A=/c/work/nrf-manaus-2/comms/channel_sounding_initiator
+A=/c/work/nrf-manaus-2/comms/02_cs_initiator
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d $A/build_lm20 $A -- -DEXTRA_CONF_FILE=meu_tag.conf -DCONFIG_LAB_PROCEDURE_INTERVAL=62
-grep -E "^CONFIG_(LAB_PROCEDURE_INTERVAL|SAMPLE_RAS_INITIATOR_STEP_MODE_2_SUB_MODE_1)=" $A/build_lm20/channel_sounding_initiator/zephyr/.config
+grep -E "^CONFIG_(LAB_PROCEDURE_INTERVAL|SAMPLE_RAS_INITIATOR_STEP_MODE_2_SUB_MODE_1)=" $A/build_lm20/02_cs_initiator/zephyr/.config
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d $A/build_lm20_pbr $A -- "-DEXTRA_CONF_FILE=meu_tag.conf;pbr_only.conf"
-grep -E "^CONFIG_SAMPLE_RAS_INITIATOR_STEP_MODE_2=" $A/build_lm20_pbr/channel_sounding_initiator/zephyr/.config
+grep -E "^CONFIG_SAMPLE_RAS_INITIATOR_STEP_MODE_2=" $A/build_lm20_pbr/02_cs_initiator/zephyr/.config
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d $A/build_lm20_rtt $A -- "-DEXTRA_CONF_FILE=meu_tag.conf;rtt_only.conf"
-grep -E "^CONFIG_SAMPLE_RAS_INITIATOR_STEP_MODE_1=" $A/build_lm20_rtt/channel_sounding_initiator/zephyr/.config
+grep -E "^CONFIG_SAMPLE_RAS_INITIATOR_STEP_MODE_1=" $A/build_lm20_rtt/02_cs_initiator/zephyr/.config
 ```
 
 Expected: `CONFIG_LAB_PROCEDURE_INTERVAL=62` e `CONFIG_SAMPLE_RAS_INITIATOR_STEP_MODE_2_SUB_MODE_1=y` no primeiro; `CONFIG_SAMPLE_RAS_INITIATOR_STEP_MODE_2=y` no segundo; `CONFIG_SAMPLE_RAS_INITIATOR_STEP_MODE_1=y` no terceiro.
@@ -876,7 +876,7 @@ Gravar `build_lm20_pbr` e conferir na serial a linha `Latest distance estimates 
 
 - [ ] **Step 6: README do lab**
 
-Criar `comms/channel_sounding_initiator/README.md`:
+Criar `comms/02_cs_initiator/README.md`:
 
 ```markdown
 # Channel Sounding · Lab 2 — Initiator no nRF54LM20-DK: RTT e PBR lado a lado
@@ -931,8 +931,8 @@ TAG **fora** do `DEBUG OUT` (senão o debugger grava o TAG). Confira com
 
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/channel_sounding_initiator/build_lm20 C:/work/nrf-manaus-2/comms/channel_sounding_initiator -- -DEXTRA_CONF_FILE=meu_tag.conf
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/channel_sounding_initiator/build_lm20
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/02_cs_initiator/build_lm20 C:/work/nrf-manaus-2/comms/02_cs_initiator -- -DEXTRA_CONF_FILE=meu_tag.conf
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/02_cs_initiator/build_lm20
 ```
 
 No VS Code: board target `nrf54lm20dk/nrf54lm20b/cpuapp` com `meu_tag.conf` em
@@ -1034,10 +1034,10 @@ E `prj.conf` ganha `CONFIG_BT_SCAN_ADDRESS_CNT=1`, o slot do filtro.
 
 ```bash
 cd /c/work/nrf-manaus-2
-sed -i 's/^CONFIG_LAB_TAG_ADDR_VALUE=.*/CONFIG_LAB_TAG_ADDR_VALUE=""/' comms/channel_sounding_initiator/meu_tag.conf
-git add comms/channel_sounding_initiator
+sed -i 's/^CONFIG_LAB_TAG_ADDR_VALUE=.*/CONFIG_LAB_TAG_ADDR_VALUE=""/' comms/02_cs_initiator/meu_tag.conf
+git add comms/02_cs_initiator
 git commit -F - <<'EOF'
-channel_sounding_initiator: intervalo por estacao, variacoes so-RTT/so-PBR e README
+02_cs_initiator: intervalo por estacao, variacoes so-RTT/so-PBR e README
 
 RTT e PBR aparecem lado a lado no build default (ifft, phase_slope, rtt);
 o README traz o experimento com trena e obstrucao. CONFIG_LAB_PROCEDURE_INTERVAL
@@ -1053,7 +1053,7 @@ EOF
 ### Task 5: Lab 3a — reflector IPT no TAG
 
 **Files:**
-- Create: `comms/channel_sounding_ipt_reflector/CMakeLists.txt`, `prj.conf`, `Kconfig.sysbuild`, `LICENSE`, `README.md`, `src/main.c`, `boards/nrf54l15tag_nrf54l15_cpuapp.conf`
+- Create: `comms/03_cs_ipt/reflector/CMakeLists.txt`, `prj.conf`, `Kconfig.sysbuild`, `LICENSE`, `README.md`, `src/main.c`, `boards/nrf54l15tag_nrf54l15_cpuapp.conf`
 
 **Interfaces:**
 - Produces: firmware que anuncia com o nome `"Nordic CS IPT Reflector"` (default do SDK, é o que o `ipt_initiator` procura). Consumido pela Task 6.
@@ -1062,17 +1062,17 @@ EOF
 
 ```bash
 cd /c/work/nrf-manaus-2
-mkdir -p comms/channel_sounding_ipt_reflector/src comms/channel_sounding_ipt_reflector/boards
+mkdir -p comms/03_cs_ipt/reflector/src comms/03_cs_ipt/reflector/boards
 S=/c/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ipt_reflector
-cp $S/CMakeLists.txt $S/prj.conf $S/Kconfig.sysbuild comms/channel_sounding_ipt_reflector/
-cp $S/src/main.c comms/channel_sounding_ipt_reflector/src/main.c
-cp edge_ai/03_central_uart/LICENSE comms/channel_sounding_ipt_reflector/LICENSE
-cp comms/channel_sounding_reflector/boards/nrf54l15tag_nrf54l15_cpuapp.conf comms/channel_sounding_ipt_reflector/boards/
+cp $S/CMakeLists.txt $S/prj.conf $S/Kconfig.sysbuild comms/03_cs_ipt/reflector/
+cp $S/src/main.c comms/03_cs_ipt/reflector/src/main.c
+cp edge_ai/03_central_uart/LICENSE comms/03_cs_ipt/reflector/LICENSE
+cp comms/01_cs_reflector/boards/nrf54l15tag_nrf54l15_cpuapp.conf comms/03_cs_ipt/reflector/boards/
 ```
 
 - [ ] **Step 2: Cabeçalhos `ORIGEM:`**
 
-No topo de `src/main.c` e de `prj.conf`, o mesmo bloco da Task 1 com `Upstream`/`Local` apontando para `.../channel_sounding/ipt_reflector/...`, `modulo comms/channel_sounding_ipt_reflector`, e:
+No topo de `src/main.c` e de `prj.conf`, o mesmo bloco da Task 1 com `Upstream`/`Local` apontando para `.../channel_sounding/ipt_reflector/...`, `modulo comms/03_cs_ipt/reflector`, e:
 
 ```
  * DIVERGENCIA DO CURSO: nenhuma. O reflector IPT roda como a Nordic entregou.
@@ -1080,14 +1080,14 @@ No topo de `src/main.c` e de `prj.conf`, o mesmo bloco da Task 1 com `Upstream`/
  *   (log por RTT, porque o TAG nao tem UART).
 ```
 
-No `boards/nrf54l15tag_nrf54l15_cpuapp.conf`, trocar a referência "Mesma correcao do edge_ai/03_central_uart." por "Mesmo fragmento do comms/channel_sounding_reflector."
+No `boards/nrf54l15tag_nrf54l15_cpuapp.conf`, trocar a referência "Mesma correcao do edge_ai/03_central_uart." por "Mesmo fragmento do comms/01_cs_reflector."
 
 - [ ] **Step 3: Compilar para o TAG — o item que a Nordic não documenta**
 
 ```bash
 cd /c/ncs/v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild -d /c/work/nrf-manaus-2/comms/channel_sounding_ipt_reflector/build_tag /c/work/nrf-manaus-2/comms/channel_sounding_ipt_reflector
-grep -E "^CONFIG_(LOG_BACKEND_RTT|BT_DEVICE_NAME|BT_CTLR_SDC_CS_ROLE_REFLECTOR_ONLY|BT_CTLR_EXTENDED_FEAT_SET)=" /c/work/nrf-manaus-2/comms/channel_sounding_ipt_reflector/build_tag/channel_sounding_ipt_reflector/zephyr/.config
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild -d /c/work/nrf-manaus-2/comms/03_cs_ipt/reflector/build_tag /c/work/nrf-manaus-2/comms/03_cs_ipt/reflector
+grep -E "^CONFIG_(LOG_BACKEND_RTT|BT_DEVICE_NAME|BT_CTLR_SDC_CS_ROLE_REFLECTOR_ONLY|BT_CTLR_EXTENDED_FEAT_SET)=" /c/work/nrf-manaus-2/comms/03_cs_ipt/reflector/build_tag/reflector/zephyr/.config
 ```
 
 Expected: build sem erro e
@@ -1106,7 +1106,7 @@ TAG no `DEBUG OUT` (conferir `device-info` = nRF54L15):
 
 ```bash
 cd /c/ncs/v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d /c/work/nrf-manaus-2/comms/channel_sounding_ipt_reflector/build_tag
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d /c/work/nrf-manaus-2/comms/03_cs_ipt/reflector/build_tag
 "/c/Program Files/SEGGER/JLink_V924a/JLinkRTTLogger.exe" -USB 1051898754 -Device NRF54L15_M33 -If SWD -Speed 4000 -RTTChannel 0 /c/Users/joaod/AppData/Local/Temp/claude/rtt_ipt_reflector.log
 ```
 
@@ -1114,7 +1114,7 @@ Expected: banner do Zephyr, `Identity:` (o **mesmo** endereço do lab 1 — anot
 
 - [ ] **Step 5: README**
 
-Criar `comms/channel_sounding_ipt_reflector/README.md`:
+Criar `comms/03_cs_ipt/reflector/README.md`:
 
 ```markdown
 # Channel Sounding · Lab 3a — Reflector IPT no nRF54L15-TAG
@@ -1140,8 +1140,8 @@ continua o mesmo, o firmware não muda isso.
 
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/channel_sounding_ipt_reflector/build_tag C:/work/nrf-manaus-2/comms/channel_sounding_ipt_reflector
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/channel_sounding_ipt_reflector/build_tag
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54l15tag/nrf54l15/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/03_cs_ipt/reflector/build_tag C:/work/nrf-manaus-2/comms/03_cs_ipt/reflector
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/03_cs_ipt/reflector/build_tag
 ```
 
 ## Log — RTT, só no `DEBUG OUT`
@@ -1173,9 +1173,9 @@ o initiator do curso filtra também pelo endereço (lab 3b).
 
 ```bash
 cd /c/work/nrf-manaus-2
-git add comms/channel_sounding_ipt_reflector
+git add comms/03_cs_ipt/reflector
 git commit -F - <<'EOF'
-channel_sounding_ipt_reflector: reflector IPT no TAG, copia do SDK v3.4.0
+03_cs_ipt/reflector: reflector IPT no TAG, copia do SDK v3.4.0
 
 Sem divergencia no codigo; RTT pelo mesmo fragmento de board do lab 1.
 Build para nrf54l15tag validado na bancada (o TAG nao esta no platform_allow
@@ -1191,7 +1191,7 @@ EOF
 ### Task 6: Lab 3b — initiator IPT no LM20-DK com filtro por endereço
 
 **Files:**
-- Create: `comms/channel_sounding_ipt_initiator/CMakeLists.txt`, `prj.conf`, `Kconfig`, `Kconfig.sysbuild`, `LICENSE`, `meu_tag.conf`, `.gitignore`, `README.md`, `src/main.c`
+- Create: `comms/03_cs_ipt/initiator/CMakeLists.txt`, `prj.conf`, `Kconfig`, `Kconfig.sysbuild`, `LICENSE`, `meu_tag.conf`, `.gitignore`, `README.md`, `src/main.c`
 
 **Interfaces:**
 - Consumes: reflector da Task 5 anunciando `"Nordic CS IPT Reflector"`; os mesmos símbolos `CONFIG_LAB_TAG_ADDR_*` da Task 3.
@@ -1201,13 +1201,13 @@ EOF
 
 ```bash
 cd /c/work/nrf-manaus-2
-mkdir -p comms/channel_sounding_ipt_initiator/src
+mkdir -p comms/03_cs_ipt/initiator/src
 S=/c/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ipt_initiator
-cp $S/CMakeLists.txt $S/prj.conf $S/Kconfig.sysbuild comms/channel_sounding_ipt_initiator/
-cp $S/src/main.c comms/channel_sounding_ipt_initiator/src/main.c
-cp edge_ai/03_central_uart/LICENSE comms/channel_sounding_ipt_initiator/LICENSE
-cp comms/channel_sounding_initiator/meu_tag.conf comms/channel_sounding_ipt_initiator/meu_tag.conf
-sed 's#comms/channel_sounding_initiator/#comms/channel_sounding_ipt_initiator/#' comms/channel_sounding_initiator/.gitignore > comms/channel_sounding_ipt_initiator/.gitignore
+cp $S/CMakeLists.txt $S/prj.conf $S/Kconfig.sysbuild comms/03_cs_ipt/initiator/
+cp $S/src/main.c comms/03_cs_ipt/initiator/src/main.c
+cp edge_ai/03_central_uart/LICENSE comms/03_cs_ipt/initiator/LICENSE
+cp comms/02_cs_initiator/meu_tag.conf comms/03_cs_ipt/initiator/meu_tag.conf
+sed 's#comms/02_cs_initiator/#comms/03_cs_ipt/initiator/#' comms/02_cs_initiator/.gitignore > comms/03_cs_ipt/initiator/.gitignore
 ```
 
 (O `ipt_initiator` do SDK não tem `Kconfig` próprio; o do curso é criado no Step 3.)
@@ -1248,13 +1248,13 @@ target_sources(app PRIVATE src/main.c)
 
 - [ ] **Step 3: `Kconfig` novo (o sample não tem)**
 
-Criar `comms/channel_sounding_ipt_initiator/Kconfig`:
+Criar `comms/03_cs_ipt/initiator/Kconfig`:
 
 ```kconfig
 #
 # Kconfig do curso (nrf-manaus-2). O ipt_initiator do SDK nao tem Kconfig proprio;
 # este arquivo existe so para o filtro do tag, com os mesmos simbolos do
-# edge_ai/03_central_uart e do comms/channel_sounding_initiator.
+# edge_ai/03_central_uart e do comms/02_cs_initiator.
 #
 
 menu "Lab: filtro do tag (nrf-manaus-2)"
@@ -1286,7 +1286,7 @@ source "Kconfig.zephyr"
 
 - [ ] **Step 4: `prj.conf` — cabeçalho `ORIGEM:` e o slot de endereço**
 
-Inserir no topo o bloco `ORIGEM:` da Task 3 com os caminhos de `ipt_initiator` e `modulo comms/channel_sounding_ipt_initiator`, `DIVERGENCIA DO CURSO (unica): CONFIG_BT_SCAN_ADDRESS_CNT=1`. Após `CONFIG_BT_SCAN_NAME_CNT=1` acrescentar:
+Inserir no topo o bloco `ORIGEM:` da Task 3 com os caminhos de `ipt_initiator` e `modulo comms/03_cs_ipt/initiator`, `DIVERGENCIA DO CURSO (unica): CONFIG_BT_SCAN_ADDRESS_CNT=1`. Após `CONFIG_BT_SCAN_NAME_CNT=1` acrescentar:
 
 ```
 # ALTERADO PELO CURSO (nrf-manaus-2): um slot de filtro por endereco, para o
@@ -1296,7 +1296,7 @@ CONFIG_BT_SCAN_ADDRESS_CNT=1
 
 - [ ] **Step 5: `src/main.c` — cabeçalho e filtro**
 
-Inserir no topo o bloco `ORIGEM:` da Task 3 (caminhos de `ipt_initiator`, módulo `comms/channel_sounding_ipt_initiator`) com:
+Inserir no topo o bloco `ORIGEM:` da Task 3 (caminhos de `ipt_initiator`, módulo `comms/03_cs_ipt/initiator`) com:
 
 ```
  * DIVERGENCIA DO CURSO (unica): scan_init() e add_tag_address_filter().
@@ -1376,7 +1376,7 @@ static int scan_init(struct bt_scan_init_param *p_param)
 
 ```bash
 cd /c/ncs/v3.4.0
-A=/c/work/nrf-manaus-2/comms/channel_sounding_ipt_initiator
+A=/c/work/nrf-manaus-2/comms/03_cs_ipt/initiator
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d $A/build_lm20 $A 2>&1 | grep -c "CONFIG_LAB_TAG_ADDR_VALUE nao definido"
 ```
 Expected: `1`.
@@ -1385,7 +1385,7 @@ Preencher `meu_tag.conf` com o endereço da bancada e:
 
 ```bash
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d $A/build_lm20 $A -- -DEXTRA_CONF_FILE=meu_tag.conf
-grep -E "^CONFIG_(BT_SCAN_ADDRESS_CNT|BT_SCAN_NAME_CNT|BT_CS_DE_1024_NFFT)=" $A/build_lm20/channel_sounding_ipt_initiator/zephyr/.config
+grep -E "^CONFIG_(BT_SCAN_ADDRESS_CNT|BT_SCAN_NAME_CNT|BT_CS_DE_1024_NFFT)=" $A/build_lm20/initiator/zephyr/.config
 ```
 Expected: build sem erro; `CONFIG_BT_SCAN_ADDRESS_CNT=1`, `CONFIG_BT_SCAN_NAME_CNT=1`, `CONFIG_BT_CS_DE_1024_NFFT=y`.
 
@@ -1405,7 +1405,7 @@ Anotar `time_delta` típico e a distância a ~1 m para o README. Não há coluna
 
 - [ ] **Step 8: README**
 
-Criar `comms/channel_sounding_ipt_initiator/README.md`:
+Criar `comms/03_cs_ipt/initiator/README.md`:
 
 ```markdown
 # Channel Sounding · Lab 3b — Initiator IPT: a mesma distância por outro caminho
@@ -1449,7 +1449,7 @@ Lab 3a: TAG no `DEBUG OUT`, grava, tira. É o mesmo TAG, o endereço não muda.
 O mesmo `meu_tag.conf` do lab 2 (e do Edge AI):
 
 ```
-copy ..\channel_sounding_initiator\meu_tag.conf meu_tag.conf
+copy ..\02_cs_initiator\meu_tag.conf meu_tag.conf
 ```
 
 ## Passo 3 — compilar e gravar a DK
@@ -1458,8 +1458,8 @@ TAG fora do `DEBUG OUT`.
 
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/channel_sounding_ipt_initiator/build_lm20 C:/work/nrf-manaus-2/comms/channel_sounding_ipt_initiator -- -DEXTRA_CONF_FILE=meu_tag.conf
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/channel_sounding_ipt_initiator/build_lm20
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/03_cs_ipt/initiator/build_lm20 C:/work/nrf-manaus-2/comms/03_cs_ipt/initiator -- -DEXTRA_CONF_FILE=meu_tag.conf
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/03_cs_ipt/initiator/build_lm20
 ```
 
 ## Passo 4 — ler e comparar
@@ -1494,10 +1494,10 @@ que ganhou (latência, setup) e o que perdeu (RTT) é o assunto do lab 4.
 
 ```bash
 cd /c/work/nrf-manaus-2
-sed -i 's/^CONFIG_LAB_TAG_ADDR_VALUE=.*/CONFIG_LAB_TAG_ADDR_VALUE=""/' comms/channel_sounding_ipt_initiator/meu_tag.conf
-git add comms/channel_sounding_ipt_initiator
+sed -i 's/^CONFIG_LAB_TAG_ADDR_VALUE=.*/CONFIG_LAB_TAG_ADDR_VALUE=""/' comms/03_cs_ipt/initiator/meu_tag.conf
+git add comms/03_cs_ipt/initiator
 git commit -F - <<'EOF'
-channel_sounding_ipt_initiator: initiator IPT no LM20-DK com filtro pelo TAG do aluno
+03_cs_ipt/initiator: initiator IPT no LM20-DK com filtro pelo TAG do aluno
 
 Copia do ipt_initiator do SDK v3.4.0. O upstream filtra so pelo nome, igual em
 todos os TAGs; entra o filtro por endereco em modo AND, mesmos simbolos do
@@ -1513,7 +1513,7 @@ EOF
 ### Task 7: Lab 4 — roteiro de segurança (sem firmware)
 
 **Files:**
-- Create: `comms/channel_sounding_secure/README.md`
+- Create: `comms/04_cs_seguranca/README.md`
 
 **Interfaces:**
 - Consumes: os logs dos labs 2 e 3 e o `s26.conf` da Task 2. Nenhum código novo.
@@ -1530,7 +1530,7 @@ Expected: pelo menos uma linha por arquivo com `bt_le_cs_security_enable` ou `se
 
 - [ ] **Step 2: Escrever o roteiro**
 
-Criar `comms/channel_sounding_secure/README.md` (ajustar as mensagens de log às encontradas no Step 1):
+Criar `comms/04_cs_seguranca/README.md` (ajustar as mensagens de log às encontradas no Step 1):
 
 ```markdown
 # Channel Sounding · Lab 4 — Segurança: o que o rádio garante e o que o chip suporta
@@ -1637,11 +1637,11 @@ No lab 2, aplicar a troca do exercício num build descartável e voltar:
 ```bash
 cd /c/work/nrf-manaus-2
 grep -n "BT_CONN_LE_CS_RTT_TYPE_32_BIT_RANDOM" /c/ncs/v3.4.0/zephyr/include/zephyr/bluetooth/conn.h
-sed -i 's/BT_CONN_LE_CS_RTT_TYPE_AA_ONLY/BT_CONN_LE_CS_RTT_TYPE_32_BIT_RANDOM/' comms/channel_sounding_initiator/src/main.c
+sed -i 's/BT_CONN_LE_CS_RTT_TYPE_AA_ONLY/BT_CONN_LE_CS_RTT_TYPE_32_BIT_RANDOM/' comms/02_cs_initiator/src/main.c
 cd /c/ncs/v3.4.0
-A=/c/work/nrf-manaus-2/comms/channel_sounding_initiator
+A=/c/work/nrf-manaus-2/comms/02_cs_initiator
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d $A/build_lm20_ex $A -- -DCONFIG_LAB_TAG_ADDR_VALUE=\"00:11:22:33:44:55\"
-cd /c/work/nrf-manaus-2 && git checkout comms/channel_sounding_initiator/src/main.c
+cd /c/work/nrf-manaus-2 && git checkout comms/02_cs_initiator/src/main.c
 ```
 
 Expected: o `grep` acha o enum; o build passa; o `git checkout` deixa o lab 2 limpo (`git status` sem mudança em `src/main.c`). Se o enum tiver outro nome em `cs.h`, corrigir o README para o nome real.
@@ -1650,9 +1650,9 @@ Expected: o `grep` acha o enum; o build passa; o `git checkout` deixa o lab 2 li
 
 ```bash
 cd /c/work/nrf-manaus-2
-git add comms/channel_sounding_secure
+git add comms/04_cs_seguranca
 git commit -F - <<'EOF'
-channel_sounding_secure: roteiro de seguranca do CS (lab 4, sem firmware)
+04_cs_seguranca: roteiro de seguranca do CS (lab 4, sem firmware)
 
 ACL cifrada e CS security enable no log do lab 2; RTT como limite fisico
 contra rele; o que o IPT do lab 3 abre mao; e a tabela do que o SDC v3.4.0
@@ -1667,10 +1667,10 @@ EOF
 ### Task 8: Lab 5 — firmware: initiator RAS que despeja o IQ em CSV na serial
 
 **Files:**
-- Create: `comms/channel_sounding_iq_music/CMakeLists.txt`, `prj.conf`, `Kconfig`, `Kconfig.sysbuild`, `LICENSE`, `meu_tag.conf`, `.gitignore`, `src/main.c`
+- Create: `comms/05_cs_iq_music/CMakeLists.txt`, `prj.conf`, `Kconfig`, `Kconfig.sysbuild`, `LICENSE`, `meu_tag.conf`, `.gitignore`, `src/main.c`
 
 **Interfaces:**
-- Consumes: `comms/channel_sounding_initiator/` como está após a Task 4 (filtro + intervalo já aplicados).
+- Consumes: `comms/02_cs_initiator/` como está após a Task 4 (filtro + intervalo já aplicados).
 - Produces: na serial USB da DK (115200 8N1), por procedure, 75 linhas `IQ,...` e uma linha `CS,...`, neste formato exato (consumido pelas Tasks 10–13):
 
 ```
@@ -1683,12 +1683,12 @@ Floats com `%.1f` nas linhas `IQ` e `%.3f` nas `CS`; `NAN` sai como `nan`. O log
 
 ```bash
 cd /c/work/nrf-manaus-2
-mkdir -p comms/channel_sounding_iq_music
-cp -r comms/channel_sounding_initiator/{CMakeLists.txt,prj.conf,Kconfig,Kconfig.sysbuild,LICENSE,meu_tag.conf,.gitignore,src} comms/channel_sounding_iq_music/
-sed -i 's/^CONFIG_LAB_TAG_ADDR_VALUE=.*/CONFIG_LAB_TAG_ADDR_VALUE=""/' comms/channel_sounding_iq_music/meu_tag.conf
-sed -i 's#comms/channel_sounding_initiator/#comms/channel_sounding_iq_music/#' comms/channel_sounding_iq_music/.gitignore
-sed -i 's/^project(channel_sound_ras_initiator)/project(channel_sounding_iq_music)/' comms/channel_sounding_iq_music/CMakeLists.txt
-ls comms/channel_sounding_iq_music
+mkdir -p comms/05_cs_iq_music
+cp -r comms/02_cs_initiator/{CMakeLists.txt,prj.conf,Kconfig,Kconfig.sysbuild,LICENSE,meu_tag.conf,.gitignore,src} comms/05_cs_iq_music/
+sed -i 's/^CONFIG_LAB_TAG_ADDR_VALUE=.*/CONFIG_LAB_TAG_ADDR_VALUE=""/' comms/05_cs_iq_music/meu_tag.conf
+sed -i 's#comms/02_cs_initiator/#comms/05_cs_iq_music/#' comms/05_cs_iq_music/.gitignore
+sed -i 's/^project(channel_sound_ras_initiator)/project(05_cs_iq_music)/' comms/05_cs_iq_music/CMakeLists.txt
+ls comms/05_cs_iq_music
 ```
 
 Expected: `CMakeLists.txt  Kconfig  Kconfig.sysbuild  LICENSE  meu_tag.conf  prj.conf  src` (mais o `.gitignore`). Sem `rtt_only.conf`, `pbr_only.conf`, `README.md` nem `build_*`.
@@ -1703,15 +1703,15 @@ Substituir o bloco `ORIGEM:` do topo por (data real):
  *   SDK     : nRF Connect SDK v3.4.0
  *   Upstream: nrf/samples/bluetooth/channel_sounding/ras_initiator/src/main.c
  *   Local   : C:/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_initiator/src/main.c
- *   Copiado : AAAA-MM-DD — curso nrf-manaus-2, modulo comms/channel_sounding_iq_music
- *             (via comms/channel_sounding_initiator, que ja traz as divergencias 1 e 2)
+ *   Copiado : AAAA-MM-DD — curso nrf-manaus-2, modulo comms/05_cs_iq_music
+ *             (via comms/02_cs_initiator, que ja traz as divergencias 1 e 2)
  *
  * Para conferir se divergiu do SDK:
  *   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_initiator/src/main.c
  *
  * DIVERGENCIA DO CURSO (tres):
  *   1. scan_init() e add_tag_address_filter(): filtro pelo endereco do TAG do aluno,
- *      modo AND. Mesmo codigo do comms/channel_sounding_initiator.
+ *      modo AND. Mesmo codigo do comms/02_cs_initiator.
  *   2. main(): CONFIG_LAB_PROCEDURE_INTERVAL sobrescreve o intervalo de procedure.
  *   3. csv_dump_report(), chamada em ranging_data_cb() logo apos cs_de_calc():
  *      despeja o IQ por canal e as estimativas do cs_de em CSV na serial (printk),
@@ -1794,9 +1794,9 @@ Preencher `meu_tag.conf` com o endereço da bancada e:
 
 ```bash
 cd /c/ncs/v3.4.0
-A=/c/work/nrf-manaus-2/comms/channel_sounding_iq_music
+A=/c/work/nrf-manaus-2/comms/05_cs_iq_music
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d $A/build_lm20 $A -- -DEXTRA_CONF_FILE=meu_tag.conf
-grep -E "^CONFIG_(LOG_BACKEND_RTT|LOG_PRINTK|CBPRINTF_FP_SUPPORT|UART_CONSOLE)=" $A/build_lm20/channel_sounding_iq_music/zephyr/.config
+grep -E "^CONFIG_(LOG_BACKEND_RTT|LOG_PRINTK|CBPRINTF_FP_SUPPORT|UART_CONSOLE)=" $A/build_lm20/05_cs_iq_music/zephyr/.config
 ```
 
 Expected: build sem erro; `CONFIG_LOG_BACKEND_RTT=y`, `CONFIG_CBPRINTF_FP_SUPPORT=y`, `CONFIG_UART_CONSOLE=y`, e **nenhuma** linha `CONFIG_LOG_PRINTK=y`.
@@ -1819,10 +1819,10 @@ Expected: contagem de `IQ,` = 75 × contagem de `CS,` (linhas completas, sem log
 
 ```bash
 cd /c/work/nrf-manaus-2
-sed -i 's/^CONFIG_LAB_TAG_ADDR_VALUE=.*/CONFIG_LAB_TAG_ADDR_VALUE=""/' comms/channel_sounding_iq_music/meu_tag.conf
-git add comms/channel_sounding_iq_music
+sed -i 's/^CONFIG_LAB_TAG_ADDR_VALUE=.*/CONFIG_LAB_TAG_ADDR_VALUE=""/' comms/05_cs_iq_music/meu_tag.conf
+git add comms/05_cs_iq_music
 git commit -F - <<'EOF'
-channel_sounding_iq_music: initiator RAS que despeja o IQ por canal em CSV na serial
+05_cs_iq_music: initiator RAS que despeja o IQ por canal em CSV na serial
 
 Lab 5, firmware: o lab 2 mais csv_dump_report() apos o cs_de_calc(). Uma
 linha IQ por canal com I/Q local e remoto, e uma linha CS com as tres
@@ -1839,7 +1839,7 @@ EOF
 ### Task 9: Lab 5 — `cs_de_numpy.py`: port do `cs_de.c` da Nordic, com testes
 
 **Files:**
-- Create: `comms/channel_sounding_iq_music/tools/cs_de_numpy.py`, `tools/tests/conftest.py`, `tools/tests/test_cs_de_numpy.py`, `tools/requirements.txt`
+- Create: `comms/05_cs_iq_music/tools/cs_de_numpy.py`, `tools/tests/conftest.py`, `tools/tests/test_cs_de_numpy.py`, `tools/requirements.txt`
 
 **Interfaces:**
 - Produces (todas com `numpy` e `NCH = 75`, `C = 299792458.0`, `DF = 1e6`):
@@ -1853,7 +1853,7 @@ EOF
 
 - [ ] **Step 1: `requirements.txt` e o gerador sintético dos testes**
 
-Criar `comms/channel_sounding_iq_music/tools/requirements.txt`:
+Criar `comms/05_cs_iq_music/tools/requirements.txt`:
 
 ```
 numpy>=1.24
@@ -1861,7 +1861,7 @@ pyserial>=3.5
 pytest>=7
 ```
 
-Criar `comms/channel_sounding_iq_music/tools/tests/conftest.py`:
+Criar `comms/05_cs_iq_music/tools/tests/conftest.py`:
 
 ```python
 # -*- coding: utf-8 -*-
@@ -1900,7 +1900,7 @@ def comb_3m():
 
 - [ ] **Step 2: Testes que falham**
 
-Criar `comms/channel_sounding_iq_music/tools/tests/test_cs_de_numpy.py`:
+Criar `comms/05_cs_iq_music/tools/tests/test_cs_de_numpy.py`:
 
 ```python
 # -*- coding: utf-8 -*-
@@ -1957,7 +1957,7 @@ def test_estimates_dict(comb_3m):
 - [ ] **Step 3: Rodar e ver falhar**
 
 ```bash
-cd /c/work/nrf-manaus-2/comms/channel_sounding_iq_music/tools
+cd /c/work/nrf-manaus-2/comms/05_cs_iq_music/tools
 python -m pip install -r requirements.txt
 python -m pytest tests/test_cs_de_numpy.py -q
 ```
@@ -1966,7 +1966,7 @@ Expected: `ModuleNotFoundError: No module named 'cs_de_numpy'` (ou falha equival
 
 - [ ] **Step 4: O port**
 
-Criar `comms/channel_sounding_iq_music/tools/cs_de_numpy.py`:
+Criar `comms/05_cs_iq_music/tools/cs_de_numpy.py`:
 
 ```python
 #!/usr/bin/env python3
@@ -2120,7 +2120,7 @@ def estimates(comb: np.ndarray, rtt_half_ns: int, rtt_count: int, nfft: int = 51
 - [ ] **Step 5: Rodar e ver passar**
 
 ```bash
-cd /c/work/nrf-manaus-2/comms/channel_sounding_iq_music/tools
+cd /c/work/nrf-manaus-2/comms/05_cs_iq_music/tools
 python -m pytest tests/test_cs_de_numpy.py -q
 ```
 
@@ -2130,9 +2130,9 @@ Expected: `7 passed`.
 
 ```bash
 cd /c/work/nrf-manaus-2
-git add comms/channel_sounding_iq_music/tools
+git add comms/05_cs_iq_music/tools
 git commit -F - <<'EOF'
-channel_sounding_iq_music: port em NumPy do cs_de.c (ifft, phase_slope, rtt) com testes
+05_cs_iq_music: port em NumPy do cs_de.c (ifft, phase_slope, rtt) com testes
 
 Reimplementa funcao a funcao o cs_de da Nordic (SDK v3.4.0), inclusive a
 busca de pico e a compensacao pelo nulo a esquerda do IFFT, para o aluno
@@ -2148,7 +2148,7 @@ EOF
 ### Task 10: Lab 5 — `cs_csv.py`: o formato do firmware, lido de volta
 
 **Files:**
-- Create: `comms/channel_sounding_iq_music/tools/cs_csv.py`, `tools/tests/test_cs_csv.py`
+- Create: `comms/05_cs_iq_music/tools/cs_csv.py`, `tools/tests/test_cs_csv.py`
 
 **Interfaces:**
 - Consumes: as linhas `IQ,`/`CS,` da Task 8.
@@ -2173,7 +2173,7 @@ def write_procedure(f, counter, comb, tq=1, rtt_half_ns=40, rtt_count=1,
     f.write(cs_csv.format_cs(counter, 0, tq, fw[0], fw[1], fw[2], rtt_count, rtt_half_ns))
 ```
 
-Criar `comms/channel_sounding_iq_music/tools/tests/test_cs_csv.py`:
+Criar `comms/05_cs_iq_music/tools/tests/test_cs_csv.py`:
 
 ```python
 # -*- coding: utf-8 -*-
@@ -2227,18 +2227,18 @@ def test_format_is_firmware_format():
 - [ ] **Step 2: Rodar e ver falhar**
 
 ```bash
-cd /c/work/nrf-manaus-2/comms/channel_sounding_iq_music/tools && python -m pytest tests/test_cs_csv.py -q
+cd /c/work/nrf-manaus-2/comms/05_cs_iq_music/tools && python -m pytest tests/test_cs_csv.py -q
 ```
 Expected: falha de import de `cs_csv`.
 
 - [ ] **Step 3: Implementar**
 
-Criar `comms/channel_sounding_iq_music/tools/cs_csv.py`:
+Criar `comms/05_cs_iq_music/tools/cs_csv.py`:
 
 ```python
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Formato CSV do firmware do lab 5 (channel_sounding_iq_music) — codigo do curso.
+"""Formato CSV do firmware do lab 5 (05_cs_iq_music) — codigo do curso.
 
 O que a serial entrega, por procedure de Channel Sounding (csv_dump_report() em
 src/main.c):
@@ -2336,7 +2336,7 @@ def read_procedures(path) -> list[Procedure]:
 - [ ] **Step 4: Rodar e ver passar**
 
 ```bash
-cd /c/work/nrf-manaus-2/comms/channel_sounding_iq_music/tools && python -m pytest tests/test_cs_csv.py -q
+cd /c/work/nrf-manaus-2/comms/05_cs_iq_music/tools && python -m pytest tests/test_cs_csv.py -q
 ```
 Expected: `5 passed`.
 
@@ -2344,9 +2344,9 @@ Expected: `5 passed`.
 
 ```bash
 cd /c/work/nrf-manaus-2
-git add comms/channel_sounding_iq_music/tools
+git add comms/05_cs_iq_music/tools
 git commit -F - <<'EOF'
-channel_sounding_iq_music: cs_csv.py le e escreve o formato do firmware, com testes
+05_cs_iq_music: cs_csv.py le e escreve o formato do firmware, com testes
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01LurGbU8nMm9xZDvXheodHb
@@ -2357,7 +2357,7 @@ EOF
 ### Task 11: Lab 5 — `cs_capture.py`: serial → arquivo
 
 **Files:**
-- Create: `comms/channel_sounding_iq_music/tools/cs_capture.py`, `tools/tests/test_cs_capture.py`
+- Create: `comms/05_cs_iq_music/tools/cs_capture.py`, `tools/tests/test_cs_capture.py`
 
 **Interfaces:**
 - Consumes: `cs_csv.parse_line`.
@@ -2393,7 +2393,7 @@ def test_looks_like_ours():
 - [ ] **Step 2: Rodar e ver falhar**
 
 ```bash
-cd /c/work/nrf-manaus-2/comms/channel_sounding_iq_music/tools && python -m pytest tests/test_cs_capture.py -q
+cd /c/work/nrf-manaus-2/comms/05_cs_iq_music/tools && python -m pytest tests/test_cs_capture.py -q
 ```
 Expected: falha de import de `cs_capture`.
 
@@ -2464,7 +2464,7 @@ def autodetect(espera: float = 3.0) -> str:
         except (SerialException, OSError):
             continue
     morrer("nenhuma porta esta enviando linhas IQ,/CS,.\n"
-           "       confira: a DK esta gravada com o channel_sounding_iq_music? o TAG esta\n"
+           "       confira: a DK esta gravada com o 05_cs_iq_music? o TAG esta\n"
            "       ligado com o reflector do lab 1? o endereco em meu_tag.conf esta certo?")
 
 
@@ -2511,7 +2511,7 @@ if __name__ == "__main__":
 - [ ] **Step 4: Rodar e ver passar**
 
 ```bash
-cd /c/work/nrf-manaus-2/comms/channel_sounding_iq_music/tools && python -m pytest tests/test_cs_capture.py -q
+cd /c/work/nrf-manaus-2/comms/05_cs_iq_music/tools && python -m pytest tests/test_cs_capture.py -q
 ```
 Expected: `2 passed`.
 
@@ -2520,7 +2520,7 @@ Expected: `2 passed`.
 Com a DK gravada (Task 8) e o TAG na bateria:
 
 ```bash
-cd /c/work/nrf-manaus-2/comms/channel_sounding_iq_music/tools
+cd /c/work/nrf-manaus-2/comms/05_cs_iq_music/tools
 python cs_capture.py --seconds 20 --out ../capturas/teste.csv
 ```
 
@@ -2528,7 +2528,7 @@ Expected: acha a porta sozinho, imprime a taxa (~5 procedures/s no default do sa
 
 - [ ] **Step 6: `.gitignore` das capturas e commit**
 
-Acrescentar ao `comms/channel_sounding_iq_music/.gitignore`:
+Acrescentar ao `comms/05_cs_iq_music/.gitignore`:
 
 ```
 # Capturas do aluno — nao versionadas
@@ -2537,9 +2537,9 @@ capturas/
 
 ```bash
 cd /c/work/nrf-manaus-2
-git add comms/channel_sounding_iq_music
+git add comms/05_cs_iq_music
 git commit -F - <<'EOF'
-channel_sounding_iq_music: cs_capture.py grava o CSV da serial, achando a porta sozinho
+05_cs_iq_music: cs_capture.py grava o CSV da serial, achando a porta sozinho
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01LurGbU8nMm9xZDvXheodHb
@@ -2564,12 +2564,12 @@ W=/c/Users/joaod/AppData/Local/Temp/claude/waves
 rm -rf $W && git clone --depth 1 https://github.com/skig/waves $W
 cd $W && git rev-parse HEAD && git log -1 --format=%cd --date=short
 cd /c/work/nrf-manaus-2
-mkdir -p comms/channel_sounding_iq_music/tools/music
-cp $W/toolset/processing/cs_music.py comms/channel_sounding_iq_music/tools/music/cs_music.py
-cp $W/toolset/constants.py comms/channel_sounding_iq_music/tools/music/constants.py
-cp $W/LICENSE comms/channel_sounding_iq_music/tools/music/LICENSE
-head -3 comms/channel_sounding_iq_music/tools/music/LICENSE
-grep -n "^def \|^from \|^import \|^_[A-Z_]* = " comms/channel_sounding_iq_music/tools/music/cs_music.py
+mkdir -p comms/05_cs_iq_music/tools/music
+cp $W/toolset/processing/cs_music.py comms/05_cs_iq_music/tools/music/cs_music.py
+cp $W/toolset/constants.py comms/05_cs_iq_music/tools/music/constants.py
+cp $W/LICENSE comms/05_cs_iq_music/tools/music/LICENSE
+head -3 comms/05_cs_iq_music/tools/music/LICENSE
+grep -n "^def \|^from \|^import \|^_[A-Z_]* = " comms/05_cs_iq_music/tools/music/cs_music.py
 ```
 
 Expected: o hash e a data do commit (anotar para o `ORIGEM.md`); `LICENSE` começando por `MIT License`; o `grep` listando os `def` (esperados `compute_music_spectrum` e `calculate_distance_from_music`), a linha `from toolset.constants import SPEED_OF_LIGHT, BLE_CS_STEP_1MHZ` e as constantes `_N_SIGNALS`, `_SUBARRAY_LEN`, `_MAX_DELAY_NS`.
@@ -2676,7 +2676,7 @@ def test_music_needs_four_channels():
 ```
 
 ```bash
-cd /c/work/nrf-manaus-2/comms/channel_sounding_iq_music/tools && python -m pytest tests/test_music_adapter.py -q
+cd /c/work/nrf-manaus-2/comms/05_cs_iq_music/tools && python -m pytest tests/test_music_adapter.py -q
 ```
 Expected: falha de import de `music_adapter`.
 
@@ -2731,7 +2731,7 @@ def music_m(comb: np.ndarray, ch_offset: int = CH_OFFSET) -> float:
 - [ ] **Step 6: Rodar; fixar a convenção pelo resultado**
 
 ```bash
-cd /c/work/nrf-manaus-2/comms/channel_sounding_iq_music/tools && python -m pytest tests/test_music_adapter.py -q
+cd /c/work/nrf-manaus-2/comms/05_cs_iq_music/tools && python -m pytest tests/test_music_adapter.py -q
 ```
 
 Decisão pelo que o teste de 3 m imprimir (ver `pytest -q -k "3.0"` com `--tb=short`):
@@ -2751,9 +2751,9 @@ Repetir até `4 passed`. Registrar no `ORIGEM.md` (linha "O que o curso acrescen
 
 ```bash
 cd /c/work/nrf-manaus-2
-git add comms/channel_sounding_iq_music/tools
+git add comms/05_cs_iq_music/tools
 git commit -F - <<'EOF'
-channel_sounding_iq_music: MUSIC do skig/waves vendorizado (MIT) e adaptador para o IQ combinado
+05_cs_iq_music: MUSIC do skig/waves vendorizado (MIT) e adaptador para o IQ combinado
 
 cs_music.py e constants.py copiados com LICENSE e ORIGEM.md (commit
 registrado); unica alteracao e o import. music_adapter.py converte o IQ
@@ -2822,7 +2822,7 @@ def test_stats_skip_bad_tone_quality(captura_3m):
 ```
 
 ```bash
-cd /c/work/nrf-manaus-2/comms/channel_sounding_iq_music/tools && python -m pytest tests/test_cs_compare.py -q
+cd /c/work/nrf-manaus-2/comms/05_cs_iq_music/tools && python -m pytest tests/test_cs_compare.py -q
 ```
 Expected: falha de import de `cs_compare`.
 
@@ -2929,14 +2929,14 @@ if __name__ == "__main__":
 - [ ] **Step 3: Rodar e ver passar — a suíte inteira**
 
 ```bash
-cd /c/work/nrf-manaus-2/comms/channel_sounding_iq_music/tools && python -m pytest -q
+cd /c/work/nrf-manaus-2/comms/05_cs_iq_music/tools && python -m pytest -q
 ```
 Expected: `20 passed` (7 + 5 + 2 + 4 + 2).
 
 - [ ] **Step 4: Bancada — o port reproduz o chip?**
 
 ```bash
-cd /c/work/nrf-manaus-2/comms/channel_sounding_iq_music/tools
+cd /c/work/nrf-manaus-2/comms/05_cs_iq_music/tools
 python cs_compare.py ../capturas/teste.csv | tail -8
 ```
 
@@ -2946,9 +2946,9 @@ Expected: `d_ifft` com módulo < 0.05 m na maioria das procedures (float32 do ch
 
 ```bash
 cd /c/work/nrf-manaus-2
-git add comms/channel_sounding_iq_music/tools
+git add comms/05_cs_iq_music/tools
 git commit -F - <<'EOF'
-channel_sounding_iq_music: cs_compare.py poe os quatro estimadores lado a lado, com testes
+05_cs_iq_music: cs_compare.py poe os quatro estimadores lado a lado, com testes
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01LurGbU8nMm9xZDvXheodHb
@@ -2960,7 +2960,7 @@ EOF
 ### Task 14: Lab 5 — medição de referência e README
 
 **Files:**
-- Create: `comms/channel_sounding_iq_music/README.md`
+- Create: `comms/05_cs_iq_music/README.md`
 - Modify: nada
 
 **Interfaces:**
@@ -2971,7 +2971,7 @@ EOF
 TAG (reflector RAS) na bateria, DK com o firmware do lab 5, linha de visada, trena:
 
 ```bash
-cd /c/work/nrf-manaus-2/comms/channel_sounding_iq_music/tools
+cd /c/work/nrf-manaus-2/comms/05_cs_iq_music/tools
 python cs_capture.py --seconds 30 --out ../capturas/ref_1m.csv
 python cs_capture.py --seconds 30 --out ../capturas/ref_3m.csv
 python cs_capture.py --seconds 30 --out ../capturas/ref_5m.csv
@@ -2982,7 +2982,7 @@ Anotar, por distância, média e desvio de `ifft_fw`, `ps_fw`, `rtt_fw`, `music`
 
 - [ ] **Step 2: README**
 
-Criar `comms/channel_sounding_iq_music/README.md` (preencher a tabela com o medido no Step 1 e a data):
+Criar `comms/05_cs_iq_music/README.md` (preencher a tabela com o medido no Step 1 e a data):
 
 ```markdown
 # Channel Sounding · Lab 5 — O IQ no PC: reproduzir o chip e tentar um algoritmo melhor
@@ -3019,10 +3019,10 @@ O ganho é **medido, não prometido**. Veja a tabela no fim.
 O mesmo `meu_tag.conf` dos labs 2 e 3. TAG fora do `DEBUG OUT`.
 
 ```
-copy ..\channel_sounding_initiator\meu_tag.conf meu_tag.conf
+copy ..\02_cs_initiator\meu_tag.conf meu_tag.conf
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/channel_sounding_iq_music/build_lm20 C:/work/nrf-manaus-2/comms/channel_sounding_iq_music -- -DEXTRA_CONF_FILE=meu_tag.conf
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/channel_sounding_iq_music/build_lm20
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/05_cs_iq_music/build_lm20 C:/work/nrf-manaus-2/comms/05_cs_iq_music -- -DEXTRA_CONF_FILE=meu_tag.conf
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/05_cs_iq_music/build_lm20
 ```
 
 O que sai na serial (115200 8N1), por procedure — 75 linhas `IQ` e uma `CS`:
@@ -3154,11 +3154,11 @@ CSV por `printk`. `prj.conf` manda o log para o RTT (`CONFIG_LOG_BACKEND_UART=n`
 
 ```bash
 cd /c/work/nrf-manaus-2
-sed -i 's/^CONFIG_LAB_TAG_ADDR_VALUE=.*/CONFIG_LAB_TAG_ADDR_VALUE=""/' comms/channel_sounding_iq_music/meu_tag.conf
-git status --short comms/channel_sounding_iq_music
-git add comms/channel_sounding_iq_music
+sed -i 's/^CONFIG_LAB_TAG_ADDR_VALUE=.*/CONFIG_LAB_TAG_ADDR_VALUE=""/' comms/05_cs_iq_music/meu_tag.conf
+git status --short comms/05_cs_iq_music
+git add comms/05_cs_iq_music
 git commit -F - <<'EOF'
-channel_sounding_iq_music: README com a medicao de referencia da bancada
+05_cs_iq_music: README com a medicao de referencia da bancada
 
 Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01LurGbU8nMm9xZDvXheodHb
@@ -3183,11 +3183,11 @@ Substituir a tabela "Labs planejados" e o título por:
 
 | Lab | Descrição | Kit | Status |
 |-----|-----------|-----|--------|
-| [`channel_sounding_reflector/`](channel_sounding_reflector/) | **CS 1** — Reflector RAS no TAG, CS default da Nordic. Log por RTT (o TAG não tem UART). Fragmentos da demo com smartphone | nRF54L15-TAG | ✅ |
-| [`channel_sounding_initiator/`](channel_sounding_initiator/) | **CS 2** — Initiator RAS no LM20-DK: `ifft`, `phase_slope` e `rtt` lado a lado. Filtra pelo endereço do TAG do aluno (mesmo `meu_tag.conf` do Edge AI). Experimento com trena e obstrução | nRF54LM20-DK | ✅ |
-| [`channel_sounding_ipt_reflector/`](channel_sounding_ipt_reflector/) + [`channel_sounding_ipt_initiator/`](channel_sounding_ipt_initiator/) | **CS 3** — O mesmo par com IPT: a contribuição do reflector viaja na fase do tom, não por GATT. A coluna `rtt` some; `time_delta` cai | TAG + LM20-DK | ✅ |
-| [`channel_sounding_secure/`](channel_sounding_secure/) | **CS 4** — Roteiro: ACL cifrada, CS Security Enable, RTT como limite físico contra relé, o que o IPT abre mão, o que o SDC não suporta | par do CS 2 | ✅ (conforme o tempo) |
-| [`channel_sounding_iq_music/`](channel_sounding_iq_music/) | **CS 5** — IQ para o PC: port do `cs_de` em NumPy reproduz o chip; MUSIC (skig/waves, MIT) sobre o mesmo IQ; medição de referência com trena | LM20-DK + PC | ✅ (conforme o tempo) |
+| [`01_cs_reflector/`](01_cs_reflector/) | **CS 1** — Reflector RAS no TAG, CS default da Nordic. Log por RTT (o TAG não tem UART). Fragmentos da demo com smartphone | nRF54L15-TAG | ✅ |
+| [`02_cs_initiator/`](02_cs_initiator/) | **CS 2** — Initiator RAS no LM20-DK: `ifft`, `phase_slope` e `rtt` lado a lado. Filtra pelo endereço do TAG do aluno (mesmo `meu_tag.conf` do Edge AI). Experimento com trena e obstrução | nRF54LM20-DK | ✅ |
+| [`03_cs_ipt/reflector/`](03_cs_ipt/reflector/) + [`03_cs_ipt/initiator/`](03_cs_ipt/initiator/) | **CS 3** — O mesmo par com IPT: a contribuição do reflector viaja na fase do tom, não por GATT. A coluna `rtt` some; `time_delta` cai | TAG + LM20-DK | ✅ |
+| [`04_cs_seguranca/`](04_cs_seguranca/) | **CS 4** — Roteiro: ACL cifrada, CS Security Enable, RTT como limite físico contra relé, o que o IPT abre mão, o que o SDC não suporta | par do CS 2 | ✅ (conforme o tempo) |
+| [`05_cs_iq_music/`](05_cs_iq_music/) | **CS 5** — IQ para o PC: port do `cs_de` em NumPy reproduz o chip; MUSIC (skig/waves, MIT) sobre o mesmo IQ; medição de referência com trena | LM20-DK + PC | ✅ (conforme o tempo) |
 | `wifi_provisioning/` | Provisionamento de dispositivo Wi-Fi 6+ com circuito companion | nRF54LM20-DK + nRF7002-EBII | planejado |
 | `wifi_tcp_client/` | Envio de dados via socket TCP/IP sobre Wi-Fi | nRF54LM20-DK + nRF7002-EBII | planejado |
 | `ntn_nbiot/` | Comunicação NB-IoT via satélite (NTN) — teste ao vivo dependente de janela de passada | nRF9151-SMA-DK | planejado |
@@ -3222,21 +3222,21 @@ E na seção "Tópicos teóricos", trocar a primeira linha por:
 Substituir a linha `- **nRF Toolbox** no smartphone — opcionalmente Pixel 10 como Channel Sounding initiator.` por:
 
 ```markdown
-- **Python 3.11** com `numpy`, `pyserial` e `pytest` para o lab CS 5 (`pip install -r comms/channel_sounding_iq_music/tools/requirements.txt`). O mesmo ambiente do Edge AI serve.
+- **Python 3.11** com `numpy`, `pyserial` e `pytest` para o lab CS 5 (`pip install -r comms/05_cs_iq_music/tools/requirements.txt`). O mesmo ambiente do Edge AI serve.
 - **Trena** (≥ 5 m) por bancada, para os labs CS 2 e CS 5.
 - **SEGGER J-Link** (vem com o toolchain) — o log do TAG só sai por RTT.
-- Smartphone com Channel Sounding (Pixel 9/10 com Android 16 QPR2+, nRF Toolbox ≥ 4.1.4) é **opcional** e só para a demo do instrutor; o Galaxy S26 exige ajustes dos dois lados (ver `comms/channel_sounding_reflector/s26.conf`).
+- Smartphone com Channel Sounding (Pixel 9/10 com Android 16 QPR2+, nRF Toolbox ≥ 4.1.4) é **opcional** e só para a demo do instrutor; o Galaxy S26 exige ajustes dos dois lados (ver `comms/01_cs_reflector/s26.conf`).
 ```
 
 - [ ] **Step 3: Conferir os links do índice**
 
 ```bash
 cd /c/work/nrf-manaus-2
-for d in channel_sounding_reflector channel_sounding_initiator channel_sounding_ipt_reflector channel_sounding_ipt_initiator channel_sounding_secure channel_sounding_iq_music; do test -f comms/$d/README.md && echo "ok $d" || echo "FALTA $d"; done
+for d in 01_cs_reflector 02_cs_initiator 03_cs_ipt/reflector 03_cs_ipt/initiator 04_cs_seguranca 05_cs_iq_music; do test -f comms/$d/README.md && echo "ok $d" || echo "FALTA $d"; done
 grep -c "channel_sounding" README.md
 ```
 
-Expected: seis `ok`; o README raiz já cita `comms/channel_sounding_initiator` no exemplo de build (≥ 1).
+Expected: seis `ok`; o README raiz já cita `comms/02_cs_initiator` no exemplo de build (≥ 1).
 
 - [ ] **Step 4: Commit**
 

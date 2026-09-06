@@ -33,7 +33,7 @@ Cada pasta de módulo tem um `README.md` com a lista de labs e instruções de b
 
 ```bash
 # exemplo: lab de channel sounding initiator para o nRF54LM20-DK
-west build -b nrf54lm20dk/nrf54lm20a/cpuapp comms/channel_sounding_initiator
+west build -b nrf54lm20dk/nrf54lm20a/cpuapp comms/02_cs_initiator
 west flash
 ```
 

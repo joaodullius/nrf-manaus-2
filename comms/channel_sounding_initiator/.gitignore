@@ -1,5 +1,0 @@
-# NOTA: meu_tag.conf NAO entra aqui de proposito. Ele e rastreado e vem no repo
-# com o endereco vazio — e o template que cada aluno preenche, e o CMakeLists.txt
-# falha de proposito quando esta vazio, com a mensagem de onde achar o endereco.
-# So nao commite o SEU endereco: 'git checkout comms/channel_sounding_initiator/meu_tag.conf'
-# antes do commit, ou deixe-o fora do 'git add'.
