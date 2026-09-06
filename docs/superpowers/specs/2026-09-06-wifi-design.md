@@ -617,6 +617,27 @@ limitação porque amostra rápido e a média é feita sobre a janela que o oper
 isso ele é o instrumento certo aqui, e não uma conveniência. A alternativa documentada é
 osciloscópio com um resistor de 10 Ω entre os pinos de P10, que é o mesmo princípio.
 
+**Detalhes do PPK2 que entram no roteiro.** Ele mede de 200 nA a 1 A, amostrando a 100 kSa/s,
+com resolução entre 100 nA e 1 mA conforme a faixa. Em **modo amperímetro** ele não alimenta
+nada: exige que a fonte externa entregue entre 0,8 V e 5 V ao alvo — no nosso caso quem alimenta
+é a própria DK, então a condição já está satisfeita. É por isso que este é o modo certo aqui, e
+não o modo fonte que a Nordic usa no nRF7002 DK.
+
+Duas coisas que confundem na primeira vez, e que o README deve antecipar:
+
+- **"Enable power output" precisa ser ligado mesmo em modo amperímetro.** Ali ele não liga
+  fonte nenhuma: só fecha o circuito interno de medição, deixando a corrente passar para o
+  alvo. Sem isso o alvo simplesmente não recebe corrente pelo caminho medido.
+- **Alimentação do próprio PPK2.** Um cabo USB entrega até 500 mA através dele; para chegar a
+  1 A são necessários dois cabos. Vale conferir o pico de transmissão do nRF7002 na primeira
+  captura antes de confiar nas médias.
+
+**Oportunidade que vale considerar para o lab.** O PPK2 tem entradas digitais que funcionam
+como analisador lógico simples, sincronizadas com a corrente. Ligando uma delas a um GPIO que o
+firmware chaveia no início e no fim da janela de despertar, o gráfico mostra a corrente e o
+evento de código lado a lado — é a forma mais direta de mostrar que o pico coincide com o
+despertar negociado, em vez de pedir para o aluno acreditar na coincidência temporal.
+
 **O P14 mede só o nRF54LM20B, e não pega o nRF7002.** Isso não é dedução, está na
 documentação de hardware da DK. O P14 fica em série com o domínio **VDD:nRF**, que alimenta
 apenas o SoC — tanto que a DK continua com serial, LEDs e botões funcionando quando o SoC é
