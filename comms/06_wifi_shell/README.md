@@ -1,14 +1,10 @@
 # Wi-Fi · Lab 6 — O companion visível
 
-> **Antes de tudo: o console muda de UART, não necessariamente de porta.** Com a
-> nRF7002-EB II acoplada, o overlay do shield desabilita a `uart20` e move o console
-> (e o `shell-uart`) para a `uart30` — são periféricos diferentes, e por isso um
-> firmware compilado sem o shield e um compilado com o shield **não são
-> intercambiáveis**: o console de um não fala na UART do outro. Isso não quer dizer
-> que a porta serial do PC muda: na bancada em que este lab foi validado, as duas
-> UARTs saem na mesma VCOM (a interface USB do kit não diferencia uma da outra), e o
-> prompt respondeu na porta de sempre. Trate isso como precaução, não como previsão —
-> abra as duas portas seriais da DK e veja qual responde.
+> **Antes de tudo: o console troca de VCOM.** Com a nRF7002-EB II acoplada, o overlay
+> do shield move o console (e o `shell-uart`) da `uart20` para a `uart30` — e isso
+> troca também a porta serial do PC. Quem vem dos labs de Channel Sounding (sem
+> shield), acostumado com a **segunda** VCOM da DK, precisa abrir a **primeira**
+> aqui. Abra as duas e veja qual responde.
 
 Este lab não escreve nenhuma linha de aplicação: é o shell de Wi-Fi da própria Nordic,
 `nrf/samples/wifi/shell`, rodando na nRF54LM20-DK com a nRF7002 EB-II encaixada. O que
@@ -29,8 +25,9 @@ aviso de console deste curso aparecem pela primeira vez para Wi-Fi.
 | **nRF7002 EB-II** | shield companion Wi-Fi 6, encaixado no header de expansão |
 | **PC** | terminal serial (VCOM) e a rede Wi-Fi da sala |
 
-Com o shield acoplado, `sw3` some do overlay (ele não existe mais): sobram `sw0`–`sw2`
-e os quatro LEDs.
+Com o shield acoplado, `sw3` some do overlay nesta versão do SDK (ele não existe
+mais): sobram `sw0`–`sw2` e os quatro LEDs. É um comportamento específico do kit
+pré-produção — ver a nota de versão no Passo 2.
 
 ## Passo 1 — compilar e gravar
 
@@ -53,25 +50,35 @@ SoC — não há domínio de rede separado para gravar). Resumo de memória:
 
 ## Passo 2 — achar o console
 
-O DK expõe duas VCOMs para o PC. Na bancada em que este lab foi validado (J-Link
-1051898754, PCA10184): **o prompt respondeu na primeira VCOM (a de sempre); a
-segunda ficou muda** — nenhum byte saiu dela.
+Medido nas duas condições, no mesmo kit (nRF54LM20-DK var. B, J-Link 1051898754,
+PCA10184):
 
-O motivo já estava confirmado na árvore do SDK antes mesmo de ligar a DK: o overlay
-do shield (`zephyr/boards/shields/nrf7002eb2/nrf54lm20.overlay`) traz o comentário
+| Firmware | Console em | Porta | Observado |
+|---|---|---|---|
+| lab de Channel Sounding (sem shield) | `uart20` (P1.16/P1.17) | **COM22**, a segunda VCOM | sai o boot banner |
+| Este lab (com `nrf7002eb2`) | `uart30` (P0.06/P0.07) | **COM21**, a primeira VCOM | sai o prompt |
+
+Em cada condição a outra porta fica muda (0 bytes): **a VCOM muda de fato** entre um
+firmware e outro. O motivo já estava confirmado na árvore do SDK antes de ligar a
+DK: o overlay do shield (`zephyr/boards/shields/nrf7002eb2/nrf54lm20.overlay`) traz
+o comentário
 
 ```
 /* UART20 conflicts with EB-II shield; use UART30 */
 ```
 
 e move `zephyr,console`, `zephyr,shell-uart` e companhia da `uart20` para a `uart30`,
-desabilitando a `uart20`. A bancada confirmou o lado do dispositivo: no shell,
-`device list` mostra só a `uart@104000` (a `uart30`) registrada — a `uart20` não
-aparece mais. E confirmou também o lado do PC: as duas UARTs, apesar de serem
-periféricos diferentes do SoC, saem fisicamente na **mesma** VCOM do chip de
-interface USB desta DK — por isso a porta de sempre continuou respondendo. Essa
-coincidência de fiação é do kit, não do overlay; **não assuma que se repete em outra
-DK ou instalação** — daí a orientação de abrir as duas portas por precaução.
+desabilitando a `uart20`. No shell deste lab, `device list` mostra só a
+`uart@104000` (a `uart30`) registrada — a `uart20` não aparece mais.
+
+### Nota de versão: por que a documentação "latest" da Nordic descreve outro comportamento
+
+O reroteamento é um contorno para um conflito de pinos que existe **só no kit
+pré-produção** do nRF54LM20-DK. Em versões de Zephyr posteriores à v3.4.0 usada
+neste curso, o shield deixa de reroteiar nessa placa: o console volta para a
+`uart20` e o `sw3` deixa de ser apagado. Não é contradição entre fontes — é versão.
+Ao comparar com a documentação online, confira sempre o overlay da árvore
+efetivamente instalada, não a versão "latest".
 
 ## Passo 3 — explorar
 
@@ -182,12 +189,12 @@ resolve.
 
 ## Pegadinhas
 
-- **Console mudo numa das duas VCOMs.** Se a DK já foi usada em outro lab sem
-  shield, o hábito é abrir a mesma porta de novo. Nesta bancada isso funcionou (as
-  duas UARTs saem na mesma VCOM), mas é fiação do kit, não garantia do overlay —
-  abra as duas e confirme (ver Passo 2).
-- **`sw3` não existe mais.** O overlay do shield remove o botão e o alias junto — não é
-  bug do sample, é o pino que a EB-II ocupa.
+- **Console na porta errada.** Quem vem de um lab de Channel Sounding (sem shield)
+  está acostumado com a segunda VCOM da DK; aqui o console está na primeira. Abra as
+  duas e confirme (ver Passo 2).
+- **`sw3` não existe mais nesta versão do SDK.** O overlay do shield remove o botão e
+  o alias junto — não é bug do sample, é o contorno do conflito de pinos do kit
+  pré-produção (some nesta versão, volta em versões futuras do Zephyr).
 - **Sem o blob do driver, o build para no CMake.** Este lab depende de
   `west blobs fetch nrf_wifi` já ter rodado nesta instalação do SDK (já rodou). Se o
   CMake reclamar de blob ausente em outra máquina, é isso que falta.
@@ -201,5 +208,8 @@ resolve.
 - nRF Connect SDK v3.4.0 — `nrf/samples/wifi/shell`
 - nRF Connect SDK v3.4.0 — `zephyr/boards/shields/nrf7002eb2` (overlay do console e
   comentário sobre o conflito de UART)
+- Nordic, guia de migração de versões do Zephyr (consultado via MCP
+  `nordic-semiconductor`) — confirma que o reroteamento de UART é específico do kit
+  pré-produção do nRF54LM20-DK e não se repete em versões futuras
 - Bancada `nrf-manaus-2`, 2026-09-06 — nRF54LM20-DK var. B (J-Link 1051898754) +
   nRF7002 EB-II, AP 802.11ax da sala
