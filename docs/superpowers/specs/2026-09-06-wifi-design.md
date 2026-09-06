@@ -536,6 +536,36 @@ TWT é um **acordo**: exige que o AP anuncie suporte. A ONT da bancada é 802.11
 responde `Peer not TWT capable` (§6.1). Os degraus 1 e 2 não dependem disso e são medíveis em
 qualquer rede.
 
+#### A escada aparece na latência, e isso dispensa o PPK2
+
+O instrumento óbvio é o PPK2, mas o conceito fecha com um `ping`. O AP só entrega o quadro
+quando a estação acorda, então o regime de economia se lê direto na **latência de descida**.
+Medido nesta bancada, 20 pings por regime (detalhe em `bancada-dtim.md`):
+
+| Regime | mediana | máximo |
+|---|---|---|
+| sem economia | 12 ms | 269 ms |
+| DTIM 3, o padrão | 168 ms | 332 ms |
+| listen interval 10 | 525 ms | 938 ms |
+
+A teoria prevê os números. Em DTIM o quadro espera uma fração aleatória do período de 307 ms,
+logo média perto da metade e máximo perto do período: medido 175 e 332. Com listen interval 10
+sobre DTIM 3 a estação acorda a cada 9 beacons, 922 ms: medido mediana 525 e máximo 938.
+
+Escalando o listen interval, o máximo cresce de forma monotônica — 913 ms com 10, 2038 ms com
+30, 5130 ms com 60.
+
+**Armadilha de método que precisa ir para o README.** Quando o período de dormida passa do
+intervalo entre pings, vários pedidos ficam bufferizados no AP e são entregues **juntos** numa
+mesma janela. Só o primeiro paga a latência cheia, e os demais puxam a mediana para baixo. Com
+dormida longa, a estatística que significa alguma coisa é o **máximo**.
+
+**Pegadinha de comando, medida.** O comando é `wifi ps_listen_interval`, não
+`wifi listen_interval`. Errar o nome **não devolve erro**: o shell imprime o help e o valor
+continua o anterior, produzindo uma medição que parece válida e não é. Sempre conferir com
+`wifi ps` depois de setar. Trocar o **modo** de despertar funciona em tempo de execução; trocar
+o **valor** do listen interval exige reconectar, porque ele viaja no quadro de associação.
+
 #### Modo Broadcast do TWT: fora do escopo
 
 No nRF Connect SDK v3.4.0 o driver do nRF70 implementa só o TWT **Individual** — registra a
