@@ -87,18 +87,21 @@ Mesmo board (`nrf54lm20dk/nrf54lm20b/cpuapp`), mesmo `prj.conf` de base,
 
 | Transporte | FLASH | % FLASH (2036 KB) | RAM | % RAM (511 KB) |
 |---|---|---|---|---|
-| TCP | 555172 B | 26,63% | 187856 B | 35,90% |
-| HTTP | 566844 B | 27,19% | 188104 B | 35,95% |
-| MQTT | 560524 B | 26,89% | 188576 B | 36,04% |
+| TCP | 555360 B | 26,64% | 191952 B | 36,68% |
+| HTTP | 567020 B | 27,20% | 192200 B | 36,73% |
+| MQTT | 560756 B | 26,90% | 193392 B | 36,96% |
 
-As três cabem com folga (RAM entre 35,90% e 36,04% dos 511 KB — a diferença
-entre elas é pequena, ~0,14 ponto percentual). **O MQTT não precisou virar
-referência lida**: a build completa, com o cliente MQTT (buffers de 256
-bytes cada para RX e TX, ver `src/transporte.c`) e a assinatura do tópico de
-comando, sobe só 720 B de RAM sobre o TCP puro. HTTP custa mais FLASH que os
-outros dois (+11672 B sobre o TCP, o parser HTTP embutido do Zephyr) mas
-quase nada de RAM a mais (+248 B) — o grosso do custo de HTTP é código, não
-estado.
+As três cabem com folga (RAM entre 36,68% e 36,96% dos 511 KB — a diferença
+entre elas é pequena, ~0,28 ponto percentual). **O MQTT não precisou virar
+referência lida**. HTTP custa mais FLASH que os outros dois (+11660 B sobre
+o TCP, o parser HTTP embutido do Zephyr) mas pouco RAM a mais (+248 B) — o
+grosso do custo de HTTP é código, não estado. MQTT soma +1440 B de RAM sobre
+o TCP: é o preço de **dois slots** (`struct mqtt_slot`, ~720 B cada — dois
+buffers de 256 B para RX/TX do cliente MQTT mais o resto do estado da
+conexão), não um só. Ter dois slots em vez de um é o que corrige o item 2 da
+rodada de correção 1 (ver a seção seguinte): a reconexão MQTT monta e
+conecta o slot novo inteiro antes de trocar, em vez de reescrever o único
+slot existente enquanto outra thread ainda pode estar usando ele.
 
 ## Comparação de pilha e heap com o precedente da Nordic
 
@@ -123,11 +126,19 @@ precedente do `softap` (pilha 6200, heap mbedTLS 49152), é trabalho
 separado.
 
 As threads que chamam `transporte_*` (`telemetria_id`, `botao_id`,
-`recepcao_id`, todas em `src/main.c`, com pilhas de 2048/1024/2048 bytes)
-**não foram alteradas nesta task** — `main.c` está fora do escopo de
-arquivos desta task (só `Kconfig`, `src/transporte.c` e `prj.conf` mudaram).
-Ver "Preocupações" no relatório da task sobre o que isso significa para a
-bancada.
+`recepcao_id`, todas em `src/main.c`) foram redimensionadas na rodada de
+correção 1 da revisão desta task: de 2048/1024/2048 bytes para **3072 bytes
+as três**. O piso é o próprio sample de referência do Zephyr para
+`http_client_req()` (`zephyr/samples/net/sockets/http_client/prj.conf`
+reserva 3072 bytes de `CONFIG_MAIN_STACK_SIZE` para uma thread que só faz
+isso) — o caminho mais fundo que qualquer uma das três pode percorrer, já
+que a mesma `http_client_req()` roda tanto em `transporte_enviar()`
+(`telemetria_id`/`botao_id`, via `POST /telemetria`) quanto em
+`transporte_receber()` (`recepcao_id`, via `GET /comando`) quando o HTTP é o
+transporte escolhido. `telemetria_id` e `botao_id` chamam a mesma função
+(`montar_e_enviar()`), então não há motivo para uma ter menos pilha que a
+outra — a assimetria anterior (2048 vs. 1024) não vinha de nenhuma análise
+de caminho, só nunca tinha estourado.
 
 ## Bytes por amostra — medido em loopback
 
@@ -295,10 +306,13 @@ python -m pytest -q
    tráfego de Wi-Fi de verdade (a medição deste README é em loopback — ver a
    ressalva na própria seção).
 4. Se algum transporte estourar pilha (sintoma: `USAGE FAULT` na serial que
-   parece bug de código, não erro de rede) — ver "Preocupações" no relatório
-   da task: as pilhas das threads que chamam `transporte_*` não foram
-   alteradas nesta task, e não há bancada para confirmar a folga de HTTP e
-   MQTT sobre elas antes desta entrega.
+   parece bug de código, não erro de rede) — as pilhas de `telemetria_id`/
+   `botao_id`/`recepcao_id` foram dimensionadas pelo piso do sample de
+   referência do Zephyr para `http_client_req()` (seção "Comparação de
+   pilha e heap" acima), não por medição na bancada real — `CONFIG_STACK_
+   SENTINEL` e `CONFIG_DEBUG_COREDUMP` (já ligados, herdados do lab 9)
+   tornam esse tipo de estouro diagnosticável em vez de silencioso, mas
+   ainda não há confirmação de bancada de que o piso é suficiente.
 
 ## Plano B — sem rede utilizável na sala, ou com isolamento de cliente
 
