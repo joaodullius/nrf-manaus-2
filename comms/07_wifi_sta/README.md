@@ -118,11 +118,15 @@ primeira VCOM com o shield acoplado):
 - [ ] Conferir a sequência de eventos `net_mgmt` no console: pedido de conexão,
       `Connected`, e a linha de IP obtido por DHCP (`DHCP IP address: ...`).
 - [ ] Anotar o IP, a máscara e o gateway recebidos.
-- [ ] Desligar o AP da sala e observar no console: `Received Disconnected` e o que o
-      firmware faz em seguida (ele volta a chamar `NET_REQUEST_WIFI_CONNECT_STORED`
-      sozinho, sem intervenção).
-- [ ] Religar o AP e confirmar a reconexão automática, com um novo `Connected` e um
-      novo `DHCP IP address`.
+- [ ] Desligar o AP da sala e observar no console: `Received Disconnected`
+      (`handle_wifi_disconnect_result()` só loga essa linha e marca o estado
+      interno como desconectado — não há, no código, um caminho explícito que
+      dispare uma nova tentativa de conexão a partir desse evento; ver "O que
+      observar" abaixo).
+- [ ] Religar o AP e **anotar o que de fato acontece**: se o firmware reconecta
+      sozinho (novo `Connected` + novo `DHCP IP address`) e, se sim, quanto tempo
+      leva — isso não está garantido pelo `main.c` deste sample, então é
+      observação de bancada, não comportamento documentado no código.
 
 ## O que observar
 
@@ -137,10 +141,21 @@ primeira VCOM com o shield acoplado):
   `print_dhcp_ip()`, disparada só quando o `NET_EVENT_IPV4_DHCP_BOUND` chega — ou
   seja, a associação Wi-Fi e a obtenção de IP são dois eventos distintos no log, na
   mesma ordem do lab 6.
-- Se o AP cair, o firmware recebe `NET_EVENT_WIFI_DISCONNECT_RESULT` e loga `Received
-  Disconnected`; ele não desiste — o loop principal em `start_app()` chama
-  `wifi_connect()` de novo assim que a interface está pronta, então a reconexão é
-  automática, sem reset e sem intervenção manual.
+- Se o AP cair, o firmware recebe `NET_EVENT_WIFI_DISCONNECT_RESULT`:
+  `handle_wifi_disconnect_result()` loga `Received Disconnected` e marca
+  `context.connected = false` — só isso. Esse handler não chama `wifi_connect()`
+  nem qualquer outra rotina de reconexão. A reentrada do laço principal em
+  `start_app()` também não depende desse evento: depois de uma conexão bem
+  sucedida, o laço fica bloqueado em `k_sem_take(&wifi_ready_state_changed_sem,
+  K_FOREVER)`, e esse semáforo só é liberado por `wifi_ready_cb()`, acionado pelos
+  eventos `NET_EVENT_SUPPLICANT_READY`/`NET_EVENT_SUPPLICANT_NOT_READY`
+  (`nrf/subsys/net/lib/wifi_ready/wifi_ready.c`) — prontidão do `wpa_supplicant`,
+  um evento diferente do de desconexão. Ou seja, **o código deste sample não
+  descreve um mecanismo explícito de reconexão após a queda do AP.** Se uma
+  reconexão automática for observada na bancada, a hipótese mais provável é a
+  reassociação interna do próprio `wpa_supplicant` (fora do que este `main.c`
+  controla) — hipótese a verificar, não um caminho documentado neste arquivo. Ver
+  o checklist do Passo 2.
 
 ## Pegadinhas
 
