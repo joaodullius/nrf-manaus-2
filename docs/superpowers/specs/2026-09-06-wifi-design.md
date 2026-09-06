@@ -455,13 +455,128 @@ Duas ressalvas do mesmo teste, que os READMEs devem carregar:
 Deck **M2-04** (Wi-Fi), no mesmo toolkit dos M2-01/02/03: companion IC e o que o nRF7002 é,
 os blobs, provisionamento, e a tabela dos três transportes (§3.2) com os números medidos.
 
+### 7.1 Beacon, TIM, DTIM e TWT — o bloco que precisa ficar claro
+
+Os termos costumam ser apresentados como alternativas concorrentes. Não são. Três deles são
+partes de um mesmo mecanismo, e a economia de energia do Wi-Fi é uma **escada de três degraus**,
+não uma escolha entre antigo e moderno. Esta é a ordem de apresentação.
+
+#### O quadro e seus elementos
+
+**Beacon.** O AP transmite um quadro periódico anunciando a rede, no *beacon interval*. Medido
+na bancada: 100 unidades de tempo, ou seja ~102,4 ms.
+
+**TIM — Traffic Indication Map.** É um **elemento dentro do beacon**, não um quadro separado.
+Carrega um bitmap de AIDs dizendo quais estações têm quadros **unicast** guardados no AP.
+
+**DTIM — Delivery TIM.** É um TIM **especial**, que aparece a cada N beacons, onde N é o
+*DTIM period* definido no AP. Ele anuncia o tráfego **de grupo** — broadcast e multicast — que o
+AP transmite logo depois desse beacon.
+
+A relação que o aluno precisa levar: **todo beacon carrega um TIM; um beacon a cada N é um
+DTIM.** DTIM não é outro mecanismo, é uma ocorrência privilegiada do TIM. Quadros de grupo saem
+só depois do DTIM; quadros unicast a estação busca quando o bit dela aparece em qualquer TIM.
+
+#### Como a estação busca o unicast
+
+Duas variantes, e o nRF70 usa a primeira por padrão:
+
+- **Legacy Power Save.** A estação vê o próprio AID no TIM e manda um **PS-Poll**. O AP
+  responde com **um** quadro por vez, sinalizando no subcampo **More Data** se ainda há fila. A
+  estação repete até o More Data zerar e volta a dormir.
+- **WMM Power Save.** Em vez do PS-Poll, a estação abre um *Service Period* com um quadro de
+  disparo, e o AP entrega vários quadros até marcar o bit **EOSP** no último. Na prática não há
+  diferença relevante de consumo em relação ao Legacy.
+
+#### A escada de três degraus
+
+| Degrau | Quem controla o intervalo de dormida | Precisa de Wi-Fi 6 | Perde broadcast/multicast |
+|---|---|---|---|
+| **DTIM Power Save** | o **AP** | não | não |
+| **Extended Power Save** (listen interval) | a **estação** | não | **sim** |
+| **TWT** (deep sleep) | **negociado** entre estação e AP | **sim** | **sim** |
+
+**Degrau 1 — DTIM.** Padrão do nRF70 assim que conecta. A estação dorme e acorda alinhada ao
+DTIM. Quem manda no período é o AP, e a estação **não pode pedir alteração**. Período maior
+economiza mais e adiciona latência ao tráfego de descida. Medido na bancada: `Beacon Interval:
+100`, `DTIM: 3`, ou seja um acordar a cada ~307 ms — o mesmo número que a documentação da Nordic
+usa como exemplo.
+
+**Degrau 2 — Extended Power Save, ou listen interval.** O degrau que quase todo mundo esquece, e
+o mais útil no nosso caso: **não depende de Wi-Fi 6**. A estação acorda a cada *listen interval*
+beacons em vez de a cada DTIM, arredondado para o múltiplo mais próximo do período de DTIM — com
+listen interval 10 e DTIM 3, acorda a cada 9 beacons; com DTIM 4, a cada 8. O preço é perder os
+quadros de grupo, que saem logo após o DTIM. O listen interval vai no quadro de associação e por
+isso deve ser configurado **antes de conectar**. Medido na bancada: `PS listen_interval: 10`, e
+a troca de modo em tempo de execução funciona nos dois sentidos.
+
+**Degrau 3 — TWT.** Aqui sim é Wi-Fi 6. A estação **negocia com o AP o seu próprio horário**, em
+vez de herdar o calendário coletivo. Dorme de segundos a horas. O preço é o mesmo do degrau 2 e
+mais explícito: não acorda para os beacons de DTIM, logo não recebe broadcast nem multicast
+enquanto a sessão estiver de pé. Se a aplicação precisar de quadros de grupo, derruba a sessão e
+volta ao DTIM.
+
+#### Dynamic power save e o temporizador de inatividade
+
+Transversal aos três degraus, e fácil de confundir com eles. O nRF70 sai do modo de economia
+sozinho quando há tráfego e volta quando a MAC fica ociosa por um tempo — o *inactivity timer*,
+100 ms por padrão. Zerar esse temporizador mantém a estação sempre em economia, inclusive
+durante a transmissão, o que derruba a vazão de descida. É um botão separado do degrau escolhido.
+
+#### Quando cada um ganha
+
+DTIM é melhor para vazão alta e latência baixa, porque a estação acorda com frequência e recebe
+os quadros de grupo. TWT é melhor para dormidas da ordem de dezenas de segundos para cima, com
+tráfego periódico previsível. O listen interval fica no meio, e é a resposta para quem não tem
+AP com TWT. **Não escrever "TWT é o moderno, DTIM é o legado".**
+
+#### A dependência que o lab prova
+
+TWT é um **acordo**: exige que o AP anuncie suporte. A ONT da bancada é 802.11ax confirmado e
+responde `Peer not TWT capable` (§6.1). Os degraus 1 e 2 não dependem disso e são medíveis em
+qualquer rede.
+
+#### Modo Broadcast do TWT: fora do escopo
+
+No nRF Connect SDK v3.4.0 o driver do nRF70 implementa só o TWT **Individual** — registra a
+operação `set_twt` e não registra `set_btwt`. O shell do Zephyr expõe um comando
+`wifi twt btwt_setup`, mas ele não tem driver por trás nesta versão. O lab usa
+`wifi twt quick_setup` e `wifi twt setup`, ambos individuais.
+
+### 7.2 O que aproveitamos do material da Nordic, e onde ele não serve direto
+
+O curso *Wi-Fi Fundamentals* da Nordic Academy, o guia de *power profiling* do nRF70 e o post do
+DevZone sobre TWT cobrem esse bloco bem, e a estrutura conceitual do §7.1 vem deles. Três coisas
+**não** transferem para a nossa bancada, e cada uma vira uma nota no README do lab 11:
+
+**1. A sintaxe do comando de TWT mudou.** O material da Nordic usa a forma posicional, por
+exemplo `wifi twt setup 0 0 1 1 0 1 1 1 8 60000`. Testado no nosso shell (Zephyr 4.4.0, NCS
+v3.4.0): **falha** com `setup: wrong parameter count`. A forma atual é por opções longas, com 25
+argumentos (`-n -c -t -f -r -T -I -a -w -p -D -d -e -m`), ou o atalho
+`wifi twt quick_setup <wake_interval_us> <interval_us>`. O aluno que copiar o comando do material
+online recebe erro — o README precisa avisar.
+
+**2. As instruções do PPK2 são do nRF7002 DK.** A Nordic documenta remover o jumper **P23**
+(VBAT) e ligar Vout ao P23 pino 1, GND ao P21. Isso é do nRF7002 DK, com host nRF5340. A nossa
+bancada é **nRF54LM20-DK + nRF7002-EB II**, e o ponto de medição precisa ser levantado — a EB II
+tem cabeçalho próprio de medição de corrente. **Item em aberto**, ver §8. Lembrar da regra da
+bancada: o PPK2 não pode ficar no jumper de corrente da DK, porque quebra o SWD.
+
+**3. Os números não são nossos.** As correntes que a Nordic publica (~2 mA em DTIM de 200 ms,
+~15 µA dormindo, ~24-28 µA de média com TWT de 5 a 10 minutos) são de nRF7002 DK com host
+nRF5340. O nosso host é o nRF54LM20. Servem como ordem de grandeza na aula, sempre atribuídas à
+fonte, e **nunca** entram numa tabela nossa como se fossem medição da bancada.
+
 ## 8. Validação pendente
 
 Nada aqui foi rodado em hardware ainda, além do build de fumaça do §2.1.
 
 1. ~~**Console na `uart30`**~~ — **fechado em 2026-09-06.** Console na `uart30`, primeira
    VCOM; sem shield fica na `uart20`, segunda VCOM. Medido nas duas condições. Ver §2.3.
-2. **`provisioning/softap` na variante B** — `platform_allow` lista, mas `boards/` só tem
+2. **Ponto de medicao do PPK2 no LM20-DK + EB II** — as instrucoes publicadas sao do nRF7002
+   DK. Levantar onde medir nesta combinacao e o que o ponto escolhido abrange (so o companion,
+   ou companion mais host). Ver §7.2.
+3. **`provisioning/softap` na variante B** — `platform_allow` lista, mas `boards/` só tem
    `.conf` da variante A. Compila? Precisa de um `.conf` novo?
 3. **Fluxo completo do `provision.py`** — `protoc`, certificado, `/prov/networks`,
    `/prov/configure`, e a DK associando depois.
