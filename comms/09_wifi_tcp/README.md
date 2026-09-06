@@ -43,6 +43,14 @@ na rede da sala (`ipconfig`) e passe os dois na linha de build.
 repositório; o IP do servidor vai só na linha de comando, nunca em um arquivo
 versionado.
 
+## Atenção: o coredump despeja a senha da rede em texto claro
+
+`CONFIG_DEBUG_COREDUMP` fica ligado de propósito — se o firmware travar, o despejo da
+RAM sai inteiro pela serial, e isso inclui o SSID e a senha de `minha_rede.conf` em
+texto claro. Na prática: nunca colar um log de coredump inteiro num ticket, chat ou
+repositório sem apagar essa parte antes. Num produto de verdade a escolha seria outra —
+desligar `CONFIG_DEBUG_COREDUMP` ou usar um backend que não vá para a serial.
+
 ## O payload, campo a campo
 
 Uma linha JSON por amostra, terminada em `\n` (formato em `tools/payload_ref.py`,
@@ -122,7 +130,7 @@ Resumo de memória:
 | Região | Usado | Região total | % usado |
 |---|---|---|---|
 | FLASH | 555100 B | 2036 KB | 26,63% |
-| RAM | 186752 B | 511 KB | 35,69% |
+| RAM | 187856 B | 511 KB | 35,90% |
 
 ## Testes automáticos (PC, sem hardware)
 
