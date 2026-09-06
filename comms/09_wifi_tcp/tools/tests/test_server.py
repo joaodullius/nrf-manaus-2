@@ -167,3 +167,24 @@ def test_segunda_conexao_e_atendida_com_a_primeira_ainda_nao_coletada():
     srv.fechar()
     t.join(timeout=2)
     assert [a["seq"] for a in recebidas] == [9]
+
+
+def test_conexao_silenciosa_e_derrubada_apos_o_tempo_limite_de_leitura():
+    """Uma conexao que nunca manda nada -- nem FIN, nem RST -- tem que ser
+    dada como morta depois de tempo_limite_leitura_s, e nao ficar presa para
+    sempre. O padrao de producao (TEMPO_LIMITE_LEITURA_S, acima do maior
+    CONFIG_LAB_INTERVALO_MS do Kconfig) e grande demais para testar de
+    verdade num teste rapido -- por isso o limite entra como parametro, e o
+    teste usa um valor pequeno em vez do padrao."""
+    recebidas = []
+    srv = Servidor(porta=0, ao_receber=recebidas.append, tempo_limite_leitura_s=0.2)
+    t = threading.Thread(target=srv.servir_uma_conexao, daemon=True)
+    t.start()
+    time.sleep(0.1)
+
+    with socket.create_connection(("127.0.0.1", srv.porta_real), timeout=2) as s:
+        # nao manda nada -- fica em silencio ate estourar o tempo limite
+        t.join(timeout=1)
+        assert not t.is_alive()
+
+    assert recebidas == []

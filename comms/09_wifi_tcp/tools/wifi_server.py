@@ -30,11 +30,13 @@ TAMANHO_LEITURA = 4096
 BACKLOG = 8
 
 # Tempo sem nenhum byte de uma conexao antes de considera-la morta e fechar.
-# A telemetria periodica (CONFIG_LAB_INTERVALO_MS, 2 s por padrao) mantem
-# qualquer conexao viva bem abaixo disso; o valor existe para o caso de uma
-# queda de associacao Wi-Fi que nunca manda FIN nem RST -- sem um limite de
-# tempo, recv() ficaria bloqueado nessa conexao para sempre.
-TEMPO_LIMITE_LEITURA_S = 30.0
+# O valor existe para o caso de uma queda de associacao Wi-Fi que nunca manda
+# FIN nem RST -- sem um limite de tempo, recv() ficaria bloqueado nessa
+# conexao para sempre. Tem que ficar acima do maior CONFIG_LAB_INTERVALO_MS
+# que o Kconfig do firmware permite (range 200..60000, ou seja ate 60 s de
+# intervalo entre amostras) -- 90 s da folga confortavel sobre esse pior
+# caso legitimo. Quem mudar um dos dois numeros tem que olhar o outro.
+TEMPO_LIMITE_LEITURA_S = 90.0
 
 
 class Servidor:
@@ -53,8 +55,9 @@ class Servidor:
     para a conexao aceita mais recentemente.
     """
 
-    def __init__(self, porta: int, ao_receber=None):
+    def __init__(self, porta: int, ao_receber=None, tempo_limite_leitura_s: float = TEMPO_LIMITE_LEITURA_S):
         self._ao_receber = ao_receber if ao_receber is not None else (lambda amostra: None)
+        self._tempo_limite_leitura_s = tempo_limite_leitura_s
         self._cliente_lock = threading.Lock()
         self._cliente: socket.socket | None = None
 
@@ -109,7 +112,7 @@ class Servidor:
             conexao.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
         except OSError:
             pass
-        conexao.settimeout(TEMPO_LIMITE_LEITURA_S)
+        conexao.settimeout(self._tempo_limite_leitura_s)
 
         buffer = b""
         try:
@@ -171,9 +174,25 @@ def _formatar_amostra(amostra: dict) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Servidor do lab 9 (wifi_tcp)")
     parser.add_argument("--porta", type=int, default=9000, help="porta TCP a escutar (padrao 9000)")
+    parser.add_argument(
+        "--tempo-limite-leitura",
+        type=float,
+        default=TEMPO_LIMITE_LEITURA_S,
+        help=(
+            "segundos sem dados de uma conexao antes de considera-la morta "
+            f"(padrao {TEMPO_LIMITE_LEITURA_S:g}). Tem que ficar acima do "
+            "CONFIG_LAB_INTERVALO_MS configurado no firmware -- se aumentar o "
+            "intervalo de telemetria alem do padrao do lab, aumente este valor "
+            "junto"
+        ),
+    )
     args = parser.parse_args()
 
-    srv = Servidor(porta=args.porta, ao_receber=lambda amostra: print(_formatar_amostra(amostra)))
+    srv = Servidor(
+        porta=args.porta,
+        ao_receber=lambda amostra: print(_formatar_amostra(amostra)),
+        tempo_limite_leitura_s=args.tempo_limite_leitura,
+    )
     print(f"Ouvindo na porta {srv.porta_real}. Teclas: l liga o LED 2, d apaga, q sai.")
 
     threading.Thread(target=srv.aceitar_para_sempre, daemon=True).start()

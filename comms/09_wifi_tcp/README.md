@@ -86,8 +86,13 @@ associação Wi-Fi não fecha a conexão de forma limpa (sem `FIN`, às vezes se
 `RST`), e o firmware reconecta sozinho antes que o servidor tenha qualquer chance de
 perceber que a conexão antiga morreu. `aceitar_para_sempre()` só aceita e delega cada
 conexão para uma thread própria — nunca espera uma conexão terminar para aceitar a
-próxima — e cada conexão tem um limite de 30 s sem receber nada antes de ser dada como
-morta e fechada.
+próxima — e cada conexão tem um limite de leitura (`--tempo-limite-leitura`, 90 s por
+padrão) sem receber nada antes de ser dada como morta e fechada.
+
+**Esse limite tem que ficar acima de `CONFIG_LAB_INTERVALO_MS`** (o intervalo de
+telemetria do firmware, Kconfig do lab, até 60 s de intervalo permitido): quem
+aumentar um dos dois precisa olhar o outro, senão o servidor derruba uma conexão
+saudável só porque está mais espaçada que o limite de leitura.
 
 ## Os três gestos do lab
 
@@ -126,16 +131,17 @@ cd comms/09_wifi_tcp/tools
 python -m pytest -q
 ```
 
-`18 passed, 8 skipped` nesta bancada: os 8 pulados são a travessia C↔Python
+`19 passed, 8 skipped` nesta bancada: os 8 pulados são a travessia C↔Python
 (`tests/test_payload_c.py`), por falta de compilador de host utilizável — ver
 `tools/README.md` para a ordem de busca e a mensagem de skip. Os testes de
 `wifi_server.py` (`tests/test_server.py`) sobem um `Servidor(porta=0)` de verdade e
 conversam com ele por um socket local, cobrindo o caminho feliz e os casos ruins:
 linha partida em dois pedaços, duas amostras no mesmo pacote, linha malformada, cliente
-que desconecta de forma limpa no meio e — o caso realista de uma queda de Wi-Fi —
-cliente derrubado com `RST` abrupto (via `SO_LINGER` zero, sem hardware), conferindo
-que o servidor continua aceitando conexões novas depois, mesmo com a conexão derrubada
-ainda não coletada.
+que desconecta de forma limpa no meio, cliente derrubado com `RST` abrupto (via
+`SO_LINGER` zero, sem hardware — o caso realista de uma queda de Wi-Fi), conferindo que
+o servidor continua aceitando conexões novas depois, mesmo com a conexão derrubada
+ainda não coletada, e conexão silenciosa (nem `FIN` nem `RST`) derrubada depois do
+tempo limite de leitura, com um limite pequeno passado só para o teste.
 
 ## Roteiro de bancada
 
