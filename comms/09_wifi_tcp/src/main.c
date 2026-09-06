@@ -93,6 +93,7 @@ static int8_t ler_rssi_dbm(void)
 {
 	struct net_if *iface = net_if_get_first_wifi();
 	struct wifi_iface_status status = {0};
+	int rssi;
 
 	if (!iface) {
 		return RSSI_DBM_INDISPONIVEL;
@@ -103,7 +104,57 @@ static int8_t ler_rssi_dbm(void)
 		return RSSI_DBM_INDISPONIVEL;
 	}
 
-	return (int8_t)status.rssi;
+	/* status.rssi ja vem como int8_t, mas o valor passa por um "int" antes
+	 * do cast final para nao truncar em silencio se essa faixa mudar numa
+	 * versao futura do driver.
+	 */
+	rssi = status.rssi;
+	if (rssi < INT8_MIN || rssi > INT8_MAX) {
+		return RSSI_DBM_INDISPONIVEL;
+	}
+	return (int8_t)rssi;
+}
+
+/* Espera entre tentativas de (re)conexao: cresce a cada falha ate o teto,
+ * para nao martelar a rede quando o servidor esta fora do ar, mas nunca
+ * desiste -- e o exercicio do lab desligar o servidor de proposito e ver o
+ * firmware retomar quando ele volta.
+ */
+#define RECONEXAO_ESPERA_INICIAL_MS 1000u
+#define RECONEXAO_ESPERA_MAXIMA_MS  30000u
+
+static void abrir_com_backoff(void)
+{
+	uint32_t espera_ms = RECONEXAO_ESPERA_INICIAL_MS;
+	int ret;
+
+	while (1) {
+		ret = transporte_abrir();
+		if (ret == 0) {
+			return;
+		}
+		LOG_WRN("Falha ao abrir o transporte (%d); nova tentativa em %u ms",
+			ret, espera_ms);
+		k_sleep(K_MSEC(espera_ms));
+		espera_ms = MIN(espera_ms * 2, RECONEXAO_ESPERA_MAXIMA_MS);
+	}
+}
+
+/* So uma reconexao de fato acontece por vez: se a telemetria e a recepcao
+ * detectarem a queda quase juntas, a segunda so adquire o mutex depois que a
+ * primeira termina. Pode fazer um fechar+abrir redundante logo em seguida
+ * (o transporte ja esta bom outra vez) -- desperdicio pequeno e inofensivo,
+ * nao uma corrida: o mutex de transporte.c garante que o descritor nunca
+ * fica inconsistente.
+ */
+static K_MUTEX_DEFINE(reconexao_mutex);
+
+static void reconectar_transporte(void)
+{
+	k_mutex_lock(&reconexao_mutex, K_FOREVER);
+	transporte_fechar();
+	abrir_com_backoff();
+	k_mutex_unlock(&reconexao_mutex);
 }
 
 static void montar_e_enviar(bool botao_pressionado)
@@ -127,7 +178,8 @@ static void montar_e_enviar(bool botao_pressionado)
 
 	ret = transporte_enviar(linha, (size_t)n);
 	if (ret < 0) {
-		LOG_ERR("Falha ao enviar a amostra %u (%d)", amostra.seq, ret);
+		LOG_ERR("Falha ao enviar a amostra %u (%d); reconectando", amostra.seq, ret);
+		reconectar_transporte();
 	}
 }
 
@@ -154,9 +206,20 @@ static void thread_recepcao(void)
 	while (1) {
 		int n = transporte_receber(linha, sizeof(linha) - 1, K_SECONDS(1));
 
-		if (n <= 0) {
+		if (n == 0) {
+			/* Tempo esgotado: nada chegou, conexao presumida viva. */
 			continue;
 		}
+		if (n < 0) {
+			if (n == -ECONNRESET) {
+				LOG_WRN("Servidor fechou a conexao; reconectando");
+			} else {
+				LOG_WRN("Falha ao receber (%d); reconectando", n);
+			}
+			reconectar_transporte();
+			continue;
+		}
+
 		linha[n] = '\0';
 
 		if (strncmp(linha, "LED 1", 5) == 0) {
@@ -288,10 +351,8 @@ int main(void)
 	LOG_INF("Aguardando IP por DHCP...");
 	k_sem_take(&ip_pronto, K_FOREVER);
 
-	if (transporte_abrir() < 0) {
-		LOG_ERR("Nao foi possivel abrir o transporte");
-		return -EIO;
-	}
+	/* Nunca desiste: espera crescente ate um teto, nao uma tentativa so. */
+	abrir_com_backoff();
 
 	k_thread_start(telemetria_id);
 	k_thread_start(botao_id);
