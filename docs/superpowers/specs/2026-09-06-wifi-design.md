@@ -586,11 +586,38 @@ argumentos (`-n -c -t -f -r -T -I -a -w -p -D -d -e -m`), ou o atalho
 `wifi twt quick_setup <wake_interval_us> <interval_us>`. O aluno que copiar o comando do material
 online recebe erro — o README precisa avisar.
 
-**2. As instruções do PPK2 são do nRF7002 DK.** A Nordic documenta remover o jumper **P23**
-(VBAT) e ligar Vout ao P23 pino 1, GND ao P21. Isso é do nRF7002 DK, com host nRF5340. A nossa
-bancada é **nRF54LM20-DK + nRF7002-EB II**, e o ponto de medição precisa ser levantado — a EB II
-tem cabeçalho próprio de medição de corrente. **Item em aberto**, ver §8. Lembrar da regra da
-bancada: o PPK2 não pode ficar no jumper de corrente da DK, porque quebra o SWD.
+**2. As instruções do PPK2 são do nRF7002 DK, e o ponto certo aqui é outro.** A Nordic
+documenta remover o jumper P23 e ligar Vout ao P23 pino 1 — isso é do **nRF7002 DK**, host
+nRF5340. Levantado na documentação de hardware das nossas duas placas, o quadro é este:
+
+| O que se quer medir | Placa | Conector | Preparo | Modo do PPK2 |
+|---|---|---|---|---|
+| SoC hospedeiro (nRF54LM20B) | LM20-DK | **P14** (VDD nRF CURRENT MEASURE) | tirar o jumper de P14, Vout no pino do meio, GND no GND do mesmo header | *source meter* |
+| Companion nRF7002, domínio VBAT | EB II | **P10** | pôr P10 em série com a carga e **cortar o solder bridge SB10** | *ampere meter* |
+| Companion nRF7002, domínio IOVDD | EB II | **P4** | análogo, com o solder bridge correspondente | *ampere meter* |
+
+Para voltar ao funcionamento normal da EB II depois da medida: jumper em P10, ou refazer o
+curto de SB10.
+
+**A consequência de projeto é grande, e precisa ser decidida antes do lab 11.** A corrente que
+muda entre DTIM, listen interval e TWT é a do **companion**, não a do hospedeiro. Medir em P14
+no LM20-DK mostra o nRF54LM20B, que quase não varia com o regime de economia do Wi-Fi. Ou seja,
+o ponto sem solda mede a coisa errada, e o ponto certo **exige cortar um solder bridge em cada
+EB II**.
+
+Três saídas, em ordem de preferência:
+
+1. **Um kit do instrutor com SB10 cortado**, e a medida projetada para a turma. Os alunos rodam
+   os regimes e leem a diferença no `wifi ps` e na latência (§7.1); a corrente aparece uma vez,
+   no kit preparado. Custo: uma solda, num kit só.
+2. **Medir o hospedeiro em P14 em todos os kits**, deixando claro no README que aquilo é o
+   consumo do SoC e **não** o do rádio Wi-Fi. Serve para falar de instrumentação, não para
+   provar a economia do Wi-Fi.
+3. **Cortar SB10 nos seis kits.** Dá a medida certa em todas as bancadas e custa seis soldas
+   mais o retrabalho de restaurar depois. Só se o instrutor quiser.
+
+Enquanto essa decisão não sai, o lab 11 se sustenta na medida por latência (§7.1), que não
+precisa de PPK2 nem de solda.
 
 **3. Os números não são nossos.** As correntes que a Nordic publica (~2 mA em DTIM de 200 ms,
 ~15 µA dormindo, ~24-28 µA de média com TWT de 5 a 10 minutos) são de nRF7002 DK com host
@@ -610,19 +637,20 @@ Nada aqui foi rodado em hardware ainda, além do build de fumaça do §2.1.
    bancada pode não expor — ONT de operadora costuma não expor. Confirmar antes de planejar a
    medida; se não expuser, a varredura fica só no listen interval, que é todo do lado da
    estação.
-3. **Ponto de medicao do PPK2 no LM20-DK + EB II** — as instrucoes publicadas sao do nRF7002
-   DK. Levantar onde medir nesta combinacao e o que o ponto escolhido abrange (so o companion,
-   ou companion mais host). Ver §7.2.
-3. **`provisioning/softap` na variante B** — `platform_allow` lista, mas `boards/` só tem
+3. ~~**Ponto de medicao do PPK2 no LM20-DK + EB II**~~ — **fechado em 2026-09-06.** LM20-DK
+   mede o SoC em P14; a EB II mede o companion em P10 (VBAT) ou P4 (IOVDD), e **exige cortar o
+   solder bridge SB10**. Ver §7.2. Fica **pendente de decisao do instrutor** qual das tres
+   saidas adotar.
+4. **`provisioning/softap` na variante B** — `platform_allow` lista, mas `boards/` só tem
    `.conf` da variante A. Compila? Precisa de um `.conf` novo?
-3. **Fluxo completo do `provision.py`** — `protoc`, certificado, `/prov/networks`,
+5. **Fluxo completo do `provision.py`** — `protoc`, certificado, `/prov/networks`,
    `/prov/configure`, e a DK associando depois.
-4. **RAM com MQTT** — o `sta` sozinho já usa 36% de 511 KB. Medir os três transportes.
-5. **Botões e LEDs com o shield** — confirmar `sw0`–`sw2` e os quatro LEDs; confirmar que
+6. **RAM com MQTT** — o `sta` sozinho já usa 36% de 511 KB. Medir os três transportes.
+7. **Botões e LEDs com o shield** — confirmar `sw0`–`sw2` e os quatro LEDs; confirmar que
    `sw3` sumiu.
-6. **Temperatura do die** — o sensor está habilitado no board; confirmar leitura plausível.
-7. **Plano B em SoftAP** — o PC conectar no AP da DK e o TCP funcionar sem infraestrutura.
-8. **TWT — o teste de cinco minutos, a fazer no dia em que o EX3000 chegar.** Decide se o lab
+8. **Temperatura do die** — o sensor está habilitado no board; confirmar leitura plausível.
+9. **Plano B em SoftAP** — o PC conectar no AP da DK e o TCP funcionar sem infraestrutura.
+10. **TWT — o teste de cinco minutos, a fazer no dia em que o EX3000 chegar.** Decide se o lab
    11 existe; se falhar, dá tempo de trocar dentro do prazo de devolução:
 
    1. no EX3000: *Advanced → Wireless → Wireless Settings*, procurar **TWT** e habilitar (na
@@ -633,11 +661,11 @@ Nada aqui foi rodado em hardware ainda, além do build de fumaça do §2.1.
 
    O que confirma: o AP aceita TWT **individual** — o modo que o nRF70 usa; a Nordic diz que
    broadcast não é suportado nesta release. Depois disso, medir corrente com e sem TWT no PPK2.
-9. **Coexistência** — compilar com o shield duplo, medir throughput dos dois rádios com o
+11. **Coexistência** — compilar com o shield duplo, medir throughput dos dois rádios com o
    mecanismo ligado e desligado, e confirmar que o TAG serve como par BLE.
-10. **Locationing** — quantos APs a DK enxerga na sala, resposta da API do nRF Cloud, e erro
+12. **Locationing** — quantos APs a DK enxerga na sala, resposta da API do nRF Cloud, e erro
     contra a posição real.
-11. **Tempo de cada lab** — cronometrar os oito. É o número que decide o corte (§1).
+13. **Tempo de cada lab** — cronometrar os oito. É o número que decide o corte (§1).
 
 ## 9. Fora de escopo
 
