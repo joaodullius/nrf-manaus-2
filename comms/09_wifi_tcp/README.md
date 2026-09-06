@@ -161,14 +161,21 @@ cliente que desconecta no meio.
    Passa (`OK, ...`) ou falha alto (`AssertionError`) — não é uma inspeção visual, é
    uma checagem que quebra se o firmware e o servidor divergirem no formato.
 
-## Plano B — rede da sala com isolamento de cliente
+## Plano B — sem rede utilizável na sala, ou com isolamento de cliente
 
-Se o AP da sala isola clientes entre si (client isolation) e o PC não alcança o kit
-mesmo os dois com IP na mesma sub-rede, não depender da infraestrutura da sala: subir
-um hotspot (celular do instrutor, ou compartilhamento de conexão do próprio PC),
-conectar o PC e a DK nesse hotspot, e apontar `minha_rede.conf` e
-`CONFIG_LAB_SERVIDOR_IP` para ele. Não muda uma linha de firmware nem do servidor — só
-a rede à qual os dois se associam.
+Se a sala não tiver uma rede Wi-Fi utilizável (sem AP, sem credencial disponível,
+etc.), o remédio é o mesmo dos dois casos abaixo: subir um hotspot (celular do
+instrutor, ou compartilhamento de conexão do próprio PC) e apontar `minha_rede.conf`
+e `CONFIG_LAB_SERVIDOR_IP` para ele. Não muda uma linha de firmware nem do servidor —
+só a rede à qual os dois se associam.
+
+O outro caso é mais traiçoeiro: o AP da sala isola clientes entre si (client
+isolation) e o PC não alcança o kit mesmo os dois com IP na mesma sub-rede. O sintoma
+engana porque os dois lados parecem certos — a DK associa, pega IP por DHCP, `wifi
+status` (lab 6/7) não acusa nada de errado — e mesmo assim a conexão TCP nunca fecha,
+porque o isolamento acontece na camada 2, dentro do próprio AP, não em nada que o kit
+ou o servidor consigam ver. Não dá para diagnosticar isso pelo lado do firmware; a
+saída é a mesma: hotspot alternativo, PC e DK os dois nele.
 
 ## O que observar
 
