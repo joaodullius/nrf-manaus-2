@@ -318,14 +318,82 @@ repetir a tabela com o corpo de alguém entre o TAG e a DK, ou com o TAG encosta
 metal (o experimento B do lab 2). O código já está pronto: é só capturar com
 `CONFIG_LAB_ANTENNA_PATHS=2` e rodar o `cs_compare.py`.
 
+## Com obstrução — o experimento que faltava
+
+As duas seções acima são linha de visada. A pergunta que ficou aberta era o caso
+oposto, que é para o que a diversidade de antena existe: **alguém no caminho**.
+
+A medida: TAG a 3,00 m na bateria, uma pessoa sentada entre a DK e o TAG, a ~40 cm
+da DK. Para provar que a diferença é o corpo e não a sala, a captura obstruída foi
+**emparedada por capturas livres antes e depois** — as duas livres batem entre si
+(`phase_slope` 4,66 e 4,74; MUSIC 4,07 e 4,29) e nenhuma se parece com a obstruída.
+
+| a 3,00 m, um caminho | livre | **com o corpo no caminho** | piorou |
+|---|---|---|---|
+| `ifft` | 4,11 · MAD 0,04 | **4,68** · MAD 0,87 | +0,6 m |
+| `phase_slope` | 4,66 · MAD 0,12 | **8,37** · MAD 0,34 | +3,7 m |
+| `rtt` | 3,37 · MAD 0,71 | **6,43** · MAD 1,88 | +3,1 m |
+| MUSIC | 4,07 · MAD 0,03 | **8,21** · MAD 0,46 | +4,1 m |
+
+![O que um corpo no caminho faz com cada estimador](cs_obstrucao.png)
+
+### O `ifft` é de longe o mais robusto
+
+Enquanto `phase_slope`, `rtt` e MUSIC ganham 3 a 4 metros de erro, o `ifft` anda
+0,6 m. Não é sorte: são as duas heurísticas que o lab manda ler no `cs_de.c` — a
+busca por um pico **mais curto** com ≥ 40 % do máximo, e a compensação pelo nulo à
+esquerda. Elas existem exatamente para o caso em que o caminho direto não é o mais
+forte. É o melhor argumento a favor do algoritmo de referência da Nordic em todo
+este lab.
+
+O `rtt` merece um parágrafo à parte. Em linha de visada ele é o estimador **menos
+enviesado** de todos (erro mediano de 0,55 m contra 1,07 m do MUSIC) — só é o mais
+ruidoso (MAD 0,71). Com o corpo no caminho ele vai para +3,4 m, e **só para cima**:
+o sinal contornou o obstáculo, o percurso ficou mais longo, e tempo de voo não sabe
+mentir para menos. É a mesma física que faz o RTT resistir a um ataque de relé.
+
+### O corpo vira um refletor — e o segundo caminho cai nele
+
+O `ifft` do `ap 1` sob obstrução lê **2,34 m** (MAD 1,63), *mais perto* que a trena,
+depois de ler 5,01 m em linha de visada. Uma reflexão nunca é mais curta que o
+caminho direto, então isso não é o alvo: é o eco no corpo a 40 cm da DK. A heurística
+do pico mais curto, que salva o `ifft` no caso geral, aqui trava no obstáculo em vez
+do alvo. Robustez a multipath e vulnerabilidade a um refletor forte no meio são o
+mesmo mecanismo visto de dois lados.
+
+Nas três rodadas obstruídas a mediana desse caminho variou de 0,6 a 2,3 m — a
+condição obstruída é bem menos estável que a livre (a pessoa respira e se mexe), e é
+por isso que a tabela usa mediana e MAD, e que o dataset guarda uma rodada como
+exemplo, não como valor de referência.
+
+### E a diversidade, pagou?
+
+Não de forma confiável — nem aqui. Com o corpo no caminho, o erro mediano do MUSIC
+fica em 5,21 m com um caminho, 4,86 m no `ap 0`, **3,80 m no `ap 1`** e 3,83 m
+combinando os dois pela soma dos espectros (4,11 m pela média das covariâncias).
+Ou seja: **a combinação apenas empata com o melhor dos dois caminhos** — e qual dos
+dois é o melhor muda com a geometria, sem que nada no dado diga qual escolher.
+
+É a mesma conclusão das duas seções anteriores, agora testada na condição em que a
+diversidade *deveria* ganhar. O que muda é o motivo: a 1 m os caminhos eram
+redundantes demais (correlação +0,94), a 3 m em visada um deles estava 1 m errado, e
+sob obstrução os dois estão errados de formas diferentes (correlação +0,51).
+
+**O que este experimento não diz.** Uma pessoa, uma posição, uma sala. Um corpo a
+40 cm da DK é um obstáculo perto de uma das pontas — parede, metal ou um obstáculo
+no meio do vão dariam outra coisa. E nada aqui testa **duas antenas dos dois lados**
+(4 caminhos), que é o arranjo que os produtos de verdade usam.
+
 ## Onde ir a partir daqui
 
 - `--nfft 1024` no `cs_compare.py` **não** melhora a resolução — só a interpolação
   (zero-padding). Confira.
 - `music/cs_music.py` assume **um** caminho (`_N_SIGNALS = 1`). Com dois, o que muda
   na obstrução do lab 2?
-- **Com obstrução**, refaça a tabela da seção "Duas antenas": é a condição em que a
-  diversidade de antena deveria finalmente pagar. Em linha de visada, não pagou.
+- **Quatro caminhos de antena** (duas antenas de cada lado) é o arranjo que este lab
+  não consegue testar — a LM20-DK tem uma antena. É o próximo degrau de verdade.
+- Refaça a seção da obstrução com **metal ou parede** no lugar do corpo, ou com o
+  obstáculo no meio do vão em vez de junto da DK.
 - `NORMALIZE_COV = False` no `music_adapter.py` faz a média das covariâncias pesar
   cada caminho pela potência dele. Muda alguma coisa quando as antenas têm ganhos
   diferentes?

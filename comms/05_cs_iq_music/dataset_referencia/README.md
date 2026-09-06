@@ -1,6 +1,6 @@
 # Dataset de referência — IQ de Channel Sounding capturado no preparo do curso
 
-Oito capturas reais do par nRF54LM20-DK (initiator, lab 5) ↔ nRF54L15-TAG (reflector,
+Dez capturas reais do par nRF54LM20-DK (initiator, lab 5) ↔ nRF54L15-TAG (reflector,
 lab 1), no formato exato que o firmware despeja na serial (`IQ,...` / `CS,...`). Servem
 para rodar o `cs_compare.py` **sem hardware**, para reproduzir a tabela do README do lab
 e para as figuras do material.
@@ -17,6 +17,8 @@ e para as figuras do material.
 | [`ref_1m_tag_na_dk_2ap.csv`](ref_1m_tag_na_dk_2ap.csv) | 1,00 m | 99 × 2 ap | mesma posição, **dois** caminhos de antena (A1-B2) |
 | [`ref_3m_1ap.csv`](ref_3m_1ap.csv) | 3,00 m | 99 | TAG na bateria, **um** caminho de antena |
 | [`ref_3m_2ap.csv`](ref_3m_2ap.csv) | 3,00 m | 99 × 2 ap | mesma posição, **dois** caminhos de antena |
+| [`ref_3m_obstruido_1ap.csv`](ref_3m_obstruido_1ap.csv) | 3,00 m | 67 | mesma posição, **pessoa sentada** entre a DK e o TAG (~40 cm da DK), um caminho |
+| [`ref_3m_obstruido_2ap.csv`](ref_3m_obstruido_2ap.csv) | 3,00 m | 69 × 2 ap | mesma obstrução, dois caminhos |
 
 Distâncias medidas com trena, da antena do LM20-DK ao TAG.
 
@@ -26,6 +28,12 @@ no initiator. A conclusão está na seção "Duas antenas" do
 [README do lab](../README.md). Em cada distância o achado foi confirmado em três
 rodadas alternadas (1 → 2 → 1 → 2 → 1 → 2 caminhos, ~100 procedures cada); o repo
 versiona uma rodada de cada, por tamanho.
+
+As duas obstruídas são o par livre/obstruído de 3,00 m: mesma posição, mesma sessão,
+mudando só a pessoa no caminho. A captura obstruída foi emparedada por capturas livres
+antes e depois, que batem entre si — é o que autoriza atribuir a diferença ao corpo. A
+condição obstruída é bem menos estável que a livre (a pessoa respira e se mexe): das
+três rodadas obstruídas, o repo guarda uma como exemplo, não como valor de referência.
 
 Cuidado ao comparar 1,00 m com 3,00 m: mudou a distância **e** a montagem do TAG
 (sobre uma DK contra na bateria). Dentro de cada distância a comparação é limpa;
@@ -62,6 +70,7 @@ Resultado esperado (média ± desvio, metros):
 | 1,00 m (2 caminhos, ap 0) | 2,39 ± 0,12 | 2,60 ± 0,32 | 1,64 ± 0,66 | 2,60 ± 0,06 |
 | 3,00 m (1 caminho) | 3,98 ± 0,51 | 4,68 ± 0,14 | 3,41 ± 0,76 | 3,97 ± 0,57 |
 | 3,00 m (2 caminhos, ap 0) | 3,90 ± 0,66 | 4,69 ± 0,50 | 3,72 ± 0,57 | 4,02 ± 0,42 |
+| 3,00 m obstruído (1 caminho) | 4,31 ± 1,26 | 8,18 ± 0,51 | 6,67 ± 1,62 | 7,58 ± 1,40 |
 
 Repare que `ref_3m.csv` e `ref_3m_1ap.csv` são as duas a 3,0 m e leem diferente
 (4,46 contra 3,98 no `ifft`): foram sessões e pontos diferentes da sala. O viés não é
