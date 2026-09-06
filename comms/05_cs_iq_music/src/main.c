@@ -9,13 +9,15 @@
  * Para conferir se divergiu do SDK:
  *   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/bluetooth/channel_sounding/ras_initiator/src/main.c
  *
- * DIVERGENCIA DO CURSO (tres):
+ * DIVERGENCIA DO CURSO (quatro):
  *   1. scan_init() e add_tag_address_filter(): filtro pelo endereco do TAG do aluno,
  *      modo AND. Mesmo codigo do comms/02_cs_initiator.
  *   2. main(): CONFIG_LAB_PROCEDURE_INTERVAL sobrescreve o intervalo de procedure.
  *   3. csv_dump_report(), chamada em ranging_data_cb() logo apos cs_de_calc():
  *      despeja o IQ por canal e as estimativas do cs_de em CSV na serial (printk),
  *      para o processamento no PC (tools/). O log do sample vai para o RTT.
+ *   4. CONFIG_LAB_ANTENNA_PATHS escolhe 1 ou 2 caminhos de antena no procedure
+ *      (A1_B1 ou A1_B2). O sample fixa A1_B1.
  */
 
 /*
@@ -67,6 +69,19 @@ BUILD_ASSERT(false, "Invalid ranging mode");
 #define PROCEDURE_COUNTER_NONE (-1)
 #define DE_SLIDING_WINDOW_SIZE (9)
 #define MAX_AP		       (CONFIG_BT_RAS_MAX_ANTENNA_PATHS)
+
+/* ALTERADO PELO CURSO (nrf-manaus-2): caminhos de antena do procedure. A
+ * LM20-DK tem uma antena (A1); o TAG tem duas (B1, B2). Com 2 caminhos o CSV
+ * traz ap 0 e ap 1 do mesmo ranging counter.
+ */
+#if CONFIG_LAB_ANTENNA_PATHS == 2
+#define LAB_TONE_ANTENNA_CONFIG    BT_LE_CS_TONE_ANTENNA_CONFIGURATION_A1_B2
+#define LAB_PREFERRED_PEER_ANTENNA (BT_LE_CS_PROCEDURE_PREFERRED_PEER_ANTENNA_1 | \
+				    BT_LE_CS_PROCEDURE_PREFERRED_PEER_ANTENNA_2)
+#else
+#define LAB_TONE_ANTENNA_CONFIG    BT_LE_CS_TONE_ANTENNA_CONFIGURATION_A1_B1
+#define LAB_PREFERRED_PEER_ANTENNA BT_LE_CS_PROCEDURE_PREFERRED_PEER_ANTENNA_1
+#endif
 
 #define LOCAL_PROCEDURE_MEM                                                                        \
 	((BT_RAS_MAX_STEPS_PER_PROCEDURE * sizeof(struct bt_le_cs_subevent_step)) +                \
@@ -1063,10 +1078,11 @@ int main(void)
 		.max_procedure_count = 0,
 		.min_subevent_len = 16000,
 		.max_subevent_len = 16000,
-		.tone_antenna_config_selection = BT_LE_CS_TONE_ANTENNA_CONFIGURATION_A1_B1,
+		/* ALTERADO PELO CURSO (nrf-manaus-2): 1 ou 2 caminhos, ver LAB_* acima. */
+		.tone_antenna_config_selection = LAB_TONE_ANTENNA_CONFIG,
 		.phy = BT_LE_CS_PROCEDURE_PHY_2M,
 		.tx_power_delta = 0x80,
-		.preferred_peer_antenna = BT_LE_CS_PROCEDURE_PREFERRED_PEER_ANTENNA_1,
+		.preferred_peer_antenna = LAB_PREFERRED_PEER_ANTENNA,
 		.snr_control_initiator = BT_LE_CS_SNR_CONTROL_NOT_USED,
 		.snr_control_reflector = BT_LE_CS_SNR_CONTROL_NOT_USED,
 	};

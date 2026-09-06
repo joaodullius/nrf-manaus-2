@@ -80,12 +80,58 @@ com a convencao do `waves`, sem precisar conjugar). Com o preenchimento dos cana
 reservados, os tres pontos do teste (1 m, 3 m, 7.5 m) caem dentro da tolerancia de
 0.2 m: 1.0 -> 1.027 m, 3.0 -> 2.933 m, 7.5 -> 7.480 m.
 
+### Pico do pseudo-espectro: interpolacao parabolica (`INTERPOLATE_PEAK`)
+
+`calculate_distance_from_music` do `waves` devolve o **argmax cru** da grade de
+atrasos: 512 pontos entre 0 e 500 ns, ou 0,98 ns por bin — 14,7 cm de distancia,
+ja com o `/2` de ida e volta. A estimativa sai quantizada nesse passo. Na bancada
+do curso isso ficou visivel: 100 procedures com o TAG parado a 1 m cairam em
+**apenas 4 valores distintos**, espacados exatamente 0,1467 m.
+
+O `cs_de` da Nordic resolve o mesmo problema na IFFT com interpolacao parabolica
+do pico (`calculate_ifft_peak_index_to_distance`). `music_adapter._peak_distance`
+faz o equivalente aqui, sobre o **log** do pseudo-espectro (o pico do MUSIC e
+estreito demais para a parabola casar na escala linear). E o default; o
+`cs_compare.py --music-grid` desliga, para comparar.
+
+Medido nos quatro datasets de `dataset_referencia/` (grade crua -> interpolado):
+a quantizacao some (3 a 7 valores distintos por dataset -> todos distintos), mas
+media e desvio **quase nao mudam** (por exemplo, a 5 m: 6,204 +- 0,296 ->
+6,215 +- 0,291). Ou seja: a grade nao era o que limitava a precisao — o
+espalhamento fisico ja era maior que o passo dela. E uma correcao de higiene, nao
+um ganho.
+
+### Varios caminhos de antena: `music_multi_m` e `music_cov_m`
+
+Com `CONFIG_LAB_ANTENNA_PATHS=2` o firmware entrega o IQ de dois caminhos de
+antena (A1-B1 e A1-B2) na mesma procedure. Duas formas de combinar:
+
+- `music_multi_m`: soma os pseudo-espectros normalizados dos caminhos e pega o
+  pico da soma (combinacao incoerente). Usa so as funcoes publicas do `waves`.
+- `music_cov_m`: monta a covariancia de cada caminho e tira a **media delas antes
+  da autodecomposicao** — a forma canonica de dar diversidade ao MUSIC. Isso nao
+  da para fazer pelas duas funcoes que o `waves` expoe (elas vao do vetor de
+  canais direto ao espectro, sem devolver a covariancia), entao
+  `_smoothed_covariance` e `_spectrum_from_covariance` **repetem a construcao do
+  `cs_music.py`**, com os mesmos parametros importados de la. O teste
+  `test_cov_path_matches_waves` exige que, para um caminho so, o espectro daqui
+  seja identico ao do arquivo vendorizado: se o upstream mudar, o teste quebra.
+  `NORMALIZE_COV = True` divide cada covariancia pelo seu traco, para que a antena
+  de maior ganho nao domine a media.
+
+O resultado medido na bancada esta no README do lab (secao "Duas antenas"): a
+1 m em linha de visada os dois caminhos sao correlacionados demais (+0,69) para
+haver diversidade a explorar, e nenhuma das duas combinacoes bate o melhor
+caminho sozinho.
+
 ## Limites conhecidos
 
 - `_N_SIGNALS = 1`: assume um caminho dominante. Em multipath forte o pico pode
   cair no caminho refletido.
 - Sem calibracao de fase entre initiator e reflector — o `cs_de` tambem nao faz.
-- Antena unica: o TAG tem duas, mas o firmware do lab usa um caminho.
+- Antena unica por default no lab 2; no lab 5, `CONFIG_LAB_ANTENNA_PATHS`
+  escolhe 1 ou 2 caminhos. Medido: dois caminhos nao melhoraram a estimativa
+  a 1 m em linha de visada (ver README do lab).
 - `_fill_reserved_channels` (no adaptador) e exata so para caminho unico; em
   multipath e uma aproximacao. Deixa de valer quando `4*dphi >= pi` entre canais
   adjacentes usados na interpolacao — na pratica, acima de ~18 m de distancia

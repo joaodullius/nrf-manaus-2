@@ -44,3 +44,15 @@ def test_read_procedures_roundtrip(tmp_path):
 def test_format_is_firmware_format():
     assert cs_csv.format_iq(3, 0, 2, 1.26, -2.0, 3.0, 4.0) == "IQ,3,0,2,1.3,-2.0,3.0,4.0\n"
     assert cs_csv.format_cs(3, 0, 1, 1.0, float("nan"), 2.0, 5, -7) == "CS,3,0,1,1.000,nan,2.000,5,-7\n"
+
+
+def test_group_by_counter_pairs_antenna_paths(tmp_path):
+    p = tmp_path / "2ap.csv"
+    with open(p, "w") as f:
+        write_procedure(f, 5, synthetic_comb(3.0), ap=0)
+        write_procedure(f, 5, synthetic_comb(3.0), ap=1)
+        write_procedure(f, 6, synthetic_comb(1.0), ap=0)
+    grupos = cs_csv.group_by_counter(cs_csv.read_procedures(p))
+    assert sorted(grupos) == [5, 6]
+    assert [q.ap for q in grupos[5]] == [0, 1]
+    assert [q.ap for q in grupos[6]] == [0]

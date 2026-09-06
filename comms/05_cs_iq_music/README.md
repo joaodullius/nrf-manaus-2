@@ -148,6 +148,37 @@ o buraco de 3 canais viraria um salto de fase e deslocaria o pico. Essa interpol
 é exata para um caminho único e uma aproximação sob multipath, válida até ~18 m de
 distância (≈ 37 m de caminho de ida-e-volta, a partir de 4·Δφ < π).
 
+### A grade do MUSIC — e por que o pico é interpolado
+
+`calculate_distance_from_music` devolve o **argmax cru** do pseudo-espectro, numa
+grade de 512 atrasos entre 0 e 500 ns. Isso é 0,98 ns por bin — **14,7 cm** de
+distância, já com o `/2` de ida e volta. A estimativa sai quantizada nesse passo, e
+na bancada dá para ver a olho nu: 100 procedures com o TAG parado a 1 m caíram em
+**apenas 4 valores distintos**, espaçados exatamente 0,1467 m.
+
+O `cs_de` resolve o mesmo problema na IFFT com interpolação parabólica do pico
+(`calculate_ifft_peak_index_to_distance`, a última linha da tabela acima).
+`music_adapter._peak_distance` faz o equivalente sobre o log do pseudo-espectro. É
+o default; `cs_compare.py --music-grid` desliga, para comparar:
+
+```bash
+python cs_compare.py ../dataset_referencia/ref_5m.csv --music-grid
+```
+
+O efeito depende de quanto o dado já espalha por conta própria:
+
+| | grade crua (waves) | pico interpolado |
+|---|---|---|
+| `ref_5m.csv` (TAG na bateria, 5 m) | 6,204 ± 0,296 · 7 valores distintos | 6,215 ± 0,291 · 30 |
+| `ref_1m_tag_na_dk_1ap.csv` (TAG parado, 1 m) | 2,579 ± 0,072 · 4 valores distintos | 2,575 ± 0,028 · 99 |
+
+Nos datasets de 1/3/5 m com o TAG na bateria, o espalhamento físico já era bem
+maior que o passo da grade e a interpolação **quase não muda nada** — é higiene, não
+ganho. Na captura mais estável (TAG parado sobre a DK, um caminho de antena) era a
+grade que dominava: o desvio cai de 0,072 para **0,028 m**, 2,5×. A lição vale para
+qualquer estimador: antes de comparar desvios, veja se um deles não está preso na
+resolução da própria grade.
+
 ## Medição de referência da bancada
 
 Medido em 2026-09-05 na bancada do curso: trena da antena do LM20-DK ao TAG, linha de
@@ -157,15 +188,15 @@ procedure/s). Média ± desvio em metros:
 | Trena | `ifft_fw` | `phase_slope` | `rtt` | `music` | n |
 |---|---|---|---|---|---|
 | 1,0 m | 2,05 ± 0,23 | 2,70 ± 0,16 | 1,89 ± 0,61 | 2,17 ± 0,16 | 30 |
-| 3,0 m | 4,46 ± 0,48 | 5,84 ± 0,72 | 4,42 ± 0,96 | 4,97 ± 0,96 | 30 |
-| 5,0 m | 5,86 ± 0,84 | 6,75 ± 0,38 | 6,14 ± 1,02 | 6,20 ± 0,30 | 30 |
+| 3,0 m | 4,46 ± 0,48 | 5,84 ± 0,72 | 4,42 ± 0,96 | 4,99 ± 0,96 | 30 |
+| 5,0 m | 5,86 ± 0,84 | 6,75 ± 0,38 | 6,14 ± 1,02 | 6,21 ± 0,29 | 30 |
 
 E, na mesma data, com o TAG **montado sobre uma nRF54L15-DK** ao lado de cabos USB
 (a montagem de bancada, não a de campo), a 0,78 m:
 
 | Trena | `ifft_fw` | `phase_slope` | `rtt` | `music` | n |
 |---|---|---|---|---|---|
-| 0,78 m | 1,92 ± 0,09 | 2,16 ± 0,16 | 1,39 ± 0,70 | 1,95 ± 0,08 | 69 |
+| 0,78 m | 1,92 ± 0,09 | 2,16 ± 0,16 | 1,39 ± 0,70 | 1,94 ± 0,07 | 69 |
 
 ![Quatro estimadores contra a trena — média ± desvio por ponto, com a reta ideal](cs_vies.png)
 
@@ -177,7 +208,7 @@ Três coisas que os números dizem, sem precisar de mais teoria:
   algoritmo de referência sem calibração de atraso de grupo.
 - **O espalhamento cresce com a distância** no `ifft` (0,23 → 0,48 → 0,84 m) e no
   `rtt` (sempre o mais ruidoso, ~1 m).
-- **O MUSIC reduz o espalhamento, não o viés**: a 5 m, 0,30 m contra 0,84 m do `ifft`,
+- **O MUSIC reduz o espalhamento, não o viés**: a 5 m, 0,29 m contra 0,84 m do `ifft`,
   com a média igualmente deslocada. É o ganho realista de um algoritmo melhor sobre os
   mesmos dados — repetibilidade — e o limite do que um algoritmo sozinho consegue.
 
@@ -187,14 +218,87 @@ simples; o `ifft` é o que a Nordic escolhe como `best`; o `music` é o que este
 acrescenta. Nenhum deles é "o teto da tecnologia" — são quatro algoritmos sobre um
 caminho de antena, sem calibração.
 
+## Duas antenas — o experimento, e o que ele respondeu
+
+O nRF54L15-TAG tem **duas antenas** e o reflector do lab 1 já as configura; a
+LM20-DK tem uma. O par 1 × 2 dá **dois caminhos de antena** (A1-B1 e A1-B2), e é o
+*initiator* quem decide usar um ou dois — o TAG não muda:
+
+```
+west build ... -- -DEXTRA_CONF_FILE=meu_tag.conf -DCONFIG_LAB_ANTENNA_PATHS=2
+```
+
+Com 2, cada procedure aparece **duas vezes** no CSV, `ap 0` e `ap 1` do mesmo
+ranging counter, e o `cs_compare.py` ganha quatro colunas: `ifft_ap1`, `music_ap1`,
+`music_2ap` (soma dos pseudo-espectros dos dois caminhos) e `music_cov` (média das
+covariâncias antes da autodecomposição — a forma canônica de dar diversidade ao
+MUSIC; ver `tools/music/ORIGEM.md`). O `rtt` vem `nan` nas linhas de `ap 1`: os
+tempos acumulados são os mesmos nos dois caminhos, e o `cs_de` só preenche a
+estimativa de RTT no primeiro.
+
+A pergunta óbvia é se dois caminhos medem melhor que um. Dá para responder com
+trena: as duas capturas abaixo são do **mesmo TAG parado a 1,00 m**, uma logo após
+a outra, trocando só o firmware do initiator.
+
+| | ifft | phase_slope | MUSIC |
+|---|---|---|---|
+| **1 caminho** (`ref_1m_tag_na_dk_1ap.csv`) | 2,436 ± 0,069 · **MAD 0,039** | 2,636 ± 0,061 · **MAD 0,040** | 2,579 ± 0,028 · **MAD 0,033** |
+| 2 caminhos · `ap 0` | 2,385 ± 0,122 · MAD 0,076 | 2,600 ± 0,315 · MAD 0,156 | 2,604 ± 0,060 · MAD 0,049 |
+| 2 caminhos · `ap 1` | 2,334 ± 0,137 · MAD 0,052 | — | 2,579 ± 0,073 · MAD 0,048 |
+| 2 caminhos · soma dos espectros | — | — | 2,596 ± 0,064 · MAD 0,048 |
+| 2 caminhos · média das covariâncias | — | — | 2,592 ± 0,065 · MAD 0,047 |
+
+n ≈ 99 procedures por linha. **MAD** é o desvio absoluto mediano (escalado para
+comparar com o desvio padrão): algumas procedures ruins inflam o desvio e não a MAD,
+então é ela que compara repetibilidade com honestidade — a própria tabela mostra o
+efeito no `phase_slope` de dois caminhos (0,315 contra MAD 0,156).
+
+Três leituras, e nenhuma é a que se esperava:
+
+- **Ligar o segundo caminho piora o primeiro.** O `ifft` do `ap 0` sai com o dobro
+  da dispersão do mesmo `ifft` com um caminho só (MAD 0,076 contra 0,039); no
+  `phase_slope` é 4× (0,156 contra 0,040). A explicação provável — e é hipótese
+  nossa, não algo que a doc do SDC confirme — é que o subevent tem um orçamento de
+  tempo fixo e, com dois caminhos, ele é dividido entre os dois. O que o dado
+  sustenta: os steps de RTT por procedure não mudam (19,2 contra 18,8), então o que
+  encolheu foi a medida de **tom** por caminho, não a de tempo.
+- **Os dois caminhos não são independentes.** A correlação entre a estimativa do
+  `ap 0` e a do `ap 1`, procedure a procedure, é **+0,94** no MUSIC (+0,63 no
+  `ifft`). A 1 m em linha de visada as duas antenas veem praticamente o mesmo canal
+  — não há diversidade a explorar.
+- **Nenhuma combinação recupera.** Soma de espectros (MAD 0,048), média das
+  covariâncias (0,047) e média simples das duas distâncias (0,048) empatam entre si
+  e ficam **piores que um caminho só** (0,033). Combinar duas medidas correlacionadas
+  e mais ruidosas não faz milagre.
+
+O viés não muda: ~+1,4 m nas duas configurações. E o `ap 1` lê sistematicamente
+2,6 cm (MUSIC) a 5 cm (`ifft`) mais perto que o `ap 0` — é o comprimento elétrico
+diferente da segunda antena, um offset fixo, não ruído.
+
+![Um caminho de antena contra dois, na mesma posição](cs_antenas.png)
+
+Por isso `CONFIG_LAB_ANTENNA_PATHS` tem **default 1**. Dois caminhos custam
+precisão e, aqui, não devolvem nada.
+
+**O que este experimento não diz.** Uma sala, 1 m, linha de visada, um par de kits.
+Diversidade de antena existe justamente para o caso oposto — multipath forte,
+obstrução, o caminho direto atenuado num dos lados —, e é aí que a correlação entre
+os caminhos cai e a combinação passa a valer. O experimento honesto é repetir a
+tabela com o corpo de alguém entre o TAG e a DK, ou com o TAG encostado em metal
+(o experimento B do lab 2). O código já está pronto para isso: é só capturar com
+`CONFIG_LAB_ANTENNA_PATHS=2` e rodar o `cs_compare.py`.
+
 ## Onde ir a partir daqui
 
 - `--nfft 1024` no `cs_compare.py` **não** melhora a resolução — só a interpolação
   (zero-padding). Confira.
 - `music/cs_music.py` assume **um** caminho (`_N_SIGNALS = 1`). Com dois, o que muda
   na obstrução do lab 2?
-- O TAG tem **duas antenas**. `CONFIG_BT_RAS_MAX_ANTENNA_PATHS=2` no par abre um
-  segundo `ap` no CSV — o `cs_compare.py` já itera por `ap`.
+- **Com obstrução**, refaça a tabela da seção "Duas antenas": é a condição em que a
+  diversidade de antena deveria finalmente pagar. Em linha de visada, não pagou.
+- `NORMALIZE_COV = False` no `music_adapter.py` faz a média das covariâncias pesar
+  cada caminho pela potência dele. Muda alguma coisa quando as antenas têm ganhos
+  diferentes?
 - Parceiros de algoritmo da Nordic (Metirionic e outros) é o caminho de produto.
 
 ## A divergência a mais deste lab

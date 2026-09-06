@@ -92,3 +92,19 @@ def read_procedures(path) -> list[Procedure]:
                     done.append(proc)
                 del pending[key]
     return done
+
+
+def group_by_counter(procs) -> dict[int, list[Procedure]]:
+    """{ranging counter: [Procedure por caminho de antena, ap crescente]}.
+
+    Com CONFIG_LAB_ANTENNA_PATHS=2 o firmware despeja a mesma procedure duas
+    vezes (ap 0 e ap 1). read_procedures() as devolve separadas; aqui elas se
+    reencontram pelo counter, para comparar um caminho contra os dois sobre a
+    MESMA medida.
+    """
+    out: dict[int, list[Procedure]] = {}
+    for p in procs:
+        out.setdefault(p.counter, []).append(p)
+    for v in out.values():
+        v.sort(key=lambda p: p.ap)
+    return out
