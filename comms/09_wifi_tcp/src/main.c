@@ -20,6 +20,10 @@
 #include <zephyr/net/net_event.h>
 #include <zephyr/net/wifi_mgmt.h>
 
+#ifdef CONFIG_WIFI_READY_LIB
+#include <net/wifi_ready.h>
+#endif /* CONFIG_WIFI_READY_LIB */
+
 #include "payload.h"
 #include "transporte.h"
 
@@ -336,6 +340,59 @@ static void handler_net(struct net_mgmt_event_callback *cb, uint64_t evento,
 	k_sem_give(&ip_pronto);
 }
 
+#ifdef CONFIG_WIFI_READY_LIB
+/* O supplicant (wpa_supplicant) demora um instante depois do driver do
+ * nRF7002 inicializar. Pedir conexao antes disso falha com -ENOTSUP (-134) --
+ * achado na bancada, nao no build nem na revisao de codigo. CONFIG_WIFI_
+ * READY_LIB (ja ligado no prj.conf, herdado do bloco do wifi/sta, mas antes
+ * sem nenhum consumidor) avisa quando o supplicant esta de fato pronto;
+ * main() so pede a conexao depois disso. Mesmo padrao do lab 7
+ * (comms/07_wifi_sta/src/main.c, linhas 42, 79-80 e 344-382), simplificado
+ * para so cobrir a espera inicial que este lab precisa.
+ */
+static K_SEM_DEFINE(wifi_pronto_sem, 0, 1);
+static bool wifi_esta_pronto;
+
+static void wifi_ready_cb(bool pronto)
+{
+	wifi_esta_pronto = pronto;
+	k_sem_give(&wifi_pronto_sem);
+}
+
+static int esperar_wifi_pronto(void)
+{
+	wifi_ready_callback_t cb = {
+		.wifi_ready_cb = wifi_ready_cb,
+	};
+	struct net_if *iface = net_if_get_first_wifi();
+	int ret;
+
+	if (!iface) {
+		LOG_ERR("Nenhuma interface Wi-Fi encontrada");
+		return -ENODEV;
+	}
+
+	ret = register_wifi_ready_callback(cb, iface);
+	if (ret < 0) {
+		LOG_ERR("Falha ao registrar o callback de Wi-Fi pronto (%d)", ret);
+		return ret;
+	}
+
+	LOG_INF("Aguardando o supplicant do Wi-Fi ficar pronto...");
+	ret = k_sem_take(&wifi_pronto_sem, K_SECONDS(10));
+	if (ret < 0) {
+		LOG_ERR("Tempo esgotado esperando o Wi-Fi ficar pronto (%d)", ret);
+		return ret;
+	}
+	if (!wifi_esta_pronto) {
+		LOG_ERR("Wi-Fi nao ficou pronto");
+		return -EIO;
+	}
+
+	return 0;
+}
+#endif /* CONFIG_WIFI_READY_LIB */
+
 static int conectar_wifi(void)
 {
 	struct net_if *iface = net_if_get_first_wifi();
@@ -364,6 +421,12 @@ int main(void)
 
 	configurar_botao();
 	configurar_led();
+
+#ifdef CONFIG_WIFI_READY_LIB
+	if (esperar_wifi_pronto() < 0) {
+		LOG_WRN("Seguindo sem confirmar que o supplicant esta pronto");
+	}
+#endif /* CONFIG_WIFI_READY_LIB */
 
 	if (conectar_wifi() < 0) {
 		return -EIO;
