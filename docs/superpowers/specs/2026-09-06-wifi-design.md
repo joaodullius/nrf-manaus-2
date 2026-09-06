@@ -599,6 +599,24 @@ nRF5340. Levantado na documentação de hardware das nossas duas placas, o quadr
 Para voltar ao funcionamento normal da EB II depois da medida: jumper em P10, ou refazer o
 curto de SB10.
 
+A EB II tem **exatamente dois** solder bridges, ambos fechados de fábrica: **SB10** corta o
+VBAT e **SB9** corta o IOVDD. Não há caminho sem solda para medir o companion — os dois
+domínios passam por um bridge fechado, e é isso que garante o funcionamento normal fora da
+medição. Com o PPK2 o modo é **ampere meter**, ligado entre os pinos de P10, com o GND em P9 ou
+no próprio P10; a EB II continua alimentada pela placa e o PPK2 só fica em série.
+
+Para o nosso caso, o domínio que interessa é o **VBAT** — é ele que alimenta o rádio. O IOVDD é
+a interface.
+
+**Armadilha de instrumentação que precisa ir para o README do lab 11.** A documentação da EB II
+avisa que um amperímetro comum só dá média válida se o ciclo de carga for **curto, abaixo de
+100 ms**, para que ele integre ciclos inteiros e não pedaços. Os nossos regimes violam isso de
+propósito: DTIM 3 já são ~307 ms, listen interval 10 são ~922 ms, e TWT pode ser de minutos. Um
+multímetro em modo corrente daria um número sem sentido nessas condições. O PPK2 não tem essa
+limitação porque amostra rápido e a média é feita sobre a janela que o operador escolhe — por
+isso ele é o instrumento certo aqui, e não uma conveniência. A alternativa documentada é
+osciloscópio com um resistor de 10 Ω entre os pinos de P10, que é o mesmo princípio.
+
 **O P14 mede só o nRF54LM20B, e não pega o nRF7002.** Isso não é dedução, está na
 documentação de hardware da DK. O P14 fica em série com o domínio **VDD:nRF**, que alimenta
 apenas o SoC — tanto que a DK continua com serial, LEDs e botões funcionando quando o SoC é
