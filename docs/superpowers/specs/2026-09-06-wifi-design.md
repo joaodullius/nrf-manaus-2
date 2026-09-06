@@ -14,11 +14,18 @@ A súmula do treinamento promete, para Wi-Fi:
 > **Exemplo prático:** provisionamento de dispositivo Wi-Fi 6+ e envio de dados via socket
 > TCP/IP.
 
-A frente ocupa **~3h** das 10h dos dias 3–4, dividindo o módulo com Channel Sounding (já
-entregue, ~3h), GNSS e NTN. Decisões de escopo tomadas no brainstorming:
+A frente divide as 10h dos dias 3–4 com Channel Sounding (já entregue, ~3h), GNSS e NTN.
 
-- **Cinco labs**, os quatro primeiros cobrindo a súmula inteira; o quinto entra conforme o
-  tempo, como o CS 4 e o CS 5.
+**O tamanho final é decisão do instrutor, tomada depois da bancada.** Os oito labs serão
+escritos e medidos; o corte acontece com tempo real na mão, não com estimativa. Somados dão
+~5h contra as ~3h que caberiam à frente hoje — logo, alguma coisa sai, e a spec não decide o
+quê. Cada lab traz seu tempo medido em §4 quando a validação (§8) fechar.
+
+Decisões de escopo tomadas no brainstorming:
+
+- **Oito labs.** Os quatro primeiros cobrem a súmula; os quatro seguintes cobrem TWT,
+  coexistência e locationing, que o instrutor classificou como importantes, mais o transporte
+  alternativo.
 - **Nada depende da rede da sala.** A rede ainda não foi definida. O lab de provisionamento
   não precisa de AP nenhum (a DK *é* o AP) e os labs de transporte têm plano B com o PC
   conectado ao SoftAP da própria DK.
@@ -27,8 +34,8 @@ entregue, ~3h), GNSS e NTN. Decisões de escopo tomadas no brainstorming:
 - **Três transportes, um payload.** TCP puro (o que a súmula pede literalmente), HTTP e MQTT
   sobre o mesmo firmware, com o transporte escolhido em Kconfig.
 - **Sem integração com o microfone dos labs de Edge AI.** Impossível no mesmo kit (§2.3).
-- **Sem coexistência BLE+Wi-Fi.** A súmula não promete, e é superfície de falha extra em
-  sala. Fica anotado como extensão.
+- **Coexistência BLE+Wi-Fi, TWT e locationing entram** por decisão do instrutor, embora a
+  súmula não os prometa. São o que diferencia Wi-Fi 6 de "Wi-Fi que já existia".
 
 ## 2. Estado da arte verificado
 
@@ -128,7 +135,42 @@ Custo: `protoc` e o pacote `protobuf` entram nos pré-requisitos (decisão do in
 O `platform_allow` do `softap/` lista `nrf54lm20dk/nrf54lm20b/cpuapp`, mas `boards/` só tem
 `.conf` da variante **A** — item de validação (§8).
 
-### 2.5 Credenciais e transporte
+### 2.5 TWT, coexistência e locationing — os três que o instrutor pediu
+
+**TWT (Target Wake Time)** — `nrf/samples/wifi/twt`, com `nrf54lm20dk/nrf54lm20b/cpuapp` e
+`twt_SHIELD="nrf7002eb2"` no `sample.yaml`. Estabelece um fluxo TWT com o AP e usa um gerador
+de tráfego para medir. É *o* recurso de Wi-Fi 6 para IoT: o dispositivo combina com o AP
+quando vai acordar, e dorme o resto.
+
+**Requisito duro:** exige um **AP que suporte TWT** — Wi-Fi 6 com o recurso habilitado.
+Hotspot de celular e roteador comum não negociam. Este é o único lab da frente **sem plano B**
+(§3.5), e o único que obriga a decidir a rede da sala.
+
+**Coexistência** — `nrf/samples/wifi/ble_coex`, com `nrf54lm20dk/nrf54lm20b/cpuapp` no
+`platform_allow` e `SHIELD="nrf7002eb2;nrf7002eb2_coex"`. Mede throughput de Wi-Fi e de BLE
+rodando ao mesmo tempo na banda de 2,4 GHz, com o mecanismo de coexistência ligado e
+desligado. Amarra direto com o Channel Sounding: a turma acabou de medir distância por BLE, e
+aqui vê o que acontece quando o Wi-Fi divide a mesma banda.
+
+**Locationing** — dois caminhos, e o do SDK é o pior para uma sala de aula:
+
+| | `wifi/nrf_cloud` (o do SDK) | Scan + resolução no PC (o do curso) |
+|---|---|---|
+| Alvo | `nrf54lm20dk/nrf54lm20b/cpuapp/**ns**` — build TF-M | `cpuapp` normal |
+| Conta nRF Cloud | uma por dispositivo, com onboarding dos 6 kits | uma chave de API, no PC do instrutor |
+| Internet | **no dispositivo** | **só no PC** |
+| O que o aluno vê | uma coordenada aparecendo | a lista de BSSID que o kit viu **e** a coordenada |
+
+O caminho do curso: a DK faz `wifi scan`, manda **BSSID + RSSI** pelo mesmo socket TCP do lab
+9, e o PC resolve a posição chamando a API REST de location do nRF Cloud com a chave do
+instrutor. Reaproveita o lab que já existe, dispensa TF-M e onboarding, e ensina o princípio
+de verdade: **a localização não está no dispositivo, está no banco de dados de quem mapeou os
+APs**. O `nrf_cloud` fica como referência escrita e demo.
+
+Nota: a documentação do nRF Cloud diz que o suporte é "nRF54L20 DK com nRF7002 EB2"; a árvore
+do v3.4.0 diz `nrf54lm20dk`. Vale a árvore.
+
+### 2.6 Credenciais e transporte
 
 `wifi/sta` recebe as credenciais **em tempo de build**:
 
@@ -186,7 +228,32 @@ O payload é uma linha JSON com:
 JSON de uma linha por amostra porque é o formato natural de HTTP e MQTT, e mantém **um só
 payload** nos três transportes.
 
-### 3.4 Tudo que vem de fora entra no repo, com fonte
+### 3.4 O que cada lab novo mede
+
+Os três labs novos não são "mais um sample rodando": cada um produz um **número** que o aluno
+compara.
+
+- **TWT:** corrente média com e sem TWT, medida com o **PPK2** — o mesmo instrumento e o mesmo
+  gesto do `11_benchmark_npu_vs_cpu` do Edge AI. É o argumento de bateria do Wi-Fi 6, medido.
+- **Coexistência:** throughput de Wi-Fi e de BLE, simultâneos, com e sem o mecanismo ligado.
+  Duas linhas numa tabela dizem mais que um slide sobre árbitro de rádio.
+- **Locationing:** quantos APs o kit enxerga, e a coordenada que sai deles — com o erro contra
+  a posição real da sala. Complementa o módulo de GNSS pelo lado de dentro do prédio.
+
+### 3.5 Plano B por lab
+
+A rede da sala não foi definida, então cada lab declara do que depende:
+
+| Lab | Depende de | Plano B |
+|---|---|---|
+| 6, 7 | um AP qualquer | SoftAP da própria DK |
+| 8 | nada | é o próprio AP |
+| 9, 10 | AP + PC na mesma rede | PC conectado ao SoftAP da DK |
+| 11 (TWT) | **AP Wi-Fi 6 com TWT** | **nenhum** — sem o AP, o lab não roda |
+| 12 (coex) | um AP qualquer + um par BLE | SoftAP + o TAG do CS como par |
+| 13 (location) | scan de APs; **internet no PC** | nenhum para a internet do PC; o kit não precisa |
+
+### 3.6 Tudo que vem de fora entra no repo, com fonte
 
 Mesma convenção do Channel Sounding: cada lab é uma app freestanding em `comms/`, copiada do
 SDK com cabeçalho `ORIGEM:` e cada divergência marcada `ALTERADO PELO CURSO (nrf-manaus-2)`.
@@ -204,6 +271,9 @@ Numerados na sequência da aula, continuando o módulo (`06`–`10`, depois dos 
 | 8 | `08_wifi_provisioning/` | `nrf/samples/wifi/provisioning/softap` | idem + notebook | **provisionamento** |
 | 9 | `09_wifi_tcp/` | código do curso, esqueleto do `sta` | idem + servidor no PC | **socket TCP/IP** |
 | 10 | `10_wifi_http_mqtt/` | o mesmo do 9, transporte por Kconfig | idem + broker | bônus |
+| 11 | `11_wifi_twt/` | `nrf/samples/wifi/twt` | idem + **AP Wi-Fi 6** + PPK2 | bônus (Wi-Fi 6) |
+| 12 | `12_wifi_coex/` | `nrf/samples/wifi/ble_coex` | idem + par BLE | bônus |
+| 13 | `13_wifi_location/` | código do curso, reusa o 9 | idem + internet no PC | bônus |
 
 ### 4.1 Lab 6 — o companion visível
 
@@ -260,6 +330,45 @@ O MQTT é o último da fila por logística: precisa de um broker (`mosquitto` no
 instrutor), que numa rede indefinida é mais uma peça para dar errado. Se a RAM não fechar
 (§8), o MQTT fica como referência lida, não rodada.
 
+### 4.6 Lab 11 — TWT: o argumento de bateria do Wi-Fi 6
+
+O `twt` como veio, com `minha_rede.conf`. O aluno estabelece o fluxo TWT com o AP e mede a
+**corrente média com e sem TWT** usando o PPK2 — mesmo instrumento e mesmo gesto do
+`11_benchmark_npu_vs_cpu` do Edge AI.
+
+É o lab que responde "por que Wi-Fi 6 e não Wi-Fi qualquer" com número em vez de slide.
+
+**Sem AP Wi-Fi 6 com TWT o lab não acontece** (§3.5). É o único da frente sem plano B, e a
+razão pela qual a rede da sala precisa ser decidida.
+
+Divergência do curso: o `minha_rede.conf`.
+
+### 4.7 Lab 12 — coexistência com o BLE que eles acabaram de usar
+
+O `ble_coex` com `SHIELD="nrf7002eb2;nrf7002eb2_coex"`. Mede throughput de Wi-Fi e de BLE
+simultâneos, com o mecanismo de coexistência **ligado e desligado**.
+
+A amarração com o Channel Sounding é o ponto: a turma passou o bloco anterior medindo
+distância por BLE em 2,4 GHz; aqui vê o que o Wi-Fi faz com esse mesmo espectro, e como o
+árbitro de coexistência divide o meio. O par BLE pode ser o próprio TAG do CS.
+
+Divergência do curso: a definir na implementação (provavelmente só o `minha_rede.conf`).
+
+### 4.8 Lab 13 — locationing sem nuvem no dispositivo
+
+**Código do curso**, reusando o cliente TCP do lab 9. A DK faz `wifi scan`, monta a lista de
+**BSSID + RSSI** e manda pelo socket. No PC, `tools/wifi_locate.py` chama a API REST de
+location do nRF Cloud com a chave do instrutor e imprime coordenada e raio de incerteza.
+
+O aluno vê **as duas metades**: a lista de APs que o kit enxergou e a coordenada que saiu
+dela. Fica claro que a localização não está no dispositivo — está no banco de dados de quem
+mapeou aqueles APs. Complementa o módulo de GNSS pelo lado de dentro do prédio.
+
+Requer no mínimo dois APs visíveis (regra do serviço) e **internet no PC**, não no kit.
+
+O `wifi/nrf_cloud` (build `/ns` com TF-M, onboarding por dispositivo) fica como referência
+escrita no README e demo do instrutor, se houver tempo.
+
 ## 5. Convenções transversais
 
 ### 5.1 `minha_rede.conf`
@@ -287,8 +396,18 @@ com esse aviso, e o `PREREQUISITOS.md` já o registra.
 
 - 6 × nRF54LM20-DK (variante B) + 6 × nRF7002-EB II, uma por aluno
 - notebook do aluno: Python com `protobuf`, `protoc` no PATH
-- PC do instrutor: `wifi_server.py`, e `mosquitto` se o lab 10 rodar
-- rede da sala **a definir** — todos os labs têm plano B (§1)
+- PC do instrutor: `wifi_server.py`; `mosquitto` se o lab 10 rodar; chave de API do nRF Cloud
+  e internet para o lab 13
+- **PPK2** para o lab 11 — o mesmo do módulo de Edge AI
+- **AP Wi-Fi 6 com TWT: TP-Link EX3000** (AX3000, 1 WAN + 3 LAN gigabit, 160 MHz) —
+  obrigatório para o lab 11, desejável para todos. Escolhido por ser o único dos candidatos
+  avaliados em que "Target Wake Time" consta da **especificação oficial do modelo**. Descartados:
+  Mercusys MR80X (TWT só na nota de rodapé de marketing; o manual de 83 páginas não tem controle
+  de TWT em *Advanced → Wireless → Additional Settings*), Archer AX23 (a própria TP-Link responde
+  na comunidade que "doesn't support" TWT e não há toggle) e Huawei AX2S (evidência só de
+  revendas; a doc de TWT da Huawei é da linha enterprise)
+- par BLE para o lab 12 — pode ser o nRF54L15-TAG do Channel Sounding
+- rede da sala **a definir**; todos os labs têm plano B **menos o 11** (§3.5)
 
 ## 7. Material
 
@@ -310,14 +429,31 @@ Nada aqui foi rodado em hardware ainda, além do build de fumaça do §2.1.
    `sw3` sumiu.
 6. **Temperatura do die** — o sensor está habilitado no board; confirmar leitura plausível.
 7. **Plano B em SoftAP** — o PC conectar no AP da DK e o TCP funcionar sem infraestrutura.
+8. **TWT — o teste de cinco minutos, a fazer no dia em que o EX3000 chegar.** Decide se o lab
+   11 existe; se falhar, dá tempo de trocar dentro do prazo de devolução:
+
+   1. no EX3000: *Advanced → Wireless → Wireless Settings*, procurar **TWT** e habilitar (na
+      linha Archer o padrão é desabilitado; se não houver toggle, seguir assim mesmo);
+   2. gravar o lab 6 (`wifi/shell`) e conectar: `wifi connect -s <ssid> -k 1 -p <senha>`;
+   3. `wifi twt setup` e ler a resposta;
+   4. `wifi status` deve mostrar o modo de power save/TWT ativo.
+
+   O que confirma: o AP aceita TWT **individual** — o modo que o nRF70 usa; a Nordic diz que
+   broadcast não é suportado nesta release. Depois disso, medir corrente com e sem TWT no PPK2.
+9. **Coexistência** — compilar com o shield duplo, medir throughput dos dois rádios com o
+   mecanismo ligado e desligado, e confirmar que o TAG serve como par BLE.
+10. **Locationing** — quantos APs a DK enxerga na sala, resposta da API do nRF Cloud, e erro
+    contra a posição real.
+11. **Tempo de cada lab** — cronometrar os oito. É o número que decide o corte (§1).
 
 ## 9. Fora de escopo
 
-- **Coexistência BLE+Wi-Fi** (`ble_coex`, shield `nrf7002eb2_coex`): a súmula não promete e é
-  risco extra em sala. Anotado como extensão no README do lab 10.
-- **Gateway TAG → DK → nuvem**: exigiria a coexistência acima. Fica como extensão escrita.
+- **Gateway TAG → DK → nuvem**: exigiria BLE e Wi-Fi ativos ao mesmo tempo na aplicação, o que
+  o lab 12 mede mas não usa como arquitetura. Fica como extensão escrita.
 - **Comando de voz como gatilho**: impossível no mesmo kit (§2.3).
-- **TWT, throughput, raw TX, promiscuous, Wi-Fi locationing**: samples existem e são alvos do
-  LM20, mas nada disso está na súmula e competem por tempo com GNSS e NTN.
+- **Throughput, raw TX, promiscuous, P2P, Thread coex, WFA QT**: samples existem e são alvos do
+  LM20, mas competem por tempo com GNSS e NTN.
+- **`wifi/nrf_cloud` como lab**: exige TF-M e onboarding dos 6 kits; entra como referência e
+  demo (§4.8).
 - **Wi-Fi 6 "6+" como certificação**: o material trata do que o nRF7002 entrega (dual-band,
   TWT como recurso citado), sem entrar em certificação.
