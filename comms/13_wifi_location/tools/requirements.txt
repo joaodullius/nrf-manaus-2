@@ -1,0 +1,4 @@
+# Execucao: wifi_locate.py fala HTTP com a API de Location Services do nRF Cloud.
+requests>=2.31
+# Dependencia de desenvolvimento: rodar os testes com pytest.
+pytest
