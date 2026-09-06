@@ -166,21 +166,36 @@ static void abrir_com_backoff(void)
 	}
 }
 
-/* So uma reconexao de fato acontece por vez: se a telemetria e a recepcao
- * detectarem a queda quase juntas, a segunda so adquire o mutex depois que a
- * primeira termina. Pode fazer um fechar+abrir redundante logo em seguida
- * (o transporte ja esta bom outra vez) -- desperdicio pequeno e inofensivo,
- * nao uma corrida: o mutex de transporte.c garante que o descritor nunca
- * fica inconsistente.
+/* So uma reconexao de fato acontece por vez -- e "so espera o resultado" de
+ * verdade, nao so serializa. A primeira versao disto so tinha um mutex
+ * bloqueante em volta do fechar+abrir: se telemetria e recepcao detectassem
+ * a queda quase juntas, a segunda thread ficava esperando a primeira
+ * terminar e, quando conseguia o mutex, repetia o fechar+abrir por cima de
+ * uma conexao que a primeira ja tinha consertado. Isso nao era so
+ * desperdicio, como o comentario antigo (removido) dizia: era uma segunda
+ * conexao de verdade aberta no servidor a poucos milissegundos da primeira
+ * -- achado na bancada, ver o relatorio da task. O comando de LED ia para
+ * uma conexao que o kit ja tinha abandonado, e nunca acendia nada.
+ *
+ * Com try-lock: quem consegue a trava faz o fechar+abrir de verdade; quem
+ * chega depois so espera essa reconexao terminar (lock bloqueante, sem
+ * repetir trabalho nenhum) antes de devolver o controle para quem chamou.
  */
 static K_MUTEX_DEFINE(reconexao_mutex);
 
 static void reconectar_transporte(void)
 {
-	k_mutex_lock(&reconexao_mutex, K_FOREVER);
-	transporte_fechar();
-	abrir_com_backoff();
-	k_mutex_unlock(&reconexao_mutex);
+	if (k_mutex_lock(&reconexao_mutex, K_NO_WAIT) == 0) {
+		transporte_fechar();
+		abrir_com_backoff();
+		k_mutex_unlock(&reconexao_mutex);
+	} else {
+		/* Outra thread ja esta reconectando agora: so espera ela
+		 * terminar, sem abrir uma conexao propria por cima.
+		 */
+		k_mutex_lock(&reconexao_mutex, K_FOREVER);
+		k_mutex_unlock(&reconexao_mutex);
+	}
 }
 
 static void montar_e_enviar(bool botao_pressionado)
@@ -256,13 +271,24 @@ static void thread_recepcao(void)
 				"(sem reconectar)");
 			continue;
 		}
-		if (n < 0) {
-			if (n == -ECONNRESET) {
-				LOG_WRN("Servidor fechou a conexao; reconectando");
-			} else {
-				LOG_WRN("Falha ao receber (%d); reconectando", n);
-			}
+		if (n == -ECONNRESET) {
+			LOG_WRN("Servidor fechou a conexao; reconectando");
 			reconectar_transporte();
+			continue;
+		}
+		if (n < 0) {
+			/* Normalmente -ENOTCONN: outra thread fechou o
+			 * transporte e ainda esta no meio de abrir um novo (o
+			 * abrir() de transporte.c conecta fora do mutex antes
+			 * de trocar o descritor). Nao e motivo para ESTA thread
+			 * tambem reconectar -- faria isso abrir uma segunda
+			 * conexao em cima da que ja esta sendo aberta (achado
+			 * na bancada: e exatamente o que fazia o comando de LED
+			 * ir para uma conexao ja abandonada). So espera um
+			 * instante e tenta de novo; quem ja esta reconectando
+			 * resolve.
+			 */
+			k_msleep(100);
 			continue;
 		}
 
