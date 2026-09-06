@@ -243,6 +243,29 @@ LM20-DK tem uma. O par 1 × 2 dá **dois caminhos de antena** (A1-B1 e A1-B2), e
 regravado para alternar. O default do lab é **2** (`CONFIG_LAB_ANTENNA_PATHS`); com
 `-DCONFIG_LAB_ANTENNA_PATHS=1` volta ao par único do lab 2.
 
+![Duas antenas no TAG: a chave de RF e quem a comanda](cs_antenas_hw.png)
+
+Vale saber o que há por trás disso, porque nada passa pela aplicação do TAG:
+
+- **A chave.** As duas antenas do TAG ficam atrás de uma chave de RF **SKY13348**,
+  comandada por dois pinos: `V1 = P1.09` seleciona ANT1, `V2 = P1.10` seleciona ANT2
+  (`nrf54l15tag_common.dtsi`). O overlay do sample apaga o nó `sky13348` e os
+  `gpio-hog` da placa e declara um `nordic,bt-cs-antenna-switch` com
+  `ant-gpios = <P1.09>, <P1.10>` e `multiplexing-mode = 0`: um pino por antena, só um
+  ativo por vez. É esse nó que entrega os pinos ao **SoftDevice Controller**.
+- **Quem escolhe.** O initiator, em `bt_le_cs_set_procedure_parameters()`:
+  `tone_antenna_config_selection = A1_B1` (índice 0, um caminho) ou `A1_B2` (índice 4,
+  A com 1 antena, B com 2, dois caminhos). A tabela completa dos oito índices está em
+  `zephyr/include/zephyr/bluetooth/conn.h`; `A2_B2` (índice 7, quatro caminhos) exigiria
+  duas antenas também na DK.
+- **Quem aciona.** Dentro de cada step de mode 2, o controller do TAG comuta a chave
+  entre os slots de tom — um slot por caminho, mais a extensão — e a ordem dos caminhos
+  é permutada a cada step (faz parte da segurança do CS). O Ranging Data volta com
+  `antenna_paths_mask`; o `main.c` do lab deriva `n_ap` dele e despeja `ap 0` e `ap 1`.
+- **O que o TAG precisou.** Só anunciar que tem duas antenas (`CONFIG_BT_CTLR_SDC_CS_NUM_ANTENNAS=2`,
+  já no board file da Nordic) e ter buffer de RAS para dois caminhos
+  (`CONFIG_BT_RAS_MAX_ANTENNA_PATHS=2`, a linha do curso).
+
 Com 2, cada procedure aparece **duas vezes** no CSV, `ap 0` e `ap 1` do mesmo
 ranging counter, e o `cs_compare.py` ganha seis colunas:
 

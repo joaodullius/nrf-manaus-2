@@ -67,7 +67,13 @@ entre bancada e campo — e é assim que um reflector de verdade vive.
 
 As duas antenas do TAG já saem configuradas pelos board files da Nordic; o
 initiator do lab 2 usa só um caminho, então a diferença só aparece mais adiante,
-no lab 5.
+no lab 5. O esquema abaixo mostra o que está por trás: uma chave de RF **SKY13348**
+comandada por `P1.09`/`P1.10`, que o overlay do sample entrega ao SoftDevice
+Controller (`nordic,bt-cs-antenna-switch`). Quem decide usar uma ou duas antenas é
+o **initiator**; o TAG só anuncia que as tem e comuta a chave quando o controller
+manda — a aplicação não participa.
+
+![Duas antenas no TAG: a chave de RF e quem a comanda](cs_antenas_hw.png)
 
 ## O endereço do seu TAG
 
