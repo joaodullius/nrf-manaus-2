@@ -84,8 +84,8 @@ em *nRF7002 EB II → Requirements → Prerequisites*. Registrado em `PREREQUISI
 
 Todas custam tempo de aula se descobertas em sala:
 
-**O console troca de UART, não de VCOM.** O overlay do shield na v3.4.0 desabilita a
-`uart20` e move console, shell e mcumgr para a `uart30`:
+**O console muda de porta — e de VCOM.** O overlay do shield na v3.4.0 desabilita a `uart20`
+e move console, shell e mcumgr para a `uart30`:
 
 ```dts
 /* UART20 conflicts with EB-II shield; use UART30 */
@@ -93,13 +93,21 @@ Todas custam tempo de aula se descobertas em sala:
 chosen { zephyr,console = &uart30; ... };
 ```
 
-**Medido na bancada (2026-09-06):** o prompt sai na **primeira VCOM**, a de sempre; a
-segunda fica muda. A troca de UART é real — o `device list` mostra só a `uart30`, a `uart20`
-some — mas `uart20` (P1.16/P1.17) e `uart30` (P0.06/P0.07) desembocam na mesma vcom 0 do chip
-de interface. A hipótese inicial de que o log migraria de VCOM está **descartada por medição**.
+**Medido na bancada (2026-09-06), nas duas condições e no mesmo kit:**
 
-O que sobra de consequência real: imagens com e sem shield usam UARTs diferentes, então trocar
-o firmware da placa sem recompilar para o alvo certo deixa o console mudo.
+| Firmware | Console em | VCOM | Observado |
+|---|---|---|---|
+| lab de Channel Sounding (sem shield) | `uart20` (P1.16/P1.17) | segunda | boot banner sai aqui |
+| lab 6 de Wi-Fi (com `nrf7002eb2`) | `uart30` (P0.06/P0.07) | primeira | prompt sai aqui |
+
+Em cada caso a outra porta fica muda. O `device list` da imagem com shield mostra só a
+`uart30` — a `uart20` some. **A VCOM muda.**
+
+**Por que a doc online "latest" afirma o contrário.** O reroteamento é um contorno para um
+conflito de pinos que existe apenas no kit **pré-produção** do LM20-DK. Em versões de Zephyr
+posteriores à nossa o shield deixa de reroteiar nessa placa: o console volta para a `uart20`
+(segunda VCOM) e o `sw3` deixa de ser apagado. A doc "latest" descreve esse comportamento
+novo; a v3.4.0 do curso ainda tem o antigo. Não é contradição, é versão.
 
 **O botão 4 some.** O mesmo overlay apaga o nó `button_3` e o alias `sw3`. Restam os botões
 1–3 (`sw0`–`sw2`) e os quatro LEDs (P1.22/25/27/28, nenhum na lista da EB II).
@@ -393,8 +401,9 @@ imagem no sysbuild (`<app>_SHIELD`), como nos `sample.yaml` da Nordic.
 
 ### 5.3 Console
 
-Com a EB II acoplada, o console está na **`uart30`** (§2.3), saindo na mesma primeira VCOM.
-Todo README abre com esse aviso, e o `PREREQUISITOS.md` já o registra.
+Com a EB II acoplada, o console está na **`uart30`** (§2.3) — **outra VCOM**, a primeira,
+enquanto os labs sem shield usam a segunda. Todo README abre com esse aviso, e o
+`PREREQUISITOS.md` já o registra.
 
 ## 6. Bancada
 
@@ -450,8 +459,8 @@ os blobs, provisionamento, e a tabela dos três transportes (§3.2) com os núme
 
 Nada aqui foi rodado em hardware ainda, além do build de fumaça do §2.1.
 
-1. ~~**Console na `uart30`**~~ — **fechado em 2026-09-06.** Console na `uart30`, saindo na
-   primeira VCOM. Ver §2.3.
+1. ~~**Console na `uart30`**~~ — **fechado em 2026-09-06.** Console na `uart30`, primeira
+   VCOM; sem shield fica na `uart20`, segunda VCOM. Medido nas duas condições. Ver §2.3.
 2. **`provisioning/softap` na variante B** — `platform_allow` lista, mas `boards/` só tem
    `.conf` da variante A. Compila? Precisa de um `.conf` novo?
 3. **Fluxo completo do `provision.py`** — `protoc`, certificado, `/prov/networks`,
