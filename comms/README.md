@@ -39,6 +39,6 @@ não do firmware). Um `meu_tag.conf` serve para os três initiators.
 
 ## Tópicos teóricos
 
-- BLE 6.0 e Channel Sounding: RTT × PBR, initiator/reflector/subevent, Ranging Service, RAS × IPT como trade-off, segurança, e "o algoritmo é camada de aplicação"
+- BLE 6.0 e Channel Sounding: RTT × PBR, initiator/reflector/subevent, Ranging Service por dentro (o serviço GATT do SIG e o que ele carrega), configuração de stack e otimização de pacotes (MTU, DLE, buffers ACL, intervalo de procedure), RAS × IPT como trade-off, segurança, e "o algoritmo é camada de aplicação"
 - Wi-Fi 6+ para IoT: integração com companion IC, provisionamento, TCP/IP
 - Redes Não Terrestres (NTN): NB-IoT via satélite

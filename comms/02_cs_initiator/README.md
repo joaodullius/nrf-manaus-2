@@ -142,6 +142,30 @@ E `prj.conf` ganha `CONFIG_BT_SCAN_ADDRESS_CNT=1`, o slot do filtro.
   TAG — ele só aceita uma conexão. Desligue o outro; `nrfutil device recover` numa DK
   esquecida com firmware antigo.
 
+## Configuração de stack e otimização de pacotes
+
+Tudo isto já vem no `prj.conf` (é o do sample da Nordic). Vale saber o que é e por
+que está lá, porque é o que muda quando o produto tem outro telefone, outra antena
+ou outro ritmo:
+
+| Ajuste | Valor | Por quê |
+|---|---|---|
+| `CONFIG_BT_L2CAP_TX_MTU` | 498 | o Ranging Data de um procedure tem ~512 B por lado; o Ranging Profile pede MTU ≥ 247 |
+| `CONFIG_BT_BUF_ACL_TX_SIZE` / `_RX_SIZE` | 502 | buffer ACL acima da MTU, senão o L2CAP fragmenta |
+| `CONFIG_BT_CTLR_DATA_LENGTH_MAX` | 251 | Data Length Extension: 251 B por PDU em vez de 27 — uma notificação de Ranging Data em 1–2 PDUs em vez de 10 |
+| `CONFIG_BT_ATT_PREPARE_COUNT` | 3 | escritas longas no RAS Control Point |
+| `CONFIG_BT_RAS_MAX_ANTENNA_PATHS` | 1 aqui, 2 no lab 5 | dimensiona o buffer de Ranging Data por caminho de antena |
+| `CONFIG_BT_CTLR_SDC_MAX_CONN_EVENT_LEN_DEFAULT` | 1250, só em `s26.conf` do lab 1 | evento de conexão maior para o Galaxy S26 conseguir negociar o procedure (sem isso, `0x1E`) |
+| `CONFIG_LAB_PROCEDURE_INTERVAL` | 0 (default do sample) | intervalo entre procedures em intervalos de conexão; 50 no lab 5 (1/s), 25 na demo (2/s), `50 + n×12` para escalonar seis bancadas |
+
+O log do initiator mostra a MTU negociada logo no início (`MTU exchange success`).
+O sample lê as **RAS Features** do reflector e escolhe o fluxo: se o reflector
+anunciar *real-time ranging data*, assina a característica `0x2C15` e recebe o dado
+assim que o procedure termina; se não, assina *Ranging Data Ready* e busca cada
+procedure pelo *Control Point* — é o caso desta bancada, e é por isso que o
+intervalo do sample cai para 10 (200 ms) em vez de 5 (100 ms). O lab 3 mostra a
+otimização definitiva: com IPT o dado do reflector nem sai do rádio.
+
 ## Fontes
 
 - nRF Connect SDK v3.4.0 — `nrf/samples/bluetooth/channel_sounding/ras_initiator` e
