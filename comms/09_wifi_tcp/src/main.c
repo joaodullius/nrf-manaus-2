@@ -123,16 +123,37 @@ static int8_t ler_rssi_dbm(void)
 #define RECONEXAO_ESPERA_INICIAL_MS 1000u
 #define RECONEXAO_ESPERA_MAXIMA_MS  30000u
 
+/* Numero de tentativas seguidas, sem nunca ter conectado uma vez, ate avisar
+ * que o problema provavelmente e configuracao (IP/porta errados, ou PC e kit
+ * em redes diferentes) e nao um servidor que caiu.
+ */
+#define RECONEXAO_TENTATIVAS_AVISO_CONFIG 5
+
+/* Uma vez que a primeira conexao aconteceu, uma queda depois e so queda --
+ * o aviso de "confira a configuracao" abaixo so faz sentido antes disso.
+ */
+static bool ja_conectou_alguma_vez;
+
 static void abrir_com_backoff(void)
 {
 	uint32_t espera_ms = RECONEXAO_ESPERA_INICIAL_MS;
+	uint32_t tentativas = 0;
 	int ret;
 
 	while (1) {
 		ret = transporte_abrir();
 		if (ret == 0) {
+			ja_conectou_alguma_vez = true;
 			return;
 		}
+
+		tentativas++;
+		if (!ja_conectou_alguma_vez && tentativas == RECONEXAO_TENTATIVAS_AVISO_CONFIG) {
+			LOG_ERR("Sem conseguir conectar depois de %u tentativas -- confira "
+				"CONFIG_LAB_SERVIDOR_IP e CONFIG_LAB_PORTA, e se o PC e o "
+				"kit estao na mesma rede", tentativas);
+		}
+
 		LOG_WRN("Falha ao abrir o transporte (%d); nova tentativa em %u ms",
 			ret, espera_ms);
 		k_sleep(K_MSEC(espera_ms));
