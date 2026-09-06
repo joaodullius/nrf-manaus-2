@@ -1,0 +1,5 @@
+# Diretorios de build
+build*/
+
+# Gerado pelo protoc a partir do schema do SDK
+scripts/common_pb2.py
