@@ -44,9 +44,12 @@ O lab tem duas partes:
 | **TWT** (deep sleep) | **negociado** entre estação e AP | **sim** | **sim** |
 
 O quadro por trás: o AP transmite um **beacon** periódico (medido na bancada: 100
-unidades de tempo, ~102,4 ms), e todo beacon carrega um **TIM** — um bitmap dizendo
-quais estações têm quadro unicast à espera. Um beacon a cada N é um **DTIM**
-(medido: N=3, ~307 ms), que anuncia o tráfego de grupo (broadcast/multicast).
+unidades de tempo, ~102,4 ms). O **TIM** não é um quadro separado — é um
+**elemento dentro do próprio beacon**, um bitmap dizendo quais estações têm
+quadro unicast à espera. O **DTIM** não é outro mecanismo, é uma ocorrência
+privilegiada do TIM: um beacon a cada N é um DTIM (medido: N=3, ~307 ms), e é só
+depois dele que sai o tráfego de grupo (broadcast/multicast). A relação a levar:
+**todo beacon carrega um TIM; um beacon a cada N é um DTIM.**
 
 - **Degrau 1 — DTIM**, o padrão do nRF70 assim que conecta. A estação acorda
   alinhada ao DTIM; quem manda no período é o AP, a estação não pede alteração.
@@ -190,7 +193,15 @@ a 100 kSa/s e a média é feita sobre a janela que o operador escolhe.
 3. Um cabo USB alimenta o PPK2 até 500 mA; para picos até 1 A (a transmissão do
    nRF7002), usar dois cabos. Vale conferir o pico de transmissão na primeira
    captura antes de confiar nas médias.
-4. Repetir os três regimes do Passo 1, 60 s por regime, corrente média:
+4. **Opcional — marcador de despertar no analisador lógico do PPK2.** O PPK2 tem
+   entradas digitais que funcionam como analisador lógico simples, sincronizadas
+   com a captura de corrente. Ligando uma delas a um GPIO que o firmware chaveia
+   no início e no fim da janela de despertar, o gráfico mostra a corrente e o
+   evento de código lado a lado na mesma tela — o pico de corrente e o marcador
+   aparecem alinhados, em vez de pedir para o aluno acreditar que a coincidência
+   temporal é o despertar negociado. Custa um pino livre e um trecho de firmware
+   (alternar o GPIO ao entrar/sair do período ativo); o lab funciona sem isso.
+5. Repetir os três regimes do Passo 1, 60 s por regime, corrente média:
 
    | Regime | Comando | Corrente média |
    |---|---|---|
