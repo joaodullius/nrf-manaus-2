@@ -248,6 +248,50 @@ netsh advfirewall firewall show rule name=all dir=in status=enabled | findstr /C
 > **A rede tem de estar classificada como "Particular"** — as regras acima usam o perfil
 > `Private`. Numa rede marcada como Pública o Windows aplica outro conjunto e elas não valem.
 
+### mosquitto: o serviço do Windows briga com o broker do lab (lab 10, MQTT)
+
+Medido nesta bancada em 2026-09-07. O instalador do mosquitto no Windows registra um
+**serviço que sobe sozinho** (`StartType: Automatic`). E o mosquitto 2.x, na configuração
+padrão, **escuta só em localhost e recusa conexão anônima** — ou seja, o serviço **não**
+serve para o lab: o kit nunca conseguiria falar com ele.
+
+Por isso o lab sobe um broker próprio, com uma conf mínima:
+
+```
+listener 1883 0.0.0.0
+allow_anonymous true
+```
+
+E aí nasce a confusão: passam a existir **dois brokers**. O serviço ocupa `127.0.0.1` e
+`::1`; o broker do lab fica com `0.0.0.0`. O kit publica no do lab — e todo assinante que
+usar `localhost` cai **no outro**, que não recebe nada. O sintoma é desconcertante: o log do
+broker do lab mostra `PUBLISH` chegando normalmente, e o `wifi_mqtt_sub.py` fica mudo, como
+se o kit não estivesse publicando.
+
+Duas saídas:
+
+- **Contorno imediato**, sem administrador: apontar o assinante para o endereço de rede do
+  PC em vez de localhost — `python wifi_mqtt_sub.py --host <ip-do-pc>`. Testado e resolve.
+- **Solução definitiva**, e a recomendada antes do curso (PowerShell como administrador):
+
+```powershell
+Stop-Service mosquitto
+Set-Service mosquitto -StartupType Manual
+```
+
+  Com o serviço parado sobra um broker só, e `localhost` volta a funcionar.
+
+Conferir quantos brokers existem:
+
+```powershell
+Get-Process mosquitto | Select-Object Id,ProcessName
+Get-NetTCPConnection -State Listen -LocalPort 1883 | Select-Object LocalAddress,LocalPort
+```
+
+> **As três armadilhas deste bloco têm a mesma assinatura**: uma ponta funciona, a outra
+> fica muda, e **nenhuma das duas dá erro**. Firewall por porta, servidor sem terminal e
+> dois brokers. Vale avisar a turma disso antes, porque o instinto é culpar o firmware.
+
 ### Os servidores dos labs precisam de terminal — não rode em background
 
 Medido nesta bancada em 2026-09-07: `wifi_server.py` (lab 9) e `wifi_http_server.py`
