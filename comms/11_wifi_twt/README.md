@@ -295,7 +295,15 @@ ensaiada antes do curso. O que segue está pronto para ser executado se algum AP
 aparecer em sala — mas **nada aqui foi verificado nesta bancada**, e é preciso dizer isso
 à turma se for demonstrado ao vivo.
 
-Sequência mínima, com o firmware deste lab já gravado e associado ao AP:
+> **Atenção — o firmware deste lab NÃO tem shell.** O `prj.conf` do sample não liga
+> `CONFIG_SHELL` nem `CONFIG_NET_L2_WIFI_SHELL`: ele **negocia TWT sozinho no boot**, com
+> os parâmetros de `CONFIG_TWT_WAKE_INTERVAL` (65000 µs) e `CONFIG_TWT_INTERVAL`
+> (524000 µs), e sai com `AP is not TWT capable, exiting the sample` se o AP não
+> anunciar TWT. **Os comandos `wifi twt` abaixo só existem no firmware do lab 6**
+> (`comms/06_wifi_shell`), que é onde a Parte A inteira já roda. Use o lab 6 para a
+> demonstração interativa e este lab para o caminho automático.
+
+Sequência mínima **no firmware do lab 6**, já associado ao AP:
 
 ```
 wifi status                       # confirmar: TWT: Supported (na nossa ONT dá Not supported)
@@ -311,6 +319,27 @@ Para o intervalo de 1 minuto, que é o ponto de comparação com o datasheet:
 ```
 wifi twt quick_setup 8192 60000000    # 8,192 ms acordado, 60 s de intervalo
 ```
+
+Para derrubar: `wifi twt teardown 0 0 1 1` (os quatro argumentos são
+`negotiation_type setup_cmd dialog_token flow_id`, nessa ordem) ou `wifi twt teardown_all`.
+
+> **Não copie o comando do blog da Nordic nem o da documentação.** Ambos usam a forma
+> posicional (`wifi twt setup 0 0 1 1 0 1 1 1 65000 524000`), que **falha nesta árvore**
+> com `setup: wrong parameter count`: nesta versão o `setup` é getopt e exige **25**
+> argumentos (12 pares de opção/valor). O `quick_setup` acima é o atalho equivalente. Pior:
+> os números do blog (`... 20 60000`) são da era em que o intervalo era em
+> **milissegundos** — a mudança para microssegundos entrou no NCS 2.4.0. Copiados
+> literalmente aqui, `60000` viraria 60 ms.
+
+> **O valor que vai aparecer no log não é exatamente o pedido.** Com `-p 60000000` espere
+> ler `TWT interval: 60030000 us`: o 802.11 representa o intervalo como mantissa e
+> expoente, e 60 s não cai exato na grade. Não é erro.
+
+Faixas aceitas pelo shell: **wake interval 1–262144 µs** (o teto é 256 ms) e **interval
+1 µs–2 147 483 646 µs** (~35 min 48 s). Fora disso o shell responde
+`Value out of range: <valor>, (<min>-<max>)`. Para dormir mais de ~36 minutos seria
+preciso o caminho de mantissa/expoente, que nesta versão tem inconsistência de escala
+entre o shell e o driver — não usar.
 
 O `8192 µs` não é arbitrário: é a duração mínima de despertar que o datasheet do nRF7002
 usa na medida de TWT, e a documentação da Nordic recomenda **não descer abaixo de 8 ms**,
