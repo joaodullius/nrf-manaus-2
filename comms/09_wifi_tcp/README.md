@@ -107,6 +107,8 @@ saudável só porque está mais espaçada que o limite de leitura.
 
 1. **O botão.** Apertar o `sw0` manda uma amostra imediata, fora do intervalo
    periódico, com `"botao":true` — dá para ver no servidor sem esperar o próximo tick.
+   Caminho implementado e revisado no código; ao contrário dos outros dois gestos
+   abaixo, esse é o único ainda não observado na bancada ponta a ponta.
 2. **O comando de LED.** Teclar `l` no servidor manda a linha `LED 1`; o firmware
    (`thread_recepcao()`) lê essa linha do transporte e acende o **LED1**. `d` manda
    `LED 0` e apaga.
@@ -165,7 +167,8 @@ tempo limite de leitura, com um limite pequeno passado só para o teste.
 2. Gravar a DK com o IP do PC (Passo 1).
 3. Conferir: amostras chegando a cada `CONFIG_LAB_INTERVALO_MS` (padrão 2 s), `seq`
    incrementando.
-4. Apertar o **botão 1** (`sw0`) → amostra imediata, com `"botao":true`.
+4. Apertar o **botão 1** (`sw0`) → amostra imediata, com `"botao":true` (gesto ainda
+   não observado na bancada — ver a nota em "Os três gestos do lab").
 5. Teclar `l` no servidor → **LED1** acende; `d` → apaga.
 6. Andar com o kit até a conexão cair e voltar → **buraco no `seq`**, o ponto do lab.
 7. Encostar o dedo no chip → `temp_c` sobe.

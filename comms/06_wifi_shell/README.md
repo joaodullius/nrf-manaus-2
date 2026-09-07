@@ -112,8 +112,8 @@ diferentes:
 
 | SSID | Canal | Banda | RSSI | Segurança | BSSID |
 |---|---|---|---|---|---|
-| `<ssid>` (rede da bancada) | 6 | 2,4 GHz | -35 | WPA2-PSK | 44:89:6D:61:58:CF |
-| `<ssid>` (rede da bancada) | 52 | 5 GHz | -48 | WPA2-PSK | 44:89:6D:61:58:CE |
+| `<ssid>` (rede da bancada) | 6 | 2,4 GHz | -35 | WPA2-PSK | `<bssid_2g4>` |
+| `<ssid>` (rede da bancada) | 52 | 5 GHz | -48 | WPA2-PSK | `<bssid_5g>` |
 
 MFP apareceu como `Disable` no scan e `Optional` depois de associado. Sem WPA3 nesta
 rede — `-k 1` (WPA2-PSK) é o modo certo.
@@ -121,8 +121,8 @@ rede — `-k 1` (WPA2-PSK) é o modo certo.
 ### `wifi connect` e `net iface`
 
 Associação, 4-way handshake e DHCP fecharam em cerca de 1 s. IP obtido:
-`192.168.15.11/24`, gateway `192.168.15.1`, lease de 14400 s (4 h). Um endereço
-IPv6 global também sobe, do prefixo do provedor.
+`<ip>/24`, gateway `<gateway>`, lease de 14400 s (4 h). Um endereço IPv6 global
+também sobe, do prefixo do provedor.
 
 ### `wifi status` — o modo de link por banda
 
@@ -148,7 +148,9 @@ TWT capable**. É um bom material de aula por si só: TWT é um recurso opcional
 padrão 802.11ax, não obrigatório — "AP Wi-Fi 6" não implica "AP com TWT".
 
 Antes de tentar negociar, o rádio do DK já estava em power save — isso descarta a
-hipótese de falso negativo do nosso lado:
+hipótese de falso negativo do nosso lado. (Os termos abaixo — power save, DTIM,
+TWT — ganham a explicação completa, a escada de três degraus, no lab 11; aqui
+bastam para ler o resultado.)
 
 ```
 PS status: Power save enabled
@@ -198,9 +200,11 @@ resolve.
 - **Sem o blob do driver, o build para no CMake.** Este lab depende de
   `west blobs fetch nrf_wifi` já ter rodado nesta instalação do SDK (já rodou). Se o
   CMake reclamar de blob ausente em outra máquina, é isso que falta.
-- **`wifi twt setup` na forma longa é frágil.** A variante com `-n -c -t -f -r -T -I
-  -a -w -p -D -d -e -m` exige exatamente 25 argumentos e devolve "Too many
-  arguments" ao menor deslize. Para o lab, usar a forma curta:
+- **`wifi twt setup` na forma longa (por opções) é frágil.** A variante com `-n -c
+  -t -f -r -T -I -a -w -p -D -d -e -m` exige exatamente 25 argumentos e devolve
+  "Too many arguments" ao menor deslize. É um caso diferente da forma **posicional**
+  do material online (`wifi twt setup 0 0 1 1 ...`), que falha com outro erro
+  (`wrong parameter count` — ver lab 11). Para o lab, usar a forma curta:
   `wifi twt quick_setup <wake_interval_us> <interval_us>`.
 
 ## Fontes
