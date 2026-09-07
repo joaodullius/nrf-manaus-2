@@ -72,7 +72,15 @@ ponto de acesso visto (`AP,<bssid>,<rssi>,<frequência>,<ssid>`) — porque o da
 outra natureza (vizinhança de rede, não telemetria do dispositivo).
 
 Blobs de firmware do nRF70 (`west blobs fetch nrf_wifi`) são pré-requisito de
-qualquer build desta frente — ver `PREREQUISITOS.md`.
+qualquer build desta frente — ver [`PREREQUISITOS.md`](../PREREQUISITOS.md).
+
+### Hex de referência
+
+[`hex/`](hex/) tem um binário pronto de cada passo que **pode** ser distribuído, para
+gravar sem compilar — os cinco de Channel Sounding e os três labs de Wi-Fi que não
+embutem credencial (6, 8a, 8b). Os outros seis labs de Wi-Fi levam a senha da rede
+dentro do binário e por isso **não são versionados**; o `hex/build_all.py` gera esses na
+sala, com a credencial da sala, para fora do repo.
 
 ### Wi-Fi 6+ — os módulos da solução, e como reconhecê-los no log
 
