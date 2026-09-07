@@ -153,10 +153,11 @@ Para compilar modelos TFLite → Axon **na nuvem**, use o próprio Edge AI Lab (
 - **Trena** (≥ 5 m) por bancada, para os labs CS 2 e CS 5.
 - **SEGGER J-Link** (vem com o toolchain) — o log do TAG só sai por RTT.
 - Smartphone com Channel Sounding (Pixel 9/10 com Android 16 QPR2+, nRF Toolbox ≥ 4.1.4) é **opcional** e só para a demo do instrutor; o Galaxy S26 exige ajustes dos dois lados (ver `comms/01_cs_reflector/s26.conf`).
-- **nRF Wi-Fi Provisioner** (Android/iOS) — só para a demo de provisionamento por BLE do
-  instrutor. O lab de provisionamento é por SoftAP e **não usa navegador**: o fluxo é HTTPS com
-  corpo em protobuf, e o cliente é o `scripts/provision.py` do próprio SDK. Ver
-  `comms/08a_wifi_provisioning/README.md`.
+- **nRF Wi-Fi Provisioner** (Android/iOS) — é o cliente do **lab 8b** (provisionamento por
+  Bluetooth LE): o celular acha a DK pelo anúncio BLE e entrega a credencial por GATT. Ver
+  `comms/08b_wifi_provisioning_ble/README.md`. O **lab 8a** é o outro caminho, por SoftAP, e
+  **não usa navegador nem app**: o fluxo é HTTPS com corpo em protobuf, e o cliente é o
+  `scripts/provision.py` do próprio SDK — ver `comms/08a_wifi_provisioning/README.md`.
 - Rede Wi-Fi de teste em sala (2.4/5 GHz) e um endpoint TCP acessível — **desejável, não
   obrigatório**: o plano B dos labs de transporte é um **hotspot** de celular ou o
   compartilhamento de conexão do PC, com o kit e o PC associados nele. **Não** serve a DK em
