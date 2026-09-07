@@ -45,11 +45,15 @@ O lab tem duas partes:
 
 ## A escada de três degraus
 
-| Degrau | Quem controla o intervalo de dormida | Precisa de Wi-Fi 6 | Perde broadcast/multicast |
-|---|---|---|---|
-| **DTIM Power Save** | o **AP** | não | não |
-| **Extended Power Save** (listen interval) | a **estação** | não | **sim** |
-| **TWT** (deep sleep) | **negociado** entre estação e AP | **sim** | **sim** |
+| Degrau | Quem controla o sono | O que faz ao acordar | Sono útil | Wi-Fi 6? | Perde broadcast |
+|---|---|---|---|---|---|
+| **DTIM Power Save** | o **AP** | lê o TIM e recebe o tráfego de grupo | 0,1–1 s (o DTIM do AP) | não | não |
+| **Extended Power Save** (listen interval) | a **estação** | lê o TIM de um beacon qualquer, **disputando o meio** | até ~3 s na prática | não | **sim** |
+| **TWT** (deep sleep) | **negociado** com o AP | acorda numa *service period* **reservada** | minutos a horas | **sim** | **sim** |
+
+A coluna do "sono útil" é o achado da Parte A, e não vem de catálogo: o listen interval
+**é aceito** até 65535 (1,8 h), mas o downlink já é inutilizável nas dezenas. **Associar
+não é ser alcançável.**
 
 O quadro por trás: o AP transmite um **beacon** periódico (medido na bancada: 100
 unidades de tempo, ~102,4 ms). O **TIM** não é um quadro separado — é um
@@ -595,6 +599,30 @@ A Nordic publica, para o **nRF7002 DK com host nRF5340** — não a nossa combin
 LM20-DK + EB II —: ~2 mA em DTIM de 200 ms, ~15 µA dormindo, ~24–28 µA de média com
 TWT de 5 a 10 minutos. Servem como ordem de grandeza na aula, sempre atribuídos à
 fonte, e **nunca** entram numa tabela nossa como se fossem medição da bancada.
+
+O datasheet do nRF7002 dá a escada inteira, e é útil para mostrar a **forma** da curva:
+
+| Regime (datasheet, 2,4 GHz) | Corrente média |
+|---|---|
+| DTIM 1 (~100 ms) | 3,47 mA |
+| **DTIM 3 (~300 ms)** | **1,12 mA** |
+| DTIM 10 (~1 s) | 0,34 mA |
+| TWT, intervalo de 1 minuto | 29,5 µA |
+| TWT, intervalo de 1 hora | 18,4 µA |
+| dormindo (`ISLEEP`, só o RTC) | 15 µA |
+
+**Como comparar com a nossa tabela sem enganar a turma:**
+
+- **O piso bate.** Nossos 12–14 µA de piso contra os 15 µA de `ISLEEP` — é o que valida
+  a cadeia de medição.
+- **O DTIM 3 não bate:** 2,29 mA aqui contra 1,12 mA no catálogo, **2× pior**. Não é
+  defeito: o datasheet mede com beacon de 3,8 ms numa rede limpa; a nossa ONT tem outros
+  clientes e tráfego de grupo o tempo todo.
+- **O TWT de 1 minuto empata com o nosso listen interval 600** (29,5 contra 31 µA) — e é
+  daí que sai a conclusão da Parte B: o argumento do TWT é determinismo, não economia.
+- **A razão entre DTIM 1, 3 e 10 é quase o inverso do período** (3,47 → 1,12 → 0,34).
+  A nossa escada de listen interval **não** tem esse rendimento, porque acordar de um sono
+  mais longo custa mais caro (a ressincronização medida na anatomia do despertar).
 
 ## As três armadilhas do material online da Nordic (resumo)
 
