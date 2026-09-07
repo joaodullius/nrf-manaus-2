@@ -34,6 +34,99 @@ não existe nesta pasta de propósito — é o mesmo módulo do lab 9
 (`../09_wifi_tcp/tools/payload_ref.py`), que os dois scripts deste lab
 importam por caminho relativo.
 
+## As camadas — o que é reaproveitado e o que é trocado
+
+Esta seção é a base do diagrama comparativo do material. A ideia central: **os três
+transportes trocam uma única peça no meio da pilha.** Tudo abaixo dela é o mesmo código,
+o mesmo binário do Zephyr, a mesma configuração.
+
+```
+          +----------------------------------------------+
+          |   APLICAÇÃO  —  src/main.c  (534 linhas)      |   IDÊNTICA
+          |   3 threads, sensores, botão, LED, backoff    |   nos três
+          +----------------------------------------------+
+          |   PAYLOAD  —  src/payload.c  (26 linhas)      |   IDÊNTICO
+          |   a linha JSON, sempre a mesma                |   nos três
+          +----------------------------------------------+
+          |   transporte.h — abrir/enviar/receber/fechar  |   A MESMA
+          |   + o contrato de erro                        |   interface
+          +======== É AQUI QUE MUDA ====================+
+          |  TCP puro   |    HTTP      |     MQTT        |
+          |  215 linhas |   262 linhas |    431 linhas   |
+          |  (nenhuma   |  http_client |    mqtt_lib     |
+          |   lib extra)|              |                 |
+          +----------------------------------------------+
+          |   SOCKETS BSD do Zephyr (zsock_*)            |   IDÊNTICO
+          +----------------------------------------------+
+          |   TCP/IP + DHCPv4 cliente                    |   IDÊNTICO
+          +----------------------------------------------+
+          |   wpa_supplicant + driver nrf_wifi           |   IDÊNTICO
+          +----------------------------------------------+
+          |   SPI  →  nRF7002  (MAC + PHY)               |   IDÊNTICO
+          +----------------------------------------------+
+```
+
+### O que é literalmente o mesmo
+
+Conferido nas três `.config` geradas:
+
+| Camada do Zephyr | TCP | HTTP | MQTT |
+|---|---|---|---|
+| `CONFIG_NET_SOCKETS` (sockets BSD) | ✅ | ✅ | ✅ |
+| `CONFIG_NET_TCP` | ✅ | ✅ | ✅ |
+| `CONFIG_NET_IPV4`, `CONFIG_NET_DHCPV4` | ✅ | ✅ | ✅ |
+| `CONFIG_NET_BUF` | ✅ | ✅ | ✅ |
+| `CONFIG_WIFI_NM_WPA_SUPPLICANT` | ✅ | ✅ | ✅ |
+| `CONFIG_WIFI_CREDENTIALS` | ✅ | ✅ | ✅ |
+
+**Os três falam TCP.** Nenhum usa UDP para a telemetria. HTTP e MQTT não substituem o TCP:
+eles se **empilham** sobre ele. É o mal-entendido mais comum sobre esse trio.
+
+### O que cada um acrescenta
+
+| | Biblioteca extra do Zephyr | Linhas em `transporte.c` |
+|---|---|---|
+| **TCP puro** | **nenhuma** — fala direto com `zsock_*` | 215 |
+| **HTTP** | `CONFIG_HTTP_CLIENT` + `CONFIG_HTTP_PARSER` | 262 |
+| **MQTT** | `CONFIG_MQTT_LIB` (+ `MQTT_KEEPALIVE`) | 431 |
+
+Nenhum dos três usa `CONFIG_DNS_RESOLVER`: o endereço do servidor é um IP literal
+(`CONFIG_LAB_SERVIDOR_IP`), não um nome. Num produto real isso mudaria, e o DNS entraria
+como mais uma camada comum aos três.
+
+### O custo de cada escolha, medido
+
+| | FLASH | RAM | Ciclo de telemetria |
+|---|---|---|---|
+| TCP puro | 555.664 B (26,65%) | 191.952 B (36,68%) | 2050 ms |
+| HTTP | 567.160 B (27,20%) | 192.200 B (36,73%) | 2095 ms |
+| MQTT | 560.992 B (26,91%) | 193.392 B (36,96%) | 2053 ms |
+
+Com `CONFIG_LAB_INTERVALO_MS=2000` nos três. A diferença de FLASH entre o mais leve e o
+mais pesado é de **11,5 KB** — pouco, para três protocolos de aplicação diferentes, e é
+a evidência de que a parte cara da pilha (Wi-Fi, supplicant, TCP/IP) é a mesma nos três.
+
+> **Os ciclos nem sempre foram iguais.** Até 2026-09-07 o TCP e o MQTT mediam ~3000 ms
+> contra ~2095 ms do HTTP, e parecia vantagem do HTTP. Era um defeito: a thread de
+> recepção segurava o mutex do transporte durante o segundo inteiro do `poll`, atrasando
+> quem queria enviar. Corrigido (ver o comentário em `transporte_receber()` dos dois),
+> os três convergiram. Fica o aviso metodológico: **medir os três lado a lado revelou um
+> bug que a leitura do código não revelou.**
+
+### Para o diagrama: as três perguntas que separam os transportes
+
+| | Quem inicia o downlink? | Quantas conexões? | Quem conhece quem? |
+|---|---|---|---|
+| **TCP** | o **servidor** empurra quando quer | uma, aberta o tempo todo | kit ↔ servidor, ponto a ponto |
+| **HTTP** | o **kit** pergunta (`GET /comando`) | uma **nova por requisição** | kit ↔ servidor, ponto a ponto |
+| **MQTT** | o **broker** empurra (assinatura) | uma, aberta o tempo todo | ninguém: kit e assinante só conhecem o **broker** |
+
+A terceira coluna é a que mais rende em aula: no TCP e no HTTP o kit precisa saber o
+endereço de quem consome os dados. No MQTT, **não** — kit e assinante nunca trocam
+endereço, só o nome do tópico. Foi o que se viu na bancada: o assinante rodava em outra
+máquina lógica (`localhost` vs. IP) e o kit não teve de saber de nada disso.
+
+
 ## Kconfig novo (em `comms/09_wifi_tcp/Kconfig`)
 
 ```
