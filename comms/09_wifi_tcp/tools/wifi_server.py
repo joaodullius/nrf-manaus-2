@@ -30,7 +30,7 @@ funcoes -- os detalhes mecanicos ficam junto de cada uma, abaixo:
 Uso:
     python wifi_server.py --porta 9000
 
-Teclas depois de subir: 'l' liga o LED 2 (led1 no firmware), 'd' desliga,
+Teclas depois de subir: 'l' liga o LED1 (led1 no firmware), 'd' desliga,
 'q' sai.
 """
 from __future__ import annotations
@@ -203,7 +203,7 @@ def main() -> None:
         ao_receber=lambda amostra: print(_formatar_amostra(amostra)),
         tempo_limite_leitura_s=args.tempo_limite_leitura,
     )
-    print(f"Ouvindo na porta {srv.porta_real}. Teclas: l liga o LED 2, d apaga, q sai.")
+    print(f"Ouvindo na porta {srv.porta_real}. Teclas: l liga o LED1, d apaga, q sai.")
 
     threading.Thread(target=srv.aceitar_para_sempre, daemon=True).start()
 

@@ -10,7 +10,7 @@ do lab 9 -- so o transporte muda; ver ../README.md.
 Uso:
     python wifi_http_server.py --porta 8000
 
-Teclas depois de subir: 'l' liga o LED 2 (led1 no firmware), 'd' desliga,
+Teclas depois de subir: 'l' liga o LED1 (led1 no firmware), 'd' desliga,
 'q' sai.
 """
 from __future__ import annotations
@@ -138,7 +138,7 @@ def main() -> None:
     args = parser.parse_args()
 
     srv = ServidorHTTP(porta=args.porta, ao_receber=lambda amostra: print(_formatar_amostra(amostra)))
-    print(f"Ouvindo HTTP na porta {srv.porta_real}. Teclas: l liga o LED 2, d apaga, q sai.")
+    print(f"Ouvindo HTTP na porta {srv.porta_real}. Teclas: l liga o LED1, d apaga, q sai.")
 
     threading.Thread(target=srv.servir_para_sempre, daemon=True).start()
 

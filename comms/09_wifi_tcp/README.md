@@ -28,8 +28,9 @@ host (ver `tools/README.md`).
 | **PC** | roda `tools/wifi_server.py` e a rede Wi-Fi da sala |
 
 Com o shield acoplado, `sw3` some do overlay nesta versão do SDK: o botão do lab é o
-`sw0`, e o LED comandado pelo servidor é o `led1` (alias do devicetree — **LED 2** na
-serigrafia da placa).
+`sw0`, e o LED comandado pelo servidor é o `led1` (alias do devicetree — **LED1** na
+serigrafia da placa; a nRF54LM20-DK numera os LEDs a partir de 0, igual à devicetree,
+sem deslocamento).
 
 ## Configuração — duas credenciais, dois fragmentos
 
@@ -81,7 +82,7 @@ pip install -r requirements.txt   # só pytest, para os testes
 python wifi_server.py --porta 9000
 ```
 
-Imprime cada amostra numa linha alinhada e lê o teclado: `l` liga o LED 2, `d` apaga,
+Imprime cada amostra numa linha alinhada e lê o teclado: `l` liga o LED1, `d` apaga,
 `q` sai. A classe `Servidor` (`porta`, `ao_receber`) é o que os testes exercitam sem
 hardware: `porta=0` deixa o SO escolher uma porta livre e `porta_real` devolve a
 efetiva, o que torna o teste determinístico; `ao_receber` é chamado com o dicionário de
@@ -107,7 +108,7 @@ saudável só porque está mais espaçada que o limite de leitura.
 1. **O botão.** Apertar o `sw0` manda uma amostra imediata, fora do intervalo
    periódico, com `"botao":true` — dá para ver no servidor sem esperar o próximo tick.
 2. **O comando de LED.** Teclar `l` no servidor manda a linha `LED 1`; o firmware
-   (`thread_recepcao()`) lê essa linha do transporte e acende o **LED 2**. `d` manda
+   (`thread_recepcao()`) lê essa linha do transporte e acende o **LED1**. `d` manda
    `LED 0` e apaga.
 3. **A queda de conexão.** Afastar o kit até a conexão cair (e voltar) mostra o
    `seq` pulando — um buraco na sequência — porque as amostras enviadas durante a
@@ -136,7 +137,7 @@ Resumo de memória:
 
 | Região | Usado | Região total | % usado |
 |---|---|---|---|
-| FLASH | 555512 B | 2036 KB | 26,64% |
+| FLASH | 555508 B | 2036 KB | 26,64% |
 | RAM | 191952 B | 511 KB | 36,68% |
 
 ## Testes automáticos (PC, sem hardware)
@@ -165,7 +166,7 @@ tempo limite de leitura, com um limite pequeno passado só para o teste.
 3. Conferir: amostras chegando a cada `CONFIG_LAB_INTERVALO_MS` (padrão 2 s), `seq`
    incrementando.
 4. Apertar o **botão 1** (`sw0`) → amostra imediata, com `"botao":true`.
-5. Teclar `l` no servidor → **LED 2** acende; `d` → apaga.
+5. Teclar `l` no servidor → **LED1** acende; `d` → apaga.
 6. Andar com o kit até a conexão cair e voltar → **buraco no `seq`**, o ponto do lab.
 7. Encostar o dedo no chip → `temp_c` sobe.
 8. **Fechar a travessia C↔Python na mão** (o teste automático que provaria isso está

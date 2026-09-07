@@ -10,7 +10,7 @@ payload do lab 9 (payload_ref.py) -- so o transporte muda.
 Uso:
     python wifi_mqtt_sub.py --host localhost --porta 1883 --topico nrf-manaus/telemetria
 
-Teclas depois de subir: 'l' liga o LED 2 (led1 no firmware), 'd' desliga,
+Teclas depois de subir: 'l' liga o LED1 (led1 no firmware), 'd' desliga,
 'q' sai.
 """
 from __future__ import annotations
@@ -123,7 +123,7 @@ def main() -> None:
         sys.exit(1)
 
     print(f"Assinando '{args.topico}' em {args.host}:{args.porta}. "
-          f"Comandos em '{assinante.topico_comando}'. Teclas: l liga o LED 2, d apaga, q sai.")
+          f"Comandos em '{assinante.topico_comando}'. Teclas: l liga o LED1, d apaga, q sai.")
 
     try:
         while True:

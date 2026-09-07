@@ -207,7 +207,7 @@ python wifi_http_server.py --porta 8000
 `POST /telemetria` imprime a amostra; `GET /comando` devolve o comando
 pendente (`200`, corpo `LED 1` ou `LED 0`) ou `204` se não houver nenhum —
 consumido na hora (o mesmo comando não aparece de novo no próximo `GET`).
-Teclas: `l` liga o LED 2, `d` apaga, `q` sai. A classe `ServidorHTTP`
+Teclas: `l` liga o LED1, `d` apaga, `q` sai. A classe `ServidorHTTP`
 (`porta`, `ao_receber`) é o que os testes exercitam sem hardware, mesmo
 padrão do `Servidor` do lab 9: `porta=0` deixa o SO escolher a porta,
 `porta_real` devolve a efetiva.
@@ -298,7 +298,7 @@ python -m pytest -q
    - `build_MQTT` → mosquitto na porta 1883, depois
      `python tools/wifi_mqtt_sub.py --porta 1883`
 2. Em cada uma, conferir os três gestos já validados no lab 9 (botão →
-   amostra imediata com `"botao":true`; tecla `l`/`d` no servidor → LED 2
+   amostra imediata com `"botao":true`; tecla `l`/`d` no servidor → LED1
    acende/apaga; queda de conexão → reconecta sozinho) — o firmware e o
    comportamento de reconexão são os mesmos, só o transporte muda.
 3. Capturar com Wireshark ou `tcpdump` no PC durante uma amostra de cada
