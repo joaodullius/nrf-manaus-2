@@ -19,7 +19,8 @@ A frente divide as 10h dos dias 3–4 com Channel Sounding (já entregue, ~3h), 
 **O tamanho final é decisão do instrutor, tomada depois da bancada.** Os oito labs serão
 escritos e medidos; o corte acontece com tempo real na mão, não com estimativa. Somados dão
 ~5h contra as ~3h que caberiam à frente hoje — logo, alguma coisa sai, e a spec não decide o
-quê. Cada lab traz seu tempo medido em §4 quando a validação (§8) fechar.
+quê. Os tempos medidos de cada lab ficam em `comms/TEMPOS_WIFI.md`, fora desta spec, porque
+são número de bancada e mudam a cada medição.
 
 Decisões de escopo tomadas no brainstorming:
 
@@ -258,17 +259,19 @@ A rede da sala não foi definida, então cada lab declara do que depende:
 
 | Lab | Depende de | Plano B |
 |---|---|---|
-| 6, 7 | um AP qualquer | SoftAP da própria DK |
+| 6, 7 | um AP qualquer | hotspot do celular ou do PC (ver nota) |
 | 8 | nada | é o próprio AP |
 | 9, 10 | AP + PC na mesma rede | hotspot do celular ou do PC (ver nota) |
 | 11 (TWT) | **AP Wi-Fi 6 com TWT** | **nenhum** — sem o AP, o lab não roda |
-| 12 (coex) | um AP qualquer + um par BLE | SoftAP + o TAG do CS como par |
+| 12 (coex) | um AP qualquer + um par BLE | hotspot (ver nota) + o TAG do CS como par |
 | 13 (location) | scan de APs; **internet no PC** | nenhum para a internet do PC; o kit não precisa |
 
-**Nota sobre o plano B dos labs 9 e 10 — correcao de uma afirmacao errada desta spec.** A
-versao anterior desta tabela dizia que o plano B era o PC se conectar ao SoftAP da propria DK.
-Isso nao funciona: o firmware desses labs e **estacao**, nao ponto de acesso, e nao ha build de
-SoftAP para eles. Fazer valer exigiria uma variante a mais de firmware, que nao esta no plano.
+**Nota sobre o plano B — correcao de uma afirmacao errada desta spec.** A versao anterior desta
+tabela dizia, para varios labs, que o plano B era o PC se conectar ao SoftAP da propria DK.
+Isso nao funciona: o firmware de todos esses labs e **estacao**, nao ponto de acesso, e nao ha
+build de SoftAP para eles. O unico lab que sobe um SoftAP e o 8, e ali isso e o proprio
+exercicio. Fazer valer o plano B antigo exigiria uma variante a mais de firmware por lab, que
+nao esta no plano.
 
 O plano B real e mais simples e nao custa codigo: subir um hotspot — celular do instrutor ou
 compartilhamento de conexao do proprio PC —, conectar o PC e a DK nele, e apontar
@@ -287,9 +290,9 @@ SDK com cabeçalho `ORIGEM:` e cada divergência marcada `ALTERADO PELO CURSO (n
 Cópias de `LICENSE` junto. O `common_pb2.py` gerado pelo `protoc` **não** é versionado — o
 aluno gera (decisão do instrutor: `protoc` nos pré-requisitos).
 
-## 4. Os cinco labs
+## 4. Os oito labs
 
-Numerados na sequência da aula, continuando o módulo (`06`–`10`, depois dos cinco de CS).
+Numerados na sequência da aula, continuando o módulo (`06`–`13`, depois dos cinco de CS).
 
 | # | Pasta | Base | Kit | Súmula |
 |---|---|---|---|---|
@@ -342,7 +345,7 @@ Divergência do curso: nenhuma no firmware; o README traz o roteiro do `protoc` 
 - `sw0` pressionado → evento sobe na hora;
 - comando do servidor → LED 1 acende/apaga.
 
-No PC, `tools/wifi_server.py` — servidor TCP de ~40 linhas que imprime cada linha recebida e
+No PC, `tools/wifi_server.py` — servidor TCP curto que imprime cada linha recebida e
 aceita um comando de teclado para mandar o LED. Mesmo papel do `cs_capture.py`/`cs_dash.py`:
 o aluno vê os dois lados.
 
@@ -403,7 +406,7 @@ escrita no README e demo do instrutor, se houver tempo.
 ### 5.1 `minha_rede.conf`
 
 Um fragmento por aluno, rastreado e vazio no repo, com `CONFIG_WIFI_CREDENTIALS_STATIC_SSID`
-e `..._PASSWORD`. Serve aos labs 7, 9 e 10. Nunca commitar credenciais reais — mesma regra do
+e `..._PASSWORD`. Serve aos labs 7, 9, 11, 12 e 13 (o 10 compila a partir do 09 e usa o fragmento dele). Nunca commitar credenciais reais — mesma regra do
 `meu_tag.conf`.
 
 ### 5.2 Build
@@ -694,7 +697,8 @@ fonte, e **nunca** entram numa tabela nossa como se fossem medição da bancada.
 
 ## 8. Validação pendente
 
-Nada aqui foi rodado em hardware ainda, além do build de fumaça do §2.1.
+Lista viva: o que está riscado foi fechado na bancada em 2026-09-06 e o que sobra depende de
+gente na sala, de hardware que ainda não chegou, ou de uma decisão do instrutor.
 
 1. ~~**Console na `uart30`**~~ — **fechado em 2026-09-06.** Console na `uart30`, primeira
    VCOM; sem shield fica na `uart20`, segunda VCOM. Medido nas duas condições. Ver §2.3.
@@ -709,14 +713,19 @@ Nada aqui foi rodado em hardware ainda, além do build de fumaça do §2.1.
    mede o SoC em P14; a EB II mede o companion em P10 (VBAT) ou P4 (IOVDD), e **exige cortar o
    solder bridge SB10**. Ver §7.2. Fica **pendente de decisao do instrutor** qual das tres
    saidas adotar.
-4. **`provisioning/softap` na variante B** — `platform_allow` lista, mas `boards/` só tem
-   `.conf` da variante A. Compila? Precisa de um `.conf` novo?
+4. ~~**`provisioning/softap` na variante B**~~ — **fechado em 2026-09-06.** Compila e roda na
+   variante B; o lab 8 traz o que foi preciso. Ver `comms/08_wifi_provisioning/`.
 5. **Fluxo completo do `provision.py`** — `protoc`, certificado, `/prov/networks`,
-   `/prov/configure`, e a DK associando depois.
-6. **RAM com MQTT** — o `sta` sozinho já usa 36% de 511 KB. Medir os três transportes.
-7. **Botões e LEDs com o shield** — confirmar `sw0`–`sw2` e os quatro LEDs; confirmar que
-   `sw3` sumiu.
-8. **Temperatura do die** — o sensor está habilitado no board; confirmar leitura plausível.
+   `/prov/configure`, e a DK associando depois. Fechado até o SoftAP no ar com DHCP; falta o
+   fluxo do PC, que exige tirar a máquina da rede e entrar no `nrf-wifiprov`.
+6. ~~**RAM com MQTT**~~ — **fechado em 2026-09-06.** Os três transportes medidos; as tabelas
+   estão nos READMEs dos labs 9 e 10.
+7. ~~**Botões e LEDs com o shield**~~ — **fechado em 2026-09-06**, com uma ressalva: os LEDs
+   foram confirmados na placa (numeração da serigrafia começa em **LED0**, igual à
+   devicetree) e o `sw0` ainda não foi apertado por ninguém — só o caminho de código foi
+   revisado.
+8. ~~**Temperatura do die**~~ — **fechado em 2026-09-06.** Leitura plausível, e é o campo
+   `temp_c` do payload do lab 9.
 9. **Plano B por hotspot** — PC e kit associados a um hotspot, e o TCP funcionando sem a
    infraestrutura da sala.
 10. **TWT — o teste de cinco minutos, a fazer no dia em que o EX3000 chegar.** Decide se o lab
@@ -732,9 +741,12 @@ Nada aqui foi rodado em hardware ainda, além do build de fumaça do §2.1.
    broadcast não é suportado nesta release. Depois disso, medir corrente com e sem TWT no PPK2.
 11. **Coexistência** — compilar com o shield duplo, medir throughput dos dois rádios com o
    mecanismo ligado e desligado, e confirmar que o TAG serve como par BLE.
-12. **Locationing** — quantos APs a DK enxerga na sala, resposta da API do nRF Cloud, e erro
-    contra a posição real.
-13. **Tempo de cada lab** — cronometrar os oito. É o número que decide o corte (§1).
+12. **Locationing** — fechado em 2026-09-06 no essencial: 21 APs vistos, 16 usados, posição
+    devolvida pela API do nRF Cloud com 13,4 m de incerteza, ~15 s do reset à coordenada.
+    Falta só o **erro contra a posição real**, que é julgamento do instrutor.
+13. **Tempo de cada lab** — cronometrado o que rodou na bancada, em `comms/TEMPOS_WIFI.md`.
+    Falta o tempo de sala dos labs que dependem de gente (8, 11, 12). É o número que decide o
+    corte (§1).
 
 ## 9. Fora de escopo
 
