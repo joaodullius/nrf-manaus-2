@@ -288,6 +288,72 @@ TWT é um acordo, não um recurso automático do driver.
 | TWT ligado | `wifi twt quick_setup <wake_us> <interval_us>` | pendente — depende do AP |
 | TWT desligado (volta a DTIM) | `wifi twt teardown_all` | pendente — depende do AP |
 
+### Se aparecer um AP com TWT no curso — receita pronta, não testada
+
+**Decisão do instrutor (2026-09-07): o EX3000 foi descartado** e a Parte B não será
+ensaiada antes do curso. O que segue está pronto para ser executado se algum AP com TWT
+aparecer em sala — mas **nada aqui foi verificado nesta bancada**, e é preciso dizer isso
+à turma se for demonstrado ao vivo.
+
+Sequência mínima, com o firmware deste lab já gravado e associado ao AP:
+
+```
+wifi status                       # confirmar: TWT: Supported (na nossa ONT dá Not supported)
+wifi ps                           # anotar o estado de partida
+wifi twt quick_setup 65024 524288 # acorda ~65 ms a cada ~524 ms
+wifi ps                           # deve listar um TWT flow
+...medir 60 s com o PPK2...
+wifi twt teardown_all             # volta ao DTIM
+```
+
+Para o intervalo de 1 minuto, que é o ponto de comparação com o datasheet:
+
+```
+wifi twt quick_setup 8192 60000000    # 8,192 ms acordado, 60 s de intervalo
+```
+
+O `8192 µs` não é arbitrário: é a duração mínima de despertar que o datasheet do nRF7002
+usa na medida de TWT, e a documentação da Nordic recomenda **não descer abaixo de 8 ms**,
+sob pena de perder dados.
+
+### O que essa medida precisaria mostrar — e o que ela NÃO vai resolver
+
+A Parte A já mediu tudo que dá para medir sem TWT, e isso define o que esperar:
+
+| | medido nesta bancada | TWT (datasheet, 1 min) |
+|---|---|---|
+| Melhor corrente sem TWT | **31 µA** (listen interval 600, ~72 s de sono) | 29,5 µA |
+| Downlink nesse regime | **morto** — 1 ping em 481 | também perdido (ver abaixo) |
+
+**A surpresa da Parte A: em corrente, o TWT praticamente empata com o listen interval.**
+Se a demonstração ao vivo der ~30 µA, ela terá confirmado o datasheet — e mostrado que o
+ganho de energia **não** é o argumento do TWT.
+
+E há uma expectativa que precisa ser corrigida antes de virar slide: **o TWT não vai fazer
+o ping voltar a funcionar.** A documentação da Nordic é explícita — o AP *"may buffer
+traffic until the next interval **if sleep duration is in the order of 100 ms**"*, mas
+*"**it will not buffer** the device data if the sleep duration is in the order of minutes,
+and data will be lost"*. Com TWT de 1 minuto o dispositivo fica tão inalcançável quanto
+ficou com o listen interval 600.
+
+### Então qual é o argumento do TWT
+
+**Determinismo, não economia.** No listen interval a estação avisa de quantos em quantos
+beacons vai acordar, e pronto: ao acordar, **disputa o meio** com todas as outras estações
+que acordaram no mesmo beacon. No TWT o AP **concorda com um horário** e reserva a *service
+period* — manda *trigger frames*, aloca os Resource Units. O despertar passa a ter duração
+acordada (8 a 256 ms) em vez de variável.
+
+Isso aparece nos nossos números: os despertares de listen interval medidos aqui duraram
+**24 a 86 ms**, irregulares, porque o rádio espera a vez. A duração de despertar do TWT é
+escolhida, não sofrida.
+
+E é por isso que a vantagem **cresce com o número de dispositivos** — e quase não apareceu
+nesta bancada, com um kit só numa rede doméstica quieta. Numa sala com vários kits, ou numa
+fábrica, apareceria. Se a demonstração for feita com um dispositivo só, esse é o limite a
+declarar.
+
+
 ## Números da Nordic — ordem de grandeza, nunca na nossa tabela
 
 A Nordic publica, para o **nRF7002 DK com host nRF5340** — não a nossa combinação
