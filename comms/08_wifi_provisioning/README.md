@@ -22,9 +22,9 @@ conectado a essa rede temporária.
 
 > **Origem.** Cópia integral de `nrf/samples/wifi/provisioning/softap` do **nRF
 > Connect SDK v3.4.0**. Licença Nordic preservada em [LICENSE](LICENSE). `prj.conf`,
-> `CMakeLists.txt` e `src/main.c` levam o cabeçalho `ORIGEM:` do curso; nenhum dos
-> três diverge do SDK. O `README.rst` original do sample não foi trazido — este
-> `README.md` substitui.
+> `CMakeLists.txt`, `src/main.c` e `scripts/provision.py` levam o cabeçalho
+> `ORIGEM:` do curso; nenhum dos quatro diverge do SDK. O `README.rst` original do
+> sample não foi trazido — este `README.md` substitui.
 
 ## Hardware
 
@@ -109,15 +109,22 @@ provisionamento típico onde o usuário digita o SSID de cabeça, aqui a DK já 
 banda, canal e modo de autenticação de cada uma. O aluno escolhe de uma lista real,
 não digita um SSID de memória.
 
-LEDs: LED1 acende quando a DK entra em modo AP (provisionamento em andamento); LED2
-acende quando a DK conecta na rede provisionada.
+LEDs: o `src/main.c` acende `DK_LED1` ao entrar em modo AP (provisionamento em
+andamento) e `DK_LED2` ao conectar na rede provisionada. Esses são os nomes dos
+macros da biblioteca `dk_buttons_and_leds`, não o número físico do LED — a
+biblioteca varre os filhos do nó `leds` do devicetree em ordem, então `DK_LED1` é
+o primeiro da lista (`led0`, rotulado `Green LED 0`) e `DK_LED2` é o segundo
+(`led1`, `Green LED 1`). Na serigrafia da nRF54LM20-DK, que numera a partir de 0
+igual ao devicetree, isso é **LED0** (modo AP) e **LED1** (conectado) — sem
+deslocamento na placa, só entre o nome do macro e o índice que ele usa.
 
 ## O certificado de servidor
 
 O provisionamento roda HTTPS na porta 443, então o firmware precisa de um
 certificado de servidor. O sample traz um autoassinado de desenvolvimento,
-registrado em tempo de boot — o log mostra `Registering self-signed server
-certificate` logo na inicialização.
+registrado **no boot, antes de qualquer rede subir** — o log mostra
+`Registering self-signed server certificate` logo na inicialização, medido nesta
+bancada em ~0,03 s (ver a tabela do Passo 3).
 
 O certificado embutido em `certs/server_certificate.pem` tem `CN=wifiprov.local`,
 Subject Alternative Name `DNS:wifiprov.local` e `DNS:*.wifiprov.local`, válido de
@@ -164,20 +171,51 @@ do SDK, não código do curso.
 
 ## Passo 3 — bancada: o fluxo completo
 
-> **A confirmar na bancada.**
+> **Parcialmente confirmado na bancada** — o boot até o SoftAP no ar foi medido; o
+> fluxo do `provision.py` e a confirmação externa de que o SoftAP está no ar ainda
+> faltam (motivos abaixo).
 
-Checklist para a rodada de bancada, na UART correta (aviso no topo deste README —
-primeira VCOM com o shield acoplado):
+Medido nesta bancada, no console (primeira VCOM, mesmo comportamento dos labs 6 e
+7 — aviso no topo deste README):
 
-- [ ] Gravar o firmware e abrir o console. Confirmar `Provisioning started` e o
-      servidor DHCP subindo (a DK já está em modo AP, com o SSID `nrf-wifiprov`).
-- [ ] No notebook, conectar na rede Wi-Fi `nrf-wifiprov`.
+| t (s) | evento |
+|---|---|
+| 0,0 | SPI do nRF7002 sobe; armazenamento de credenciais (`fs_zms`) montado |
+| 0,03 | `Registering self-signed server certificate` — certificado registrado no boot |
+| 0,08 | `Network interface brought up` |
+| 0,09 | `Waiting for IPv4 HTTP connections on port 443` — servidor HTTPS já escutando |
+| 0,10 | `Scanning for Wi-Fi networks...` |
+| 4,7 | `NET_EVENT_WIFI_SCAN_DONE` — a varredura levou **~4,6 s** |
+| 4,8 | `Protobuf payload prepared, scan results encoded, size: 194` — o log diz **protobuf** com todas as letras, no payload de 194 bytes que vira a lista de redes |
+| 5,6 | `NET_EVENT_WIFI_AP_ENABLE_RESULT`, `Provisioning started` — SoftAP no ar |
+| 5,7 | servidor DHCPv4 no ar |
+
+Do boot até o SoftAP no ar: **~5,6 s** (publicado em `comms/TEMPOS_WIFI.md`). SSID
+confirmado na `.config` gerada: `CONFIG_SOFTAP_WIFI_PROVISION_SSID="nrf-wifiprov"`.
+Pré-requisitos do PC também conferidos nesta bancada: `protoc` 25.3 e o módulo
+Python `protobuf` (7.35.0) presentes.
+
+**O que ainda falta, e por quê:**
+
+- **O fluxo completo do `provision.py`.** Exige tirar o PC da rede atual e entrar
+  no SoftAP `nrf-wifiprov`, o que derrubaria a máquina no meio da sessão de
+  bancada — fica para a sala, com o roteiro abaixo.
+- **A confirmação externa de que o SoftAP está no ar.** Ficou **inconclusiva, não
+  negativa**: o adaptador Wi-Fi do PC, enquanto conectado a outra rede, só reporta
+  essa rede no `netsh wlan show networks`, mesmo com `mode=bssid` — não dá para
+  concluir daí que o `nrf-wifiprov` não esteja no ar. Do lado da DK a evidência é
+  forte (`AP_ENABLE_RESULT`, `Provisioning started`, servidor DHCP iniciado).
+
+Checklist para fechar esses dois pontos, na UART correta:
+
+- [ ] Conectar o notebook na rede Wi-Fi `nrf-wifiprov` (fecha o item que ficou
+      inconclusivo nesta bancada — confirma de fato que o SoftAP está visível).
 - [ ] Rodar `python provision.py --certificate ../certs/server_certificate.pem`.
 - [ ] Conferir que o script **lista as redes que a DK viu** (SSID, RSSI, banda,
       canal, tipo de autenticação) — não uma lista digitada pelo usuário.
 - [ ] Escolher a rede da sala na lista e digitar a senha (rede WPA2-PSK, sem WPA3).
 - [ ] Confirmar no console da DK que ela recebeu a credencial, saiu do modo AP e
-      associou na rede da sala (LED2 acende; `net_mgmt` reporta a conexão).
+      associou na rede da sala (LED1 acende; `net_mgmt` reporta a conexão).
 
 Anotar cada saída observada (mensagens do console, conteúdo da listagem do
 `provision.py`, IP obtido) na próxima rodada deste README.
@@ -213,3 +251,10 @@ Anotar cada saída observada (mensagens do console, conteúdo da listagem do
 - Medição local, 2026-09-06 — `openssl x509` sobre `certs/server_certificate.pem`:
   `CN=wifiprov.local`, SAN `DNS:wifiprov.local`/`DNS:*.wifiprov.local`, validade
   22/mai/2024–20/mai/2034, chave EC `prime256v1`
+- Medição de bancada, 2026-09-06 — nRF54LM20-DK var. B com nRF7002 EB-II: log do
+  boot até o SoftAP no ar, `protoc` e módulo `protobuf` do Python conferidos no
+  PC; tempo total publicado em `comms/TEMPOS_WIFI.md`
+- `zephyr/boards/nordic/nrf54lm20dk/nrf54lm20dk_common.dtsi` e
+  `nrf/lib/dk_buttons_and_leds/dk_buttons_and_leds.c` — numeração física dos LEDs
+  (`Green LED 0`..`3`) e como os macros `DK_LED1`/`DK_LED2` mapeiam para os
+  índices 0/1 dessa lista
