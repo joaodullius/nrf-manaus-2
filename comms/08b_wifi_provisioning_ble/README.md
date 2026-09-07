@@ -232,6 +232,64 @@ a confirmação depende de resolver `wifiprov.local` por mDNS, e o kit não resp
 depois de virar estação; aqui o link GATT continua aberto e o app confirma pelo mesmo canal,
 sem depender de descoberta na rede.
 
+### 8a e 8b lado a lado — o que é o mesmo hardware e o que muda
+
+Os dois labs rodam **na mesma placa, com o mesmo shield**. A diferença de hardware é uma só,
+e é grande: **o 8b acende um rádio que o 8a deixa apagado.**
+
+| Bloco de hardware | 8a (SoftAP) | 8b (BLE) |
+|---|---|---|
+| nRF54LM20 — rádio 2,4 GHz **interno** | **desligado** | **ligado** (BLE, SoftDevice Controller) |
+| Antena 2,4 GHz da DK | ociosa | irradiando |
+| nRF7002 (EB II) | Wi-Fi em modo **AP** | Wi-Fi em modo **estação** |
+| Antena do nRF7002 | irradiando | irradiando |
+| SPI host ↔ nRF7002 | igual | igual |
+| Flash interna (credencial) | igual | igual |
+
+**No 8b há dois rádios transmitindo em 2,4 GHz dentro do mesmo kit** — o BLE do LM20 e o
+Wi-Fi do nRF7002. É a primeira vez que isso acontece no módulo, e é exatamente o assunto do
+**lab 12 (coexistência)**.
+
+Isso aparece na configuração compilada, e o número foi conferido nos dois binários:
+
+| Opção | 8a | 8b | O que significa |
+|---|---|---|---|
+| `CONFIG_NANOPB` | ✅ | ✅ | **protobuf nos dois** — é o mesmo `wifi_prov_core`, o mesmo protocolo |
+| `CONFIG_WIFI_CREDENTIALS`, `CONFIG_SETTINGS` | ✅ | ✅ | onde a credencial é guardada: igual |
+| `CONFIG_NET_DHCPV4` (cliente) | ✅ | ✅ | os dois terminam como estação pedindo IP |
+| `CONFIG_NRF70_AP_MODE`, `..._WPA_SUPPLICANT_AP` | ✅ | — | só o 8a vira ponto de acesso |
+| `CONFIG_NET_DHCPV4_SERVER` | ✅ | — | **só o 8a distribui IP** — ele é o AP da rede temporária |
+| `CONFIG_MBEDTLS`, `..._SOCKOPT_TLS`, `CONFIG_TLS_CREDENTIALS` | ✅ | — | a pilha TLS inteira só existe no 8a |
+| `CONFIG_MDNS_RESPONDER` | ✅ | — | o nome `wifiprov.local` só existe no 8a |
+| `CONFIG_HTTP_PARSER` | ✅ | — | o 8b não fala HTTP |
+| `CONFIG_BT`, `CONFIG_BT_SMP`, `CONFIG_BT_PERIPHERAL` | — | ✅ | a pilha Bluetooth só existe no 8b |
+| **`CONFIG_NRF70_SR_COEX`** | — | ✅ | **o árbitro de coexistência entra sozinho** quando há Bluetooth no binário |
+| `CONFIG_NRF70_SR_COEX_RF_SWITCH` | — | — | **desligado nos dois** — ver abaixo |
+
+Repare na última linha, e no aviso que todo build deste lab emite:
+
+```
+warning: NRF70_SR_COEX_RF_SWITCH ... was assigned the value 'y' but got the value 'n'
+```
+
+Não é erro. A opção depende de `srrf-switch-gpios` no nó `nrf70`, e **o overlay da EB-II
+nesta placa não declara esses pinos**. Então o 8b roda com o árbitro de coexistência
+compilado, mas **sem a chave de RF em hardware** — os dois rádios convivem sem esse recurso.
+É por isso que o lab 12 precisa **medir** o efeito da coexistência em vez de assumi-lo.
+
+### O custo dos dois transportes, medido
+
+| Lab | Transporte | FLASH | RAM |
+|---|---|---|---|
+| 8a | SoftAP + HTTPS + protobuf | 728140 B (34,93%) | 271813 B (51,95%) |
+| 8b | BLE GATT + protobuf | **678024 B (32,52%)** | **320304 B (61,21%)** |
+
+**O 8b gasta menos FLASH e mais RAM.** Isso contraria o argumento com que a Nordic
+apresentou o SoftAP — *"evita incluir a pilha Bluetooth só para a fase de provisionamento"*:
+nesta montagem a pilha BLE saiu **50 KB mais barata em flash** que SoftAP + servidor HTTPS +
+TLS, e custou **48 KB a mais de RAM**. O argumento não está errado como princípio; ele
+simplesmente não se sustenta neste par de configurações, e a única forma de saber era medir.
+
 ### O que persiste e o que não persiste
 
 Note o `bonded: 0` com `level 2`: houve pareamento **com criptografia**, mas o `prj.conf`
