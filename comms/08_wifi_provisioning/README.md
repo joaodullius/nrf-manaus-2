@@ -310,6 +310,71 @@ Checklist para fechar esses dois pontos, na UART correta:
 Anotar cada saída observada (mensagens do console, conteúdo da listagem do
 `provision.py`, IP obtido) na próxima rodada deste README.
 
+## Sugestão de expansão — e por que este lab não é um formulário web
+
+A pergunta aparece sempre: *por que não uma página no navegador, o aluno digita SSID e
+senha e pronto?* Vale explicitar a diferença, porque ela ensina mais que a resposta.
+
+### O que este lab faz
+
+O kit expõe uma **API máquina-a-máquina**: dois recursos HTTPS que trocam **protobuf**
+(`/prov/networks` e `/prov/configure`), com TLS autenticado por um certificado ligado ao
+hostname. Não há HTML em lugar nenhum — o "cliente" é o app da Nordic ou o
+`provision.py`. É o desenho de um **produto**: o app do fabricante fala um protocolo
+binário, versionável e compacto, sobre um canal autenticado.
+
+### O que seria um provisionamento por navegador
+
+O kit serviria uma **página HTML** com um formulário; o aluno digitaria SSID e senha e
+enviaria um `POST` comum (`application/x-www-form-urlencoded`); o firmware guardaria a
+credencial, derrubaria o SoftAP e conectaria como estação. Sem app, sem script, sem
+`protoc`.
+
+### O que já existe no SDK, e o que não existe
+
+| Peça | Situação no NCS v3.4.0 (Zephyr 4.4) |
+|---|---|
+| Servidor HTTP com HTML estático embutido | **existe** — `CONFIG_HTTP_SERVER`, com exemplo em `zephyr/samples/net/sockets/http_server` (o `index.html` é comprimido em build e incluído como array) |
+| SoftAP + servidor DHCP | **existe** — é o que este lab já usa |
+| Guardar credencial | **existe** — `wifi_credentials_set_personal()` |
+| Sample que junte HTTP server **com** SoftAP | **não existe** |
+| Provisionamento por página web / captive portal | **não existe** — a palavra "captive" não aparece no SDK |
+| **Servidor DNS** | **não existe** — há só cliente DNS, mDNS e LLMNR |
+
+### O que teria de mudar, e o que ficaria para investigar
+
+- **Trocar protobuf por formulário.** Um recurso `GET /` devolvendo HTML e um `POST` que
+  entenda `ssid=...&senha=...` (com *percent-decode*), chamando o mesmo
+  `wifi_credentials_set_personal()`.
+- **Trocar HTTPS por HTTP.** O certificado autoassinado faz o navegador barrar, e dentro
+  da mini-janela de portal do celular o erro de TLS costuma não ser contornável. Preço a
+  declarar em aula: **a senha passaria em claro na camada de aplicação** — mitigável
+  pondo senha no próprio SoftAP (WPA2), que cifra o enlace.
+- **Sem DNS, não há captive portal de verdade.** Android e iOS decidem "esta rede tem
+  internet?" buscando uma URL fixa; sem sequestrar DNS, a janelinha não abre sozinha e o
+  aluno digita `http://192.168.0.1` na mão. Escrever um respondedor DNS mínimo é
+  possível, mas é código novo.
+- **`wifiprov.local` não ajuda no Android**, que não resolve `.local` no navegador.
+- **A investigar:** se o `http_server` do Zephyr sobe junto com o SoftAP nesta placa
+  (nenhum sample combina os dois), quanta RAM sobra depois do `wpa_supplicant` e do
+  mbedTLS, e como um navegador real se comporta — ele abre várias conexões em paralelo e
+  pede `/favicon.ico`, enquanto este sample atende **uma conexão por vez**.
+- **Caminho preferível, se for tentar:** *não* modificar a biblioteca
+  `softap_wifi_provision` (as funções que despacham URL são internas, sem ponto de
+  extensão — mexer nelas obriga a manter um fork a cada versão do SDK), e sim escrever um
+  app pequeno usando só API pública: `NET_REQUEST_WIFI_AP_ENABLE`, `CONFIG_HTTP_SERVER`,
+  `wifi_credentials_set_personal()` e `NET_REQUEST_WIFI_AP_DISABLE`.
+
+### Conclusão
+
+Fica como **sugestão de expansão**, não como tarefa. Para o tempo de um lab, o caminho
+atual entrega mais: protobuf e TLS são justamente o que se vê num produto real, e o
+navegador esconderia os dois. Um meio-termo barato, se o objetivo for só ver uma página
+servida pelo kit, é um lab **separado** com o `http_server` do Zephyr rodando sobre a
+rede **já provisionada** — mostra o servidor web embarcado sem nenhuma das armadilhas
+acima. Note, porém, que esse lab **não provisiona**: para abrir a página o kit já
+precisa estar na rede, ou seja, já teria a credencial.
+
 ## Pegadinhas
 
 - **A VCOM muda com o shield — não é sempre a mesma porta.** Ver o aviso no topo

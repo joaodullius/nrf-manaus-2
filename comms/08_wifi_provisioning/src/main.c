@@ -8,7 +8,12 @@
  * Para conferir se divergiu do SDK:
  *   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/wifi/provisioning/softap/src/main.c
  *
- * DIVERGENCIA DO CURSO: nenhuma.
+ * DIVERGENCIA DO CURSO: imprime o IP recebido da rede provisionada.
+ *   O sample original so loga "Network connected" e nunca mostra o endereco que o
+ *   kit pegou por DHCP -- para achar o kit na rede era preciso cacar o MAC na tabela
+ *   ARP do PC. Foi acrescentada uma assinatura de NET_EVENT_IPV4_DHCP_BOUND que
+ *   imprime "DHCP IP address: ...", o mesmo texto do lab 7. Procure por
+ *   "DIVERGENCIA DO CURSO" no corpo do arquivo para ver os dois trechos.
  */
 
 /*
@@ -48,6 +53,41 @@ LOG_MODULE_REGISTER(softap_wifi_provision_sample, CONFIG_SOFTAP_WIFI_PROVISION_S
 /* Callbacks for Zephyr NET management events. */
 static struct net_mgmt_event_callback l4_cb;
 static struct net_mgmt_event_callback conn_cb;
+
+/* DIVERGENCIA DO CURSO: o sample original nao imprime o IP que o kit recebe da rede
+ * provisionada -- ele so loga "Network connected". Sem o endereco, nao ha como falar
+ * com o kit depois de provisionado a nao ser cacando o MAC na tabela ARP do PC. O
+ * bloco abaixo assina NET_EVENT_IPV4_DHCP_BOUND e imprime o endereco, no mesmo
+ * formato do lab 7 ("DHCP IP address: ...") para os dois logs se lerem igual.
+ */
+static struct net_mgmt_event_callback dhcp_cb;
+
+static void print_dhcp_ip(struct net_mgmt_event_callback *cb)
+{
+	const struct net_if_dhcpv4 *dhcpv4 = cb->info;
+	const struct in_addr *addr = &dhcpv4->requested_ip;
+	char dhcp_info[128];
+
+	net_addr_ntop(AF_INET, addr, dhcp_info, sizeof(dhcp_info));
+
+	LOG_INF("DHCP IP address: %s", dhcp_info);
+}
+
+static void dhcp_event_handler(struct net_mgmt_event_callback *cb,
+			       uint64_t event,
+			       struct net_if *iface)
+{
+	ARG_UNUSED(iface);
+
+	switch (event) {
+	case NET_EVENT_IPV4_DHCP_BOUND:
+		print_dhcp_ip(cb);
+		break;
+	default:
+		/* Don't care */
+		return;
+	}
+}
 
 static void l4_event_handler(struct net_mgmt_event_callback *cb,
 			     uint64_t event,
@@ -280,6 +320,13 @@ int main(void)
 	/* Setup handler for Zephyr NET Connection Manager Connectivity layer. */
 	net_mgmt_init_event_callback(&conn_cb, connectivity_event_handler, CONN_LAYER_EVENT_MASK);
 	net_mgmt_add_event_callback(&conn_cb);
+
+	/* DIVERGENCIA DO CURSO: imprime o IP da rede provisionada. Registrado aqui junto
+	 * com os outros, isto e, depois do provisionamento, pelo mesmo motivo do
+	 * comentario acima.
+	 */
+	net_mgmt_init_event_callback(&dhcp_cb, dhcp_event_handler, NET_EVENT_IPV4_DHCP_BOUND);
+	net_mgmt_add_event_callback(&dhcp_cb);
 
 	ret = conn_mgr_all_if_connect(true);
 	if (ret) {
