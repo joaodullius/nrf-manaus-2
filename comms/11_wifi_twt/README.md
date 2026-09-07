@@ -171,7 +171,7 @@ não coube. Com 12 a 20 pings por regime, nenhuma das duas amostras decide a que
 **A leitura que sobrevive às duas corridas** — e é a que vai para o slide — é a razão
 entre os degraus, não o valor exato: **~10 ms → ~0,1 s → ~0,7 s → ~2 s**.
 
-![Economia de energia e latência são a mesma escolha](../../doc/comms/img/wifi_troca_energia_latencia.png)
+![Economia de energia e latência são a mesma escolha](wifi_troca_energia_latencia.png)
 
 A figura junta esta tabela com a corrente do Passo 2, e é a imagem que resume o lab: do
 regime sem economia ao listen interval 10, a **corrente cai ~45×** e a **latência sobe
@@ -277,7 +277,7 @@ Bancada de 2026-09-07: nRF54LM20-DK var. B + nRF7002-EB II, SB10 cortado, PPK2 e
 amperímetro no P10 (VIN no pad 3/P3V6, VOUT no pad 2/VBAT, GND no pad 1), firmware do
 **lab 6**, **22 s por regime**. AP Askey 802.11ax, beacon 100 ms, DTIM 3, sem TWT.
 
-![A escada de economia de energia, medida](../../doc/comms/img/wifi_escada_psm.png)
+![A escada de economia de energia, medida](wifi_escada_psm.png)
 
 | Regime | Corrente média | Mediana | Pico |
 |---|---|---|---|
@@ -353,7 +353,7 @@ solta que a hipótese não explica:** o pulso do listen interval em 2,4 GHz (24 
 
 ### Até onde o listen interval leva — e o que isso adianta da Parte B
 
-![Até onde o listen interval leva](../../doc/comms/img/wifi_li_longo.png)
+![Até onde o listen interval leva](wifi_li_longo.png)
 
 | Listen interval | Sono | Corrente média | Downlink |
 |---|---|---|---|
