@@ -28,6 +28,7 @@ Cada pasta de módulo tem um `README.md` com a lista de labs e instruções de b
 | 3 | Nordic nRF9151-SMA-DK | GNSS e Redes Não Terrestres (NTN) |
 | 2 | u-blox EVK-X20P | GNSS multi-banda de alta precisão (L1+L2+L5+L6) |
 | 6 | Microfone PDM MEMS | Lab de wake word e comandos de voz com NPU |
+| 1 | TP-Link EX3000 (AP Wi-Fi 6) | AP de referência com suporte a TWT, para a Parte B do lab de energia de Wi-Fi |
 
 ## Build rápido
 

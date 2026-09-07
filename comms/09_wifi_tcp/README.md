@@ -220,16 +220,31 @@ saída é a mesma: hotspot alternativo, PC e DK os dois nele.
 
 ## Pegadinhas
 
-- **O firewall do Windows bloqueia o servidor sem avisar ninguém.** Achado na bancada:
-  com `CONFIG_LAB_SERVIDOR_IP` e `CONFIG_LAB_PORTA` corretos, a conexão ainda falha com
+- **O firewall do Windows bloqueia o servidor sem avisar ninguém — e uma regra de
+  bloqueio por programa vence qualquer permissão por porta.** Achado na bancada: com
+  `CONFIG_LAB_SERVIDOR_IP` e `CONFIG_LAB_PORTA` corretos, a conexão ainda falha com
   `-116` (`ETIMEDOUT`) porque o Windows tem uma regra de bloqueio de entrada para o
   Python no perfil de rede Private. O sintoma engana dos dois lados: no PC,
   `wifi_server.py` fica ouvindo e nada chega, sem nenhum erro; no kit, o log do
   firmware aponta para `CONFIG_LAB_SERVIDOR_IP`/`CONFIG_LAB_PORTA` (a mensagem que
-  aparece depois de 5 tentativas), que já estavam certos. Conserto, em PowerShell como
-  administrador:
+  aparece depois de 5 tentativas), que já estavam certos. **Se o aluno já clicou em
+  "Cancelar" num daqueles diálogos de rede do Windows para o Python, alguma vez**,
+  fica registrada uma regra de bloqueio por programa (`Block`, perfil Private) — e
+  essa regra vence qualquer permissão criada só por porta; liberar a porta sozinho
+  não resolve nesse caso. Conserto completo, em PowerShell como administrador, em
+  dois comandos:
 
   ```powershell
+  # 1. remove as regras de bloqueio do Python (o "Cancelar" de alguma vez)
+  Get-NetFirewallRule -Action Block | Where-Object {
+      (Get-NetFirewallApplicationFilter -AssociatedNetFirewallRule $_).Program -like "*python*"
+  } | Remove-NetFirewallRule
+
+  # 2. libera a porta do lab, entrada, perfil Private
   New-NetFirewallRule -DisplayName "Lab 9 Wi-Fi TCP (curso nrf-manaus-2)" `
     -Direction Inbound -Action Allow -Protocol TCP -LocalPort 9000 -Profile Private
   ```
+
+  Os labs 10, 12 e 13 sofrem do mesmo bloqueio, cada um na sua porta: o primeiro
+  comando (remover o bloqueio do Python) só precisa rodar uma vez por PC; o segundo
+  (liberar a porta) se repete para cada porta nova.

@@ -158,6 +158,46 @@ Para compilar modelos TFLite → Axon **na nuvem**, use o próprio Edge AI Lab (
 - Rede Wi-Fi de teste em sala (2.4/5 GHz) e um endpoint TCP acessível — **desejável, não
   obrigatório**: os labs têm plano B com a própria DK em SoftAP, e o PC do aluno se conecta
   a ela. Wi-Fi corporativo com portal cativo ou WPA2-Enterprise não serve.
+- **`protoc`** e o pacote Python **`protobuf`**, para o lab 8 (provisionamento): o
+  cliente `provision.py` fala protobuf com a DK, e o schema (`common_pb2.py`) é gerado
+  localmente a partir do `.proto` do SDK — sem `protoc`, o script falha no `import`.
+- **`paho-mqtt`** (Python) e um broker **mosquitto** local, para o lab 10 (MQTT).
+- **`requests`** (Python), para o lab 13 (locationing) — é quem fala HTTPS com o nRF
+  Cloud.
+- **`iperf` versão 2.0.5**, para o lab 12 (coexistência). **O `iperf3` não serve** — o
+  gerador de tráfego (`zperf`) do Zephyr fala o protocolo do iperf 2, não o 3.
+- **PPK2** (Power Profiler Kit II), para o lab 11 (energia) — mesmo instrumento do
+  módulo Edge AI, agora medindo o companion Wi-Fi na própria EB II (não no jumper de
+  corrente da DK).
+- **Um AP com TWT** (TP-Link EX3000, ou equivalente) como referência para a Parte B do
+  lab 11 — o AP da bancada de preparação é 802.11ax confirmado, mas não é TWT capable.
+- **Um segundo dispositivo Bluetooth LE** gravado com `nrf/samples/bluetooth/
+  throughput` (o papel, central ou periférico, é escolhido por botão no próprio
+  sample), para o lab 12 (coexistência) — o par do central BLE deste lab. O candidato
+  natural é o nRF54L15-TAG do módulo de Channel Sounding.
+
+### Firewall do Windows — bloqueia os servidores Python dos labs Wi-Fi por padrão
+
+Os labs 9, 10, 12 e 13 sobem um servidor Python no PC (TCP, HTTP, ou o broker
+mosquitto) que a DK precisa alcançar pela rede. O firewall do Windows bloqueia essa
+entrada por padrão em rede classificada como Private, e o sintoma não avisa ninguém:
+o servidor fica ouvindo e nada chega, sem erro nenhum. Pior — se o aluno já tiver
+clicado em "Cancelar" num diálogo de rede do Windows para o Python alguma vez, fica
+registrada uma regra de **bloqueio por programa** que **vence qualquer permissão
+criada só por porta**. O conserto completo (dois comandos em PowerShell como
+administrador: remover as regras de bloqueio do Python e liberar a porta do lab) está
+em `comms/09_wifi_tcp/README.md`, seção "Pegadinhas" — resolva lá, testando com o
+próprio lab 9, antes do curso.
+
+### Conta nRF Cloud, para o lab 13 (locationing)
+
+Crie uma conta e um projeto no [nRF Cloud](https://nrfcloud.com/) e gere um
+**Organization Auth Token** (OAT) em **Project Settings** — não é a API key comum da
+conta: a API key devolve `401 Auth token is malformed` nos serviços de localização
+(Location Services). Anote também os identificadores de **organização** (Organization
+Slug) e de **projeto** (Project Slug), em **Project Settings → General** — o
+`tools/wifi_locate.py` do lab precisa dos três. **Localização é um serviço cobrado por
+chamada** — não gaste chamadas de teste sem necessidade.
 
 ### Blobs de firmware do nRF70 — passo obrigatório, uma vez por instalação do SDK
 
