@@ -171,6 +171,25 @@ Para compilar modelos TFLite → Axon **na nuvem**, use o próprio Edge AI Lab (
   Cloud.
 - **`iperf` versão 2.0.5**, para o lab 12 (coexistência). **O `iperf3` não serve** — o
   gerador de tráfego (`zperf`) do Zephyr fala o protocolo do iperf 2, não o 3.
+
+  > **Baixe o binário da arquitetura certa.** As páginas de release publicam versões
+  > para x64 **e** para ARM64, e o nome do arquivo é o mesmo (`iperf.exe`). Baixar o
+  > ARM64 numa máquina Intel dá um erro que **não parece** ser de arquitetura — o
+  > Windows responde só *"The specified executable is not a valid application for this
+  > OS platform"*, e o Git Bash, `Exec format error`. Aconteceu nesta bancada em
+  > 2026-09-07 e custou tempo. Para conferir sem instalar nada, o cabeçalho PE diz a
+  > arquitetura: `0x8664` é x64, `0xaa64` é ARM64.
+
+  > **Não dá para compilar o iPerf nesta máquina.** Não há compilador nativo (`gcc`,
+  > `clang`, `cl`) — o toolchain do NCS traz só cross-compilers para o
+  > microcontrolador (`arm-zephyr-eabi`, `riscv64-zephyr-elf`). Compilar exigiria MSYS2
+  > ou Cygwin. É a mesma razão pela qual os testes de travessia C↔Python do lab 9 ficam
+  > pulados.
+
+  **Alternativa validada:** um sorvedouro UDP em Python mede o throughput do lado do PC
+  e dispensa o iPerf — foi assim que o lab 12 foi medido em 2026-09-07. A ressalva é que
+  o `zperf` do kit termina com `Stats receive timeout`, porque o sorvedouro não devolve o
+  relatório do protocolo iperf 2; o número válido passa a ser só o do PC.
   **Atenção: o iperf 2.0.5 não está instalado nesta bancada, e o `winget` não tem
   esse pacote** — nesta máquina só o `iperf3` foi instalado, e ele não serve para
   este lab. Resolva isso antes do curso (download direto do binário, por exemplo).
