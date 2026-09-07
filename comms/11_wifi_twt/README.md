@@ -7,9 +7,9 @@
 > (`comms/06_wifi_shell/README.md`, Passo 2).
 
 > **Origem.** Cópia integral de `nrf/samples/wifi/twt` do **nRF Connect SDK v3.4.0**.
-> Licença Nordic preservada em [LICENSE](LICENSE). Todos os arquivos vindos do SDK
-> levam o cabeçalho `ORIGEM:` do curso — `prj.conf`, `CMakeLists.txt`, `src/main.c` e
-> os seis de `modules/traffic_gen/`. A única divergência é a mesma dos labs 7 e 9, e
+> Licença Nordic preservada em [LICENSE](LICENSE). Levam o cabeçalho `ORIGEM:` do
+> curso o `prj.conf`, o `CMakeLists.txt`, o `src/main.c` e os seis de
+> `modules/traffic_gen/`. A única divergência é a mesma dos labs 7 e 9, e
 > está nos dois primeiros: as credenciais saem para `minha_rede.conf` e o
 > `CMakeLists.txt` ganha uma falha proposital de build quando ele está vazio. O
 > `src/main.c` e o `modules/traffic_gen/` estão byte a byte iguais ao SDK, e o

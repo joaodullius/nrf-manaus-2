@@ -135,7 +135,7 @@ Para `SHIELD` e `SNIPPET` o prefixo é **obrigatório**: sem ele, os dois valeri
 **opcional** — sem ele a opção já vale para a aplicação principal, de propósito, para o
 mesmo comando funcionar com ou sem sysbuild.
 
-O curso escreve sempre com prefixo, nas oito linhas de build da frente. Não é exigência
+O curso escreve sempre com prefixo, em todas as linhas de build da frente. Não é exigência
 da ferramenta: é para o aluno ler uma linha só e saber, sem decorar exceção, a qual
 imagem cada opção se aplica.
 
