@@ -156,37 +156,88 @@ nas linhas de build documentadas em cada README.
 
 ## O que observar no console
 
-Ordem esperada no log, com a primeira VCOM aberta a 115200:
+Capturado nesta bancada (nRF54LM20-DK var. B + nRF7002-EB II, primeira VCOM a 115200,
+celular Android com o nRF Wi-Fi Provisioner). **Log real, não reconstruído.**
+
+No boot, antes de qualquer celular:
 
 ```
+[00:03:55.164,503] <inf> bt_hci_core: HW Variant: nRF54Lx (0x0005)
+[00:03:55.165,048] <inf> bt_hci_core: Identity: F0:DB:09:C1:94:93 (random)
 Bluetooth initialized.
 Wi-Fi provisioning service starts successfully.
 BT Advertising successfully started.
 ```
 
-Com o app conectado e pareando:
+O kit anuncia com o nome `PV` seguido dos três últimos bytes do MAC (`src/main.c`,
+`byte_to_hex()` sobre `addr[3..5]`) — nesta bancada, `PV00D210`. **Esse nome não sai no
+log**: para saber qual é o seu kit numa sala com vários, leia o MAC ou olhe a lista do app.
+
+Quando o celular conecta e pareia:
 
 ```
-BT Connected: <endereco BLE do celular>
-BT Security changed: <endereco> level <n>.
-BT pairing completed: <endereco>, bonded: 0
+BT Connected: 4A:DC:06:47:BE:B1 (random)
+BT pairing completed: 4A:DC:06:47:BE:B1 (random), bonded: 0
+BT Security changed: 4A:DC:06:47:BE:B1 (random) level 2.
 ```
 
-Depois da credencial enviada e aceita, aparecem as mensagens do supplicant, as mesmas
-dos labs 7 e 8a:
+E então o protocolo de provisionamento, **operação por operação, com o nome de cada uma**:
 
 ```
-wpa_supp: wlan0: CTRL-EVENT-CONNECTED - Connection to <MAC do AP> completed
+[00:11:01.370,303] <inf> wifi_prov: Wi-Fi Provisioning service - control point: indications enabled
+[00:11:01.550,301] <inf> wifi_prov: Wi-Fi Provisioning service - data out: notifications enabled
+[00:11:01.791,990] <inf> wifi_prov: Start parsing...
+[00:11:01.792,013] <inf> wifi_prov: GET_STATUS received...
+[00:11:07.251,837] <inf> wifi_prov: Start parsing...
+[00:11:07.251,852] <inf> wifi_prov: Start_Scan received...
+[00:11:15.801,689] <inf> wifi_prov: Start parsing...
+[00:11:15.801,703] <inf> wifi_prov: Stop_Scan received...
+[00:11:24.141,984] <inf> wifi_prov: Start parsing...
+[00:11:24.142,018] <inf> wifi_prov: Set_config received...
+[00:11:27.252,832] <inf> net_dhcpv4: Received: 192.168.15.19
+[00:11:27.252,948] <inf> net_config: IPv4 address: 192.168.15.19
+[00:11:27.252,953] <inf> net_config: Lease time: 14400 seconds
+[00:11:27.253,002] <inf> net_config: Router: 192.168.15.1
 ```
 
-Note o `bonded: 0`: o `prj.conf` traz `CONFIG_BT_BONDABLE=n`, então o pareamento é
-por sessão e não fica salvo. A credencial de **Wi-Fi**, essa sim, persiste em flash —
-o que persiste e o que não persiste são coisas diferentes aqui.
+### Como ler esse log
 
-> **Bancada pendente.** O build deste lab foi validado (números de FLASH/RAM acima);
-> o fluxo com o celular ainda não foi cronometrado nesta bancada. Os trechos de log
-> desta seção vêm do `README.rst` do sample e do `src/main.c` (as strings de `printk`
-> são literais do código), não de uma captura local.
+| Linha | O que aconteceu |
+|---|---|
+| `indications enabled` / `notifications enabled` | o app assinou os dois canais GATT do serviço: **control point** (comandos) e **data out** (respostas e resultados de scan) |
+| `GET_STATUS received` | o app pergunta se o kit já está provisionado — é a primeira coisa que ele faz |
+| `Start_Scan` / `Stop_Scan` | **quem manda escanear é o celular.** A varredura durou 8,5 s aqui |
+| `Set_config received` | chegou a credencial |
+| `Received: 192.168.15.19` | **3,1 s depois** do `Set_config`, o kit já está na rede com IP |
+
+Os intervalos entre as operações são o **tempo do dedo do usuário** na tela, não latência
+do protocolo: 5,5 s entre o `GET_STATUS` e o `Start_Scan`, 8,3 s entre o `Stop_Scan` e o
+`Set_config` (escolher a rede e digitar a senha). O que o firmware demora é só o último
+trecho: **3,1 s do `Set_config` ao IP**.
+
+### O contraste com o lab 8a
+
+Este log mostra três diferenças que não são de transporte, e sim de **fluxo**:
+
+1. **O protocolo aparece por nome.** No 8a via-se `POST /prov/configure` e um blob
+   protobuf; aqui a biblioteca loga `GET_STATUS`, `Start_Scan`, `Set_config`. **É o mesmo
+   protocolo** — o `wifi_prov_core` é compartilhado pelos dois —, só que legível de graça.
+2. **Quem manda escanear é o celular.** No 8a a DK escaneia **sozinha, antes** de subir o
+   SoftAP, e entrega a lista pronta; aqui o app comanda `Start_Scan`/`Stop_Scan`.
+3. **O celular nunca sai da rede em que está.** No 8a ele precisa abandonar o Wi-Fi e
+   entrar na rede do kit.
+
+E uma consequência prática: **o passo "Verify" do app funciona aqui e falha no 8a.** No 8a
+a confirmação depende de resolver `wifiprov.local` por mDNS, e o kit não responde mDNS
+depois de virar estação; aqui o link GATT continua aberto e o app confirma pelo mesmo canal,
+sem depender de descoberta na rede.
+
+### O que persiste e o que não persiste
+
+Note o `bonded: 0` com `level 2`: houve pareamento **com criptografia**, mas o `prj.conf`
+traz `CONFIG_BT_BONDABLE=n`, então não fica chave guardada — o próximo provisionamento
+pareia de novo. A credencial de **Wi-Fi**, essa sim, persiste em flash. São duas coisas
+diferentes, e é fácil confundir.
 
 ## O terceiro botão do app: NFC
 
