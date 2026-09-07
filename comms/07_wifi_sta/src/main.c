@@ -1,5 +1,5 @@
 /*
- * ORIGEM: copia de arquivo do SDK - nao e codigo do curso.
+ * ORIGEM: copia de arquivo do SDK — nao e codigo do curso.
  *   SDK     : nRF Connect SDK v3.4.0
  *   Upstream: nrf/samples/wifi/sta/src/main.c
  *   Local   : C:/ncs/v3.4.0/nrf/samples/wifi/sta/src/main.c

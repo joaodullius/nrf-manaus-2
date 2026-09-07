@@ -1,5 +1,5 @@
 /*
- * ORIGEM: copia de arquivo do SDK - nao e codigo do curso.
+ * ORIGEM: copia de arquivo do SDK — nao e codigo do curso.
  *   SDK     : nRF Connect SDK v3.4.0
  *   Upstream: nrf/samples/wifi/ble_coex/src/bt_throughput_test.c
  *   Local   : C:/ncs/v3.4.0/nrf/samples/wifi/ble_coex/src/bt_throughput_test.c
