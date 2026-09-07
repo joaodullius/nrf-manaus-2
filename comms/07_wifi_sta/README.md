@@ -140,11 +140,9 @@ conectar, o gargalo provavelmente não está no firmware.
       `SCANNING` → `AUTHENTICATING` → `Connected` → `DHCP IP address: ...`.
 - [x] Anotar IP, máscara e gateway recebidos (cronometragem acima; endereços
       reais não entram neste README — ver "Dois IPv4 no log").
-- [ ] Desligar o AP da sala e observar a reconexão. **Não executado nesta
-      rodada**: o AP desta bancada é a ONT da residência, e derrubá-lo derruba a
-      rede inteira — fica para a sala de aula, com um AP dedicado. O que o código
-      garante (ou não garante) nesse cenário está descrito em "O que observar"
-      abaixo.
+- [x] Desligar o AP e observar a reconexão. **Executado em 2026-09-07**, com um hotspot
+      de celular no lugar da ONT (derrubar a ONT derrubaria a casa). **O kit reconecta
+      sozinho** — o resultado completo está na seção seguinte.
 
 ### Dois IPv4 no log — qual vale
 
@@ -166,6 +164,100 @@ lab 6 nesse mesmo trecho, e a conexão completa normalmente logo em seguida — 
 sinal de falha, é esperado nessa janela da associação. Vale saber disso antes de
 parar para investigar um aviso que não é nada.
 
+## A queda do AP — medida, e quem reconecta não é este código
+
+Executado em 2026-09-07 com um hotspot de celular (a ONT da bancada não pode ser
+desligada). Sequência completa, do log:
+
+| t | linha | leitura |
+|---|---|---|
+| 15:40,557 | `sta: Received Disconnected` | o hotspot foi desligado; o **LED0 apaga** |
+| 15:45,584 | `State: COMPLETED` com **`RSSI: -9999`** | status obsoleto: o estado ainda diz conectado, mas o RSSI é o sentinela de "sem medida" |
+| 15:50,200 | `Connection failed (4)` | 1ª retentativa |
+| 15:59,826 | `Connection failed (4)` | 2ª, **~9,6 s** depois |
+| 16:09,568 | **`Connected`** | 3ª, ~9,7 s depois, já com o hotspot de volta |
+| 16:09,589 | `DHCP IP address: 10.151.38.218` | **21 ms** depois, e o **mesmo IP** de antes |
+
+**O ponto central: em nenhum momento aparece um segundo `Connection requested`.** Essa
+linha só sai de `wifi_connect()`, chamada **uma única vez** pelo laço de `start_app()`.
+Logo, as retentativas a cada ~9,7 s **não vêm da aplicação** — vêm do `wpa_supplicant`,
+que reassocia por conta própria. Isso confirma, com medida, a hipótese que este README
+levantava sem poder testar.
+
+**Para o aluno:** o kit **volta sozinho**, em até ~10 s depois de o AP voltar, sem reset.
+O que o código deste sample faz na queda é apenas logar `Received Disconnected` e apagar
+o LED0.
+
+### Dois detalhes que valem citar
+
+- **`RSSI: -9999`** é o valor que aparece enquanto o link está caído. Não é bug: é o
+  sentinela de "não há medida". Bom sinal visual de link morto.
+- **O IP volta idêntico e em 21 ms.** O *lease* de 3599 s ainda valia, então o cliente
+  DHCP **renovou** em vez de refazer o DORA completo. Não confundir com o boot, em que
+  obter endereço leva centenas de ms.
+
+O mesmo mecanismo aparece na **associação inicial**: nesta bancada houve um
+`Connection failed (4)` em 00:12:37 e um `Connected` em 00:12:42 — 5,5 s depois, também
+**sem** um novo `Connection requested`. Uma falha na primeira tentativa se resolve
+sozinha, e o aluno pode nem notar.
+## O fluxograma do `main.c` — e a linha de log de cada caixa
+
+O firmware não tem shell nem comandos: tudo acontece sozinho. O desenho abaixo é o
+esqueleto, e cada caixa está amarrada à linha que ela **produz no console** — é assim que
+se lê o log sem abrir o código.
+
+```
+          main()
+            |
+  +---------v-----------+   registra callbacks de
+  | net_mgmt_callback   |   CONNECT_RESULT, DISCONNECT_RESULT,
+  | _init()             |   IPV4_DHCP_BOUND                       (sem log)
+  +---------+-----------+
+            |
+  +---------v-----------+
+  | espera o supplicant |   "Aguardando o supplicant..."
+  | (CONFIG_WIFI_READY) |   -> sem isto, conectar falha com -ENOTSUP
+  +---------+-----------+
+            |
+  +---------v-----------+
+  | NET_REQUEST_WIFI_   |   "Connection requested"
+  | CONNECT_STORED      |   (credencial vem do wifi_credentials,
+  +---------+-----------+    nao de argumento)
+            |
+  +---------v-----------+
+  | laco de status      |   "State: SCANNING" a cada 300 ms
+  | ate connect_result  |   -> ~4 s, o maior trecho do boot
+  +---------+-----------+   "State: AUTHENTICATING"
+            |
+  +---------v-----------+
+  | (callback) associou |   "Connected"        <- LINK, ainda SEM IP
+  +---------+-----------+
+            |
+  +---------v-----------+
+  | (callback) DHCP     |   "DHCP IP address: <ip>"   <- agora sim
+  +---------+-----------+
+            |
+  +---------v-----------+
+  | k_sem_take(FOREVER) |   (nada mais e impresso)
+  +---------------------+
+
+   em paralelo:  thread do LED  ---> pisca LED0 a 5 Hz enquanto conectado
+                 handler de queda ---> "Received Disconnected" e apaga o LED0
+```
+
+**A caixa que mais engana é a penúltima.** `Connected` e `DHCP IP address` são **dois
+eventos diferentes**, separados por ~150 ms nesta bancada. Quem trata os dois como o
+mesmo momento erra ao explicar por que o kit "conectou mas não responde".
+
+### Os LEDs neste lab
+
+| LED | Significado |
+|---|---|
+| **LED0**, piscando a 5 Hz | associado ao Wi-Fi. É a thread `toggle_led()`, que só olha `context.connected` |
+| **LED0** apagado | sem associação |
+
+Repare no que o LED **não** indica: **ele não sabe se há IP.** Pisca a partir do
+`Connected`, antes do DHCP. Um kit com LED piscando e sem endereço é possível.
 ## O que observar
 
 - Este sample não tem shell de Wi-Fi: a lógica de conexão mora em `src/main.c`, que
