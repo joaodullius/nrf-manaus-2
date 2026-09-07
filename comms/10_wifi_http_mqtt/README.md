@@ -1,5 +1,15 @@
 # Wi-Fi · Lab 10 — HTTP e MQTT sobre o mesmo payload
 
+> **O console continua na primeira VCOM.** Este lab regrava a placa com o shield
+> acoplado, então vale a mesma troca dos labs 6 a 9: com a nRF7002-EB II, o console vai
+> para a `uart30` e sai na **primeira** VCOM da DK, não na segunda. Está medido e
+> explicado no lab 9 (`comms/09_wifi_tcp/README.md`, no topo); aqui não muda nada,
+> porque é o mesmo firmware.
+>
+> Esta pasta também não tem `.gitignore` próprio, ao contrário dos outros sete: ela não
+> gera diretório de build (o build sai em `comms/09_wifi_tcp/build_*`), e o `.gitignore`
+> da raiz já cobre `build*/` e `__pycache__/`.
+
 Este lab não tem firmware próprio: ele **recompila o firmware do lab 9**
 (`comms/09_wifi_tcp/`) escolhendo outra opção da choice `LAB_TRANSPORTE` do
 Kconfig. O `src/main.c` não muda uma linha — monta a mesma amostra, chama os
