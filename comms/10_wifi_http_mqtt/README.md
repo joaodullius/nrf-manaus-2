@@ -138,7 +138,12 @@ que a mesma `http_client_req()` roda tanto em `transporte_enviar()`
 transporte escolhido. `telemetria_id` e `botao_id` chamam a mesma função
 (`montar_e_enviar()`), então não há motivo para uma ter menos pilha que a
 outra — a assimetria anterior (2048 vs. 1024) não vinha de nenhuma análise
-de caminho, só nunca tinha estourado.
+de caminho, só nunca tinha estourado. **Confirmado na bancada**: HTTP (POST
+de telemetria e GET de comando) e MQTT (PUBLISH de telemetria) rodaram com
+hardware real sobre esse dimensionamento sem `USAGE FAULT` — não é uma
+prova exaustiva (reconexão sob perda de rede e o comando de LED por MQTT
+especificamente ainda não foram exercitados, ver "Roteiro de bancada"
+abaixo), mas é evidência de bancada, não só de precedente lido no fonte.
 
 ## Bytes por amostra — medido em loopback
 
@@ -215,15 +220,45 @@ padrão do `Servidor` do lab 9: `porta=0` deixa o SO escolher a porta,
 ### `tools/wifi_mqtt_sub.py`
 
 Precisa de um broker MQTT rodando — este curso usa o **mosquitto** local
-(`C:\Program Files\mosquitto`, já instalado e verificado nesta bancada):
+(`C:\Program Files\mosquitto`, já instalado e verificado nesta bancada).
 
-```bash
-"C:\Program Files\mosquitto\mosquitto.exe" -p 1883
+**Atenção, pegadinha confirmada na bancada: o mosquitto 2.x (2.0.22 aqui)
+fechou os padrões de fábrica.** Subido sem arquivo de configuração, ele
+escuta só em `localhost` e recusa cliente anônimo — e isso engana, porque
+`wifi_mqtt_sub.py`, rodando no mesmo PC, conecta normalmente (é loopback:
+`localhost` alcança `localhost`). Só o kit falha, porque chega pela rede,
+não por loopback, e a porta nem está aberta para a rede. O sintoma no
+firmware é `Falha ao mandar o CONNECT MQTT (-116)` — aponta para rede
+(IP/porta errados, firewall), não para o broker, que é onde o problema de
+fato está. O aluno vê o assinante conectado e conclui, errado, que o broker
+está no ar para qualquer um.
+
+O remédio é subir o mosquitto com um arquivo de configuração de duas linhas
+(local, não versionado — não faz parte deste repositório):
+
+```
+listener 1883 0.0.0.0
+allow_anonymous true
 ```
 
-Sem um arquivo de configuração, o mosquitto sobe com o padrão de fábrica
-(aceita conexão anônima em `localhost`) — suficiente para este lab. Em outro
-terminal:
+```bash
+"C:\Program Files\mosquitto\mosquitto.exe" -c mosquitto.conf
+```
+
+`listener 1883 0.0.0.0` faz o broker escutar em todas as interfaces de rede
+do PC, não só `localhost` — na mesma porta que o firmware usa
+(`CONFIG_LAB_PORTA`; 1883 no exemplo de build deste README, mas o número
+tem que bater dos dois lados). `allow_anonymous true` aceita conexão sem
+usuário/senha, porque o kit não manda nenhum. **Isso é aceitável só para o
+laboratório**: um broker de produto real pede credencial e roda atrás de
+TLS — abrir mão dos dois de propósito para um kit numa rede de sala fechada
+é uma escolha de ambiente de ensino, não algo que se leva para produção.
+
+Como qualquer servidor deste lab ouvindo em rede, a porta também precisa
+estar liberada no firewall do Windows — mesma pegadinha do lab 9, seção
+"O firewall do Windows" logo abaixo.
+
+Em outro terminal:
 
 ```bash
 cd comms/10_wifi_http_mqtt/tools
@@ -289,30 +324,42 @@ python -m pytest -q
   critério de `../09_wifi_tcp/tools/tests/test_payload_c.py` para um
   compilador de host ausente.
 
-## Roteiro de bancada (a fazer pelo instrutor — grava e mede)
+## Roteiro de bancada
 
-1. Gravar as três variantes (uma DK por vez, ou revezando), com o servidor
-   certo rodando no PC a cada troca:
-   - `build_TCP` → `python ../09_wifi_tcp/tools/wifi_server.py --porta 9000`
-   - `build_HTTP` → `python tools/wifi_http_server.py --porta 8000`
-   - `build_MQTT` → mosquitto na porta 1883, depois
-     `python tools/wifi_mqtt_sub.py --porta 1883`
-2. Em cada uma, conferir os três gestos já validados no lab 9 (botão →
-   amostra imediata com `"botao":true`; tecla `l`/`d` no servidor → LED1
-   acende/apaga; queda de conexão → reconecta sozinho) — o firmware e o
-   comportamento de reconexão são os mesmos, só o transporte muda.
-3. Capturar com Wireshark ou `tcpdump` no PC durante uma amostra de cada
-   variante, para confirmar os números da tabela "Bytes por amostra" contra
-   tráfego de Wi-Fi de verdade (a medição deste README é em loopback — ver a
-   ressalva na própria seção).
-4. Se algum transporte estourar pilha (sintoma: `USAGE FAULT` na serial que
-   parece bug de código, não erro de rede) — as pilhas de `telemetria_id`/
-   `botao_id`/`recepcao_id` foram dimensionadas pelo piso do sample de
-   referência do Zephyr para `http_client_req()` (seção "Comparação de
-   pilha e heap" acima), não por medição na bancada real — `CONFIG_STACK_
-   SENTINEL` e `CONFIG_DEBUG_COREDUMP` (já ligados, herdados do lab 9)
-   tornam esse tipo de estouro diagnosticável em vez de silencioso, mas
-   ainda não há confirmação de bancada de que o piso é suficiente.
+Gravar cada variante com o servidor certo rodando no PC:
+- `build_TCP` → `python ../09_wifi_tcp/tools/wifi_server.py --porta 9000`
+- `build_HTTP` → `python tools/wifi_http_server.py --porta 8000`
+- `build_MQTT` → mosquitto com o arquivo de configuração da seção
+  `tools/wifi_mqtt_sub.py` acima, depois `python tools/wifi_mqtt_sub.py --porta 1883`
+
+**Já confirmado na bancada, com hardware real:**
+- **HTTP**: telemetria chegando no `wifi_http_server.py` e o comando de LED
+  (`l`/`d` no servidor) acendendo/apagando o LED1 no kit — round-trip
+  completo confirmado visualmente.
+- **MQTT**: telemetria fluindo do kit pelo broker até o `wifi_mqtt_sub.py`,
+  com sequência (`seq`) contínua.
+
+**Ainda a confirmar na bancada:**
+- **MQTT, o comando de LED** (`l`/`d` no `wifi_mqtt_sub.py` → assinatura do
+  kit em `<tópico>/comando` → LED1): a telemetria (uplink) foi validada, mas
+  o downlink deste transporte especificamente ainda não teve o console do
+  kit capturado durante o teste do comando.
+- Botão (amostra imediata com `"botao":true`) e queda de conexão
+  (reconecta sozinho) nas três variantes — comportamento herdado do lab 9,
+  não re-testado gesto a gesto neste lab.
+- Captura com Wireshark ou `tcpdump` no PC durante uma amostra de cada
+  variante, para confirmar os números da tabela "Bytes por amostra" contra
+  tráfego de Wi-Fi de verdade (a medição deste README é em loopback — ver a
+  ressalva na própria seção).
+- Se algum transporte estourar pilha (sintoma: `USAGE FAULT` na serial que
+  parece bug de código, não erro de rede): as pilhas de `telemetria_id`/
+  `botao_id`/`recepcao_id` foram dimensionadas pelo piso do sample de
+  referência do Zephyr para `http_client_req()` (seção "Comparação de
+  pilha e heap" acima), não por medição na bancada real — `CONFIG_STACK_
+  SENTINEL` e `CONFIG_DEBUG_COREDUMP` (já ligados, herdados do lab 9)
+  tornam esse tipo de estouro diagnosticável em vez de silencioso, mas o
+  HTTP e o MQTT já rodaram na bancada (item acima) sem esse sintoma
+  aparecer.
 
 ## Plano B — sem rede utilizável na sala, ou com isolamento de cliente
 
