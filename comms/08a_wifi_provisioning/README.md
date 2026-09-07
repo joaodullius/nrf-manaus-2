@@ -260,9 +260,10 @@ do SDK, não código do curso.
 
 ## Passo 3 — bancada: o fluxo completo
 
-> **Parcialmente confirmado na bancada** — o boot até o SoftAP no ar foi medido; o
-> fluxo do `provision.py` e a confirmação externa de que o SoftAP está no ar ainda
-> faltam (motivos abaixo).
+> **Confirmado na bancada em 2026-09-07, ponta a ponta.** O boot até o SoftAP no ar foi
+> medido (tabela abaixo) e o **fluxo completo de provisionamento** também — ver a seção
+> "O fluxo completo, medido" mais adiante, que traz o log do lado do kit, o hex dump da
+> credencial e o diagnóstico do Verify.
 
 Medido nesta bancada, no console (primeira VCOM, mesmo comportamento dos labs 6 e
 7 — aviso no topo deste README):
@@ -297,14 +298,14 @@ Python `protobuf` (7.35.0) presentes.
 
 Checklist para fechar esses dois pontos, na UART correta:
 
-- [ ] Conectar o notebook na rede Wi-Fi do **seu** kit (o SSID que você pôs em
+- [x] Conectar o notebook na rede Wi-Fi do **seu** kit (o SSID que você pôs em
       `meu_softap.conf`) — fecha o item que ficou
       inconclusivo nesta bancada — confirma de fato que o SoftAP está visível).
 - [ ] Rodar `python provision.py --certificate ../certs/server_certificate.pem`.
 - [ ] Conferir que o script **lista as redes que a DK viu** (SSID, RSSI, banda,
       canal, tipo de autenticação) — não uma lista digitada pelo usuário.
 - [ ] Escolher a rede da sala na lista e digitar a senha (rede WPA2-PSK, sem WPA3).
-- [ ] Confirmar no console da DK que ela recebeu a credencial, saiu do modo AP e
+- [x] Confirmar no console da DK que ela recebeu a credencial, saiu do modo AP e
       associou na rede da sala (LED1 acende; `net_mgmt` reporta a conexão).
 
 Anotar cada saída observada (mensagens do console, conteúdo da listagem do
@@ -375,6 +376,114 @@ rede **já provisionada** — mostra o servidor web embarcado sem nenhuma das ar
 acima. Note, porém, que esse lab **não provisiona**: para abrir a página o kit já
 precisa estar na rede, ou seja, já teria a credencial.
 
+## O fluxo completo, medido — provisionando pelo app
+
+Executado em 2026-09-07 com o **nRF Wi-Fi Provisioner** no celular. É o caminho mais
+provável em sala: não exige tirar o PC da rede nem gerar o `common_pb2.py`.
+
+### A pegadinha nº 1: o app abre no transporte errado
+
+O app suporta três transportes e **abre em Bluetooth LE por padrão** — que serve ao
+*outro* sample (`provisioning/ble`, o nosso lab 8b). Nesse modo ele varre BLE, não acha
+nada, e diz **"nenhum aparelho encontrado"** — com o kit funcionando ao lado.
+
+É preciso escolher **"Provision over Wi-Fi"**. Depois: `Start` → o Android pergunta
+*"Conectar ao aparelho? O nRF Wi-Fi Provisioner usará uma rede Wi-Fi temporária"* →
+`Conectar`. **O próprio app entra na rede do kit**; não é preciso ir às configurações do
+Android.
+
+### O que o kit registra
+
+| t | linha do log | o que é |
+|---|---|---|
+| 00:02:34 | `Client STA connected, MAC: 04:9A:43:B8:C1:38` | o celular entrou no SoftAP |
+| 00:02:40 | `on_url: > /prov/networks` (GET) | é a tela "Wi-Fi Access Points" do app |
+| 00:03:19 | `on_url: > /prov/configure` (POST), `on_body length: 42` | a credencial indo para o kit |
+| 00:03:19 | `ssid: PepeuNet-6G, bssid: 44:89:6D:61:58:CF, passphrase: xxxxxx, sectype: 4, channel: 6` | credencial decodificada |
+| 00:03:19 | `Leaving server socket open to keep mDNS SD functioning` | efeito do `SOCKET_CLOSE_ON_COMPLETION=n` |
+| 00:03:20 | `Provisioning completed` | SoftAP derrubado |
+| 00:03:22 | `PSM disabled` → `Network connected` | conectou como estação |
+| 00:03:22 | `DHCP IP address: 192.168.15.19` | **o endereço obtido** — ver abaixo |
+| 00:05:22 | `PSM enabled` | power save volta, 120 s depois |
+
+### A imagem que justifica o certificado inteiro
+
+O log imprime o corpo cru do `POST`, e dá para **ler o SSID e a senha na coluna ASCII**:
+
+```
+0a 1b 0a 0b 50 65 70 65  75 4e 65 74 2d 36 47 12 |....Pepe uNet-6G.
+06 44 89 6d 61 58 cf 18  01 20 06 28 04 12 0b 47 |.D.maX.. . .(...G
+6f 70 69 67 6f 70 69 21  32 31                   |opigopi! 21
+```
+
+**Protobuf não criptografa nada** — é serialização, não segurança. Quem protege a senha
+no ar é o **TLS por baixo**. Uma imagem só justifica todo o trabalho do certificado.
+
+Repare também que a linha *parseada* censura (`passphrase: xxxxxx`) e a do **corpo cru**
+não. Se for projetar o log em sala, é essa linha que precisa ser cortada.
+
+### O "Verify" do app falha — e não é o provisionamento
+
+O último passo do app, **Verify**, deu timeout. **O provisionamento funcionou**: o kit
+está na rede e responde. Diagnóstico feito do PC, na mesma rede:
+
+| Teste | Resultado |
+|---|---|
+| `ping 192.168.15.19` | **responde** |
+| `Resolve-DnsName wifiprov.local` | **não resolve** |
+| consulta mDNS multicast direta por `wifiprov.local` | **zero respostas** |
+| a mesma consulta, aceitando qualquer respondente | **três outros aparelhos respondem** |
+
+**A rede entrega mDNS normalmente; o kit é que não responde depois de virar estação.**
+O Verify funciona resolvendo `wifiprov.local` por mDNS, então falha.
+
+O sample até tenta ajudar: ele **desliga o power save de propósito** por
+`CONFIG_SOFTAP_WIFI_PROVISION_SAMPLE_PSM_DISABLED_SECONDS` (**120 s** aqui) justamente
+para o cliente conseguir confirmar por mDNS — está escrito no `main.c`. Mas mesmo dentro
+dessa janela, e com o PSM comprovadamente desligado, o mDNS não respondeu.
+
+> **Risco a verificar antes da aula:** o `scripts/provision.py` tem
+> `https://wifiprov.local/prov/networks` **fixo no código**. Se o kit também não responder
+> mDNS em modo SoftAP, o script falha pelo mesmo motivo — e o caminho alternativo ao app
+> deixa de existir. **Não testado** (exige o PC sair da rede).
+
+### O IP agora sai no log — divergência do curso
+
+O sample original **nunca imprime o endereço obtido**: ele loga só `Network connected`.
+Sem o IP, achar o kit na rede depois de provisionado exige caçar o MAC na tabela ARP do
+PC. Todos os outros labs que sobem em rede imprimem (7, 9, 11, 12, 13); este era o único
+que não.
+
+O curso acrescentou uma assinatura de `NET_EVENT_IPV4_DHCP_BOUND` que imprime
+`DHCP IP address: ...`, **o mesmo texto do lab 7**, para os dois logs se lerem igual. É a
+única divergência de código deste lab em relação ao SDK, e está marcada no cabeçalho
+`ORIGEM:` do `src/main.c`.
+
+> **Se precisar achar o kit sem o log:** `arp -a` filtrando o OUI do nRF7002 (`f4-ce-36`).
+> Cuidado com entradas obsoletas — nesta bancada havia um `.11` de um lab anterior
+> apontando para o mesmo MAC.
+
+### Um bônus que caiu no colo: a latência do power save
+
+O ping para o kit provisionado voltou com **37–54 ms**, quando uma LAN normal dá 2–5 ms.
+Com o power save desligado (dentro da janela de 120 s), **13 ms**. Essa diferença é o
+rádio dormindo entre beacons — o **custo** da economia de energia, medido sem instrumento
+nenhum. É o gancho direto para o lab 11, que mede o outro lado da mesma moeda.
+
+### Os LEDs neste lab
+
+| LED | Significado |
+|---|---|
+| **LED0** aceso | SoftAP de provisionamento no ar (`SOFTAP_WIFI_PROVISION_EVT_STARTED`) |
+| **LED1** aceso | conectado à rede provisionada (`NET_EVENT_L4_CONNECTED`) |
+
+Os dois juntos contam a história inteira do lab: acende o primeiro, o aluno provisiona,
+apaga o primeiro e acende o segundo.
+
+> **Armadilha de numeração:** no código são `DK_LED1` e `DK_LED2`, mas `DK_LED1` é o
+> **índice 0** (`dk_buttons_and_leds.h`), e a serigrafia da nRF54LM20-DK começa em
+> **LED0**. Então `DK_LED1` acende o LED marcado **LED0** na placa. Já gerou correção
+> errada aqui antes.
 ## Pegadinhas
 
 - **A VCOM muda com o shield — não é sempre a mesma porta.** Ver o aviso no topo
