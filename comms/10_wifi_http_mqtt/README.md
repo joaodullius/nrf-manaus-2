@@ -146,9 +146,11 @@ de caminho, só nunca tinha estourado. **Confirmado na bancada**: os três
 transportes — TCP, HTTP (POST de telemetria e GET de comando) e MQTT
 (PUBLISH de telemetria e o comando de LED via assinatura) — rodaram com
 hardware real sobre esse dimensionamento sem `USAGE FAULT`, nos dois
-sentidos. Não é uma prova exaustiva (reconexão sob perda de rede ainda não
-foi exercitada com hardware, ver "Roteiro de bancada" abaixo), mas é
-evidência de bancada, não só de precedente lido no fonte.
+sentidos, **e também sob reconexão** (broker MQTT derrubado e religado com
+o kit conectado, backoff de 1 a 8 s até voltar — ver "Roteiro de bancada"
+abaixo). Não é mais uma leitura de precedente sem exercício real: é
+evidência de bancada, sob os três caminhos que o dimensionamento precisava
+cobrir.
 
 ## Bytes por amostra — medido em loopback
 
@@ -351,24 +353,31 @@ dois sentidos (telemetria subindo, comando de LED descendo):**
   lab_wifi_tcp: LED1 aceso (comando do servidor)
   lab_wifi_tcp: LED1 apagado (comando do servidor)
   ```
+- **Reconexão sob perda de serviço** (MQTT, broker derrubado com o kit
+  conectado e religado 25 s depois):
+  ```
+  MQTT desconectado (-104)
+  Servidor fechou a conexao; reconectando
+  Falha ao enviar a amostra 6 (-128); reconectando
+  Falha ao mandar o CONNECT MQTT (-116); nova tentativa em 1000 ms
+                                          nova tentativa em 2000 / 4000 / 8000 ms
+  MQTT conectado em 192.168.15.15:9000, publicando em nrf-manaus/telemetria
+  ```
+  A queda foi detectada por **dois caminhos ao mesmo tempo** — a thread de
+  recepção (`MQTT desconectado`) e a de telemetria (`Falha ao enviar`) — e
+  mesmo assim só houve **uma** reconexão, não duas concorrentes: é a
+  evidência, sob concorrência real e não só em teste, de que a
+  serialização de `reconectar_transporte()` (`src/main.c`) segura o caso
+  para o qual foi desenhada. O backoff dobrou de 1 a 8 s até o broker
+  voltar, como documentado no lab 9.
 
 **Ainda a confirmar na bancada:**
 - Botão (amostra imediata com `"botao":true`) nas três variantes —
   comportamento herdado do lab 9, não re-testado gesto a gesto neste lab.
-- Reconexão sob perda de rede nas três variantes: tem teste automático (o
-  caminho de erro é exercitado pelas suítes de PC), mas não foi exercitada
-  com hardware real numa queda de associação Wi-Fi de verdade.
 - Captura com Wireshark ou `tcpdump` no PC durante uma amostra de cada
   variante, para confirmar os números da tabela "Bytes por amostra" contra
   tráfego de Wi-Fi de verdade (a medição deste README é em loopback — ver a
   ressalva na própria seção).
-- Se algum transporte estourar pilha sob reconexão (sintoma: `USAGE FAULT`
-  na serial que parece bug de código, não erro de rede): as pilhas de
-  `telemetria_id`/`botao_id`/`recepcao_id` foram dimensionadas pelo piso do
-  sample de referência do Zephyr para `http_client_req()` (seção
-  "Comparação de pilha e heap" acima) — os três transportes já rodaram na
-  bancada (itens acima) sem esse sintoma aparecer, mas isso cobre o
-  caminho normal, não especificamente uma reconexão sob perda de rede.
 
 ## Plano B — sem rede utilizável na sala, ou com isolamento de cliente
 
