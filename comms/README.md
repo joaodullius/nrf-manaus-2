@@ -21,7 +21,7 @@ Implementação e validação das principais tecnologias de conectividade e loca
 | [`08b_wifi_provisioning_ble/`](08b_wifi_provisioning_ble/) | **Lab 8b** — O mesmo provisionamento pelo outro transporte: a DK anuncia por Bluetooth LE (`PVxxxxxx`, nome derivado do MAC) e o app nRF Wi-Fi Provisioner entrega a credencial por GATT — o celular nunca sai da rede em que já está | nRF54LM20-DK + nRF7002-EBII + celular | ✅  |
 | [`09_wifi_tcp/`](09_wifi_tcp/) | **Lab 9** — Lab central da frente: telemetria por socket TCP puro, mesmo payload do lab 10; reconexão com backoff e queda de conexão como o próprio ponto do lab | nRF54LM20-DK + nRF7002-EBII | ✅ |
 | [`10_wifi_http_mqtt/`](10_wifi_http_mqtt/) | **Lab 10** — O mesmo payload do lab 9 recompilado sobre HTTP e MQTT: comparação medida de bytes por amostra, FLASH/RAM, e o custo estrutural do polling HTTP | nRF54LM20-DK + nRF7002-EBII | ✅ |
-| [`11_wifi_twt/`](11_wifi_twt/) | **Lab 11** — A escada de economia de energia: DTIM e listen interval medidos por latência com o firmware do lab 6 (Parte A, Passo 1) e preparados para medida de corrente com PPK2 (Parte A, Passo 2, pendente da decisão do instrutor sobre o solder bridge da EB II); TWT (Parte B) depende de um AP que negocie | nRF54LM20-DK + nRF7002-EBII | ✅ (Parte A medida; Parte B pendente do AP com TWT) |
+| [`11_wifi_twt/`](11_wifi_twt/) | **Lab 11** — A escada de economia de energia: DTIM e listen interval medidos por latência com o firmware do lab 6 (Parte A, Passo 1) e por corrente no PPK2 (Parte A, Passo 2 — 51,3 mA sem economia, 2,29 mA em DTIM 3, 31 µA no listen interval 600, com o downlink morrendo pelo caminho); TWT (Parte B) depende de um AP que negocie | nRF54LM20-DK + nRF7002-EBII | ✅ (Parte A medida; Parte B pendente do AP com TWT) |
 | [`12_wifi_coex/`](12_wifi_coex/) | **Lab 12** — Coexistência BLE×Wi-Fi no mesmo kit: cliente Wi-Fi (zperf) e central BLE (throughput) simultâneos, árbitro de coexistência ligado/desligado por build — o lab mais pesado de RAM da frente | nRF54LM20-DK + nRF7002-EBII + par BLE (nRF54L15-TAG) | ✅ |
 | [`13_wifi_location/`](13_wifi_location/) | **Lab 13** — Locationing sem GPS: o kit varre os APs vizinhos e o nRF Cloud resolve a posição pelo banco de mapeamento — fecha o módulo pelo lado de dentro do prédio | nRF54LM20-DK + nRF7002-EBII | ✅ |
 | `ntn_nbiot/` | Comunicação NB-IoT via satélite (NTN) — teste ao vivo dependente de janela de passada | nRF9151-SMA-DK | planejado |
@@ -74,6 +74,82 @@ outra natureza (vizinhança de rede, não telemetria do dispositivo).
 Blobs de firmware do nRF70 (`west blobs fetch nrf_wifi`) são pré-requisito de
 qualquer build desta frente — ver `PREREQUISITOS.md`.
 
+### Wi-Fi 6+ — os módulos da solução, e como reconhecê-los no log
+
+"O Wi-Fi" desta frente não é uma peça: são **seis camadas** entre a aplicação do lab e
+a antena, cada uma de um lugar diferente da árvore. Saber quem é quem é o que permite
+ler um log de falha sem abrir o código — o prefixo da linha já diz em qual camada o
+problema está.
+
+```
+   aplicacao do lab              nosso codigo         lab_wifi_tcp: / sta: / wifi_prov:
+          |  net_mgmt(...)  <-- UNICO ponto de contato
+   +------v-----------------+
+   | TCP/IP, DHCP, sockets  |   Zephyr net           net_config: net_dhcpv4: net_if:
+   +------+-----------------+
+   | Wi-Fi management (L2)  |   Zephyr l2/wifi       net_wifi_mgmt: wifi_nm:
+   +------+-----------------+                        net_wifi_shell:  (o shell do lab 6)
+   | wpa_supplicant         |   fork do hostap       wpa_supp:
+   +------+-----------------+
+   | driver nrf_wifi        |   nRF Connect SDK      wifi_nrf:
+   +------+-----------------+
+          |  SPI (spi22, ~8 MHz)
+   +------v-----------------+
+   | nRF7002: MAC + PHY     |   blob binario na RAM do companion
+   +------------------------+
+```
+
+| Camada | O que faz | Onde mora | Prefixo no log |
+|---|---|---|---|
+| **Aplicação** | a lógica do lab | `comms/NN_*/src/` | o que o lab registrar (`lab_wifi_tcp:`, `sta:`, `wifi_prov:`) |
+| **TCP/IP, DHCP, sockets** | endereço, rotas, `zsock_*` | `zephyr/subsys/net/` | `net_config:`, `net_dhcpv4:`, `net_if:` |
+| **Wi-Fi management (L2)** | traduz pedidos (`CONNECT`, `SCAN`, `PS`) em chamadas ao gerente de rede; hospeda o `wifi` do shell | `zephyr/subsys/net/l2/wifi/` | `net_wifi_mgmt:`, `wifi_nm:`, `net_wifi_shell:` |
+| **wpa_supplicant** | política de varredura, máquina de estados de associação, *4-way handshake*, WPA2/WPA3, credenciais | `modules/lib/hostap/` (fork do hostap) | `wpa_supp:` |
+| **Driver `nrf_wifi`** | fala com o companion, carrega o *blob* de firmware, mapeia a API do Zephyr no protocolo do chip | `zephyr/drivers/wifi/nrf_wifi/` + `modules/lib/nrf_wifi/` | `wifi_nrf:` |
+| **nRF7002** | MAC 802.11 e PHY, **dentro do silício** | o companion na EB II | não loga — é outro chip |
+
+**O ponto de contato é um só: `net_mgmt()`.** A aplicação nunca chama o supplicant nem
+o driver. Ela emite um pedido (`NET_REQUEST_WIFI_CONNECT_STORED`,
+`NET_REQUEST_WIFI_PS`, ...) e assina eventos (`NET_EVENT_WIFI_CONNECT_RESULT`,
+`NET_EVENT_IPV4_DHCP_BOUND`). É a mesma forma nos labs 7, 9, 10, 11 e 13, e é por isso
+que trocar de transporte (lab 10) ou de regime de energia (lab 11) não mexe em nada
+abaixo da aplicação.
+
+**FullMAC: o 802.11 não roda no nosso SoC.** O nRF7002 implementa MAC e PHY em
+silício, e o que atravessa o SPI são **quadros Ethernet**, não quadros 802.11. Duas
+consequências que aparecem na bancada: o `net iface` do lab 6 lista "Ethernet
+capabilities" numa interface Wi-Fi — não é erro —, e o host não gasta ciclo com
+retransmissão, agregação ou temporização de rádio. Em compensação, **tudo o que o chip
+não implementa não existe** para nós: foi assim que o TWT ficou pendente de um AP no
+lab 11, e é por isso que o `nrf7002eb2` precisa do *blob*
+(`west blobs fetch nrf_wifi`, em `PREREQUISITOS.md`) — sem ele o companion não tem
+firmware para rodar.
+
+**O wpa_supplicant é o módulo que mais surpreende**, por três motivos práticos:
+
+1. **Ele é uma thread, e demora a subir.** O lab 7 espera por
+   `CONFIG_WIFI_READY_LIB` antes de conectar; sem essa espera, o pedido de conexão
+   volta **`-ENOTSUP`** — o driver está pronto e o supplicant ainda não.
+2. **Ele reconecta sozinho.** Na queda do AP medida no lab 7, as retentativas saem a
+   cada ~9,7 s **sem** a aplicação pedir nada — o log não mostra um segundo
+   `Connection requested`. Quem reassocia é ele.
+3. **Ele é a maior parte da conta de RAM da frente.** É a razão de o lab 12
+   (coexistência) ser o build mais pesado do módulo, porque ali ele divide a memória
+   com a pilha de Bluetooth LE.
+
+**Dois módulos que só aparecem em alguns labs:**
+
+- **`wifi_credentials`** — o cofre de credenciais por trás do
+  `NET_REQUEST_WIFI_CONNECT_STORED` dos labs 7, 8a e 8b. A API é a mesma nos três,
+  **o backend não**: o lab 7 usa `WIFI_CREDENTIALS_STATIC`, com a credencial compilada
+  a partir do `minha_rede.conf` — some se você mudar de rede, e é isso que justifica o
+  provisionamento; os labs 8a e 8b gravam em memória não volátil (`SETTINGS_ZMS` e
+  `SETTINGS_NVS`, respectivamente), e é por isso que o kit provisionado volta sozinho à
+  rede depois de um reset.
+- **`wifi_prov_core`** — a máquina de provisionamento e o **protobuf** compartilhados
+  pelos labs 8a e 8b. A diferença entre os dois é **só o transporte** (HTTPS sobre o
+  SoftAP contra GATT sobre Bluetooth LE); a codificação da credencial é a mesma nos
+  dois, e é por isso que o mesmo app do celular atende aos dois.
 ## Tópicos teóricos
 
 - BLE 6.0 e Channel Sounding: RTT × PBR, initiator/reflector/subevent, Ranging Service por dentro (o serviço GATT do SIG e o que ele carrega), configuração de stack e otimização de pacotes (MTU, DLE, buffers ACL, intervalo de procedure), RAS × IPT como trade-off, segurança, e "o algoritmo é camada de aplicação"
