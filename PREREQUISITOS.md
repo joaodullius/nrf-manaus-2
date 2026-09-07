@@ -190,13 +190,6 @@ Para compilar modelos TFLite → Axon **na nuvem**, use o próprio Edge AI Lab (
   e dispensa o iPerf — foi assim que o lab 12 foi medido em 2026-09-07. A ressalva é que
   o `zperf` do kit termina com `Stats receive timeout`, porque o sorvedouro não devolve o
   relatório do protocolo iperf 2; o número válido passa a ser só o do PC.
-  **Atenção: o iperf 2.0.5 não está instalado nesta bancada, e o `winget` não tem
-  esse pacote** — nesta máquina só o `iperf3` foi instalado, e ele não serve para
-  este lab. Resolva isso antes do curso (download direto do binário, por exemplo).
-  Alternativa em avaliação pelo instrutor: trocar o iPerf por um receptor UDP
-  simples em Python, já que o número que o lab compara vem do próprio kit
-  (`zperf`) e o servidor de PC só precisa ser o sorvedouro do tráfego — se essa
-  alternativa for adotada, o `README.md` do lab 12 passa a valer sobre este item.
 - **PPK2** (Power Profiler Kit II), para o lab 11 (energia) — mesmo instrumento do
   módulo Edge AI, agora medindo o companion Wi-Fi na própria EB II (não no jumper de
   corrente da DK).
@@ -227,6 +220,16 @@ pip install protobuf
 | `paho-mqtt` (≥ 2.0) | **lab 10, variante MQTT** — o assinante `wifi_mqtt_sub.py` | o lab 10 MQTT não roda |
 | `requests` (≥ 2.31) | **lab 13** — fala HTTPS com o nRF Cloud | o lab 13 não roda |
 | `protobuf` + o executável **`protoc`** | **lab 8a** — gera `common_pb2.py` do schema do SDK | `provision.py` falha no `import` |
+
+> **Um compilador C nativo é opcional, mas destrava um teste.** Sem ele, os **8 testes de
+> travessia C↔Python do lab 9** (`tools/tests/test_payload_c.py`) ficam pulados — são os
+> que compilam `src/payload.c` num binário de host e comparam **byte a byte** com o
+> `tools/payload_ref.py`. É a tese do lab, hoje afirmada e não verificada nesta máquina.
+> Não é teórico: em 2026-09-07 o `payload_ref.montar()` divergia do C em 4 dos 6 vetores
+> (o C imprime `25.00`, o `json.dumps` imprimia `25.0`), e o defeito só apareceu porque
+> foi comparado à mão com linhas reais capturadas do kit. Para instalar, o caminho é
+> **MSYS2** (traz MinGW-w64 gcc, `make` e as autotools); o `gcc` sozinho não basta para
+> projetos autotools.
 
 Fora do Python, dois executáveis: um broker **mosquitto** local (lab 10 MQTT) e o
 **`iperf` 2.0.5** (lab 12 — o `iperf3` **não** serve; ver o item acima).
