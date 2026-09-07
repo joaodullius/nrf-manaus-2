@@ -373,9 +373,16 @@ solta que a hipótese não explica:** o pulso do listen interval em 2,4 GHz (24 
 |---|---|---|---|
 | 10 | 0,9 s | 1,13 mA | ok |
 | 30 | 3,2 s | 0,62 mA | degradado — 3 de 14 pings perdidos |
-| 100 | 10 s | 0,295 mA | **morto** |
-| 300 | 30 s | 0,168 mA | **morto** |
-| **600** | **72 s** | **0,031 mA** | **morto** |
+| 100 | 10 s | 0,295 mA | **praticamente inalcançável** |
+| 300 | 30 s | 0,168 mA | **praticamente inalcançável** |
+| **600** | **72 s** | **0,031 mA** | **praticamente inalcançável** |
+
+> **"Praticamente", e não "morto", porque as duas corridas discordam do jeito que
+> importa.** Na captura longa, nenhum ping voltou em nenhum dos três regimes — mas na
+> varredura do teto, um ping com listen interval 100 voltou em **166 ms**. Não é
+> contradição: a janela de despertar continua lá, e um pacote que a acerte passa
+> normalmente. O que morreu foi a **probabilidade**, e com ela qualquer uso prático.
+> Em todos os casos o kit seguia **associado**.
 
 **O listen interval 600 chega a 31 µA** — o mesmo patamar que o datasheet atribui ao TWT
 de 1 minuto (29,5 µA). Guarde esse número: ele é o que torna a Parte B uma discussão de
