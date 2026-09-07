@@ -80,67 +80,171 @@ neste curso, o shield deixa de reroteiar nessa placa: o console volta para a
 Ao comparar com a documentação online, confira sempre o overlay da árvore
 efetivamente instalada, não a versão "latest".
 
-## Passo 3 — explorar
+## Passo 3 — a sessão completa, comando a comando
 
-Antes de qualquer comando de rádio, confirme que o companion apareceu:
+Tudo abaixo foi capturado nesta bancada em 2026-09-07 (nRF54LM20-DK var. B, J-Link
+1051898754, AP Askey 802.11ax). **São respostas reais, não exemplos.** Cada campo está
+explicado, e onde faz diferença está dito a que geração de Wi-Fi ele pertence.
+
+### 1. `device list` — o companion apareceu?
+
+Antes de qualquer comando de rádio, confirme que a EB II foi enumerada:
 
 ```
 wifi_shell:~$ device list
+devices:
+- spi@c8000 (READY)    DT node labels: spi22 nordic_expansion_spi
+- wlan0 (READY)        DT node labels: wlan0
+- uart@104000 (READY)  DT node labels: uart30
 ```
 
-Espera-se `wlan0 (READY)` e `spi@c8000 (spi22 / nordic_expansion_spi)` na lista — é
-assim que se sabe que a EB II está acoplada e enumerada, antes de gastar tempo
-tentando `wifi scan` num companion que não subiu.
+| O que procurar | Por quê |
+|---|---|
+| `spi@c8000 (READY)` | é o barramento SPI que liga o host ao nRF7002. Sem ele, o shield não está encaixado ou não foi detectado |
+| `wlan0 (READY)` | a interface de rede que o driver `nrf_wifi` criou por cima do SPI |
+| só `uart@104000` (a `uart30`) | a `uart20` **sumiu** — é a troca de VCOM avisada no topo deste README |
+
+Se `wlan0` não aparecer, não adianta tentar `wifi scan`.
+
+### 2. `wifi scan` — o que existe no ar
 
 ```
-wifi scan
-wifi connect -s <ssid> -k 1 -p <senha> -b 5
-wifi status
-net iface
+wifi_shell:~$ wifi scan
+Scan requested
+Num | SSID           (len) | Chan (Band)   | RSSI | Security        | BSSID             | MFP
+1   | #CLARO-WIFI    11    | 4    (2.4GHz) | -34  | OPEN            | 02:01:12:96:C4:5E | Disable
+3   | PepeuNet-6G    11    | 6    (2.4GHz) | -43  | WPA2-PSK        | 44:89:6D:61:58:CF | Disable
+5   | PepeuNet-6G    11    | 52   (5GHz  ) | -50  | WPA2-PSK        | 44:89:6D:61:58:CE | Disable
+21  |                0     | 6    (2.4GHz) | -83  | WPA2 Enterprise | 5C:F7:96:FD:A7:90 | Disable
+...
+Scan request done
 ```
 
-- `wifi scan` — lista as redes ao alcance, com banda, canal e RSSI de cada uma.
-- `wifi connect -s <ssid> -k 1 -p <senha> -b 5` — conecta na rede da sala (`-k 1` =
-  WPA2-PSK; `-b` escolhe a banda, `2` ou `5`).
-- `wifi status` — banda, canal e RSSI da conexão atual.
-- `net iface` — mostra a interface Wi-Fi e o IP obtido por DHCP.
+Nesta captura vieram **26 redes**. Campo a campo:
 
-### `wifi scan` — o que apareceu na bancada
+| Campo | O que é |
+|---|---|
+| `SSID` / `(len)` | o nome da rede e seu comprimento. **`len 0` é rede oculta** — o AP não anuncia o nome |
+| `Chan (Band)` | canal e banda. Canais 1–14 são 2,4 GHz; 36 e acima são 5 GHz |
+| `RSSI` | potência recebida em dBm, sempre negativa. −34 é forte, −90 é no limite |
+| `Security` | `OPEN`, `WPA-PSK`, `WPA2-PSK`, `WPA2 Enterprise`. **Define o `-k` do `connect`** |
+| `BSSID` | o MAC do **rádio** do AP — não do AP inteiro |
+| `MFP` | *Management Frame Protection*, do **802.11w**: protege os quadros de gerência, como um `deauth` forjado |
 
-25 redes ao todo. A rede da bancada apareceu duas vezes — uma por banda, com BSSIDs
-diferentes:
+**A observação que rende aula:** a rede da bancada aparece **duas vezes**, com o mesmo
+SSID e **BSSIDs diferentes** (`...58:CF` no canal 6, `...58:CE` no canal 52). É *um* AP
+com *dois* rádios. O aluno escolhe qual usar com o `-b` do `connect` — e vai medir
+consumo diferente em cada um (lab 11).
 
-| SSID | Canal | Banda | RSSI | Segurança | BSSID |
-|---|---|---|---|---|---|
-| `<ssid>` (rede da bancada) | 6 | 2,4 GHz | -35 | WPA2-PSK | `<bssid_2g4>` |
-| `<ssid>` (rede da bancada) | 52 | 5 GHz | -48 | WPA2-PSK | `<bssid_5g>` |
+### 3. `wifi connect` — associar
 
-MFP apareceu como `Disable` no scan e `Optional` depois de associado. Sem WPA3 nesta
-rede — `-k 1` (WPA2-PSK) é o modo certo.
+```
+wifi_shell:~$ wifi connect -s PepeuNet-6G -k 1 -p <senha> -b 5
+<inf> wpa_supp: wlan0: WPA: Key negotiation completed with 44:89:6d:61:58:ce [PTK=CCMP GTK=CCMP]
+<inf> wpa_supp: wlan0: CTRL-EVENT-CONNECTED - Connection to 44:89:6d:61:58:ce completed
+<inf> net_dhcpv4: Received: 192.168.15.19
+```
 
-### `wifi connect` e `net iface`
+| Opção | Significado |
+|---|---|
+| `-s <ssid>` | o nome da rede |
+| `-k <n>` | o modo de segurança. **`1` = WPA2-PSK**, `0` = aberta, `2` = WPA2-EAP, `3` = WPA3-SAE. Tem de bater com a coluna `Security` do scan |
+| `-p <senha>` | a chave pré-compartilhada |
+| `-b <2/5/6>` | a banda — **é o que decide qual dos dois rádios do AP** você usa |
 
-Associação, 4-way handshake e DHCP fecharam em cerca de 1 s. IP obtido:
-`<ip>/24`, gateway `<gateway>`, lease de 14400 s (4 h). Um endereço IPv6 global
-também sobe, do prefixo do provedor.
+**Três eventos distintos em cerca de 250 ms**, e vale separá-los para a turma:
 
-### `wifi status` — o modo de link por banda
+1. **`Key negotiation completed ... [PTK=CCMP GTK=CCMP]`** — o *4-way handshake* do WPA2.
+   A **PTK** protege o tráfego só desta estação; a **GTK** protege o que o AP manda em
+   broadcast e multicast para todas. `CCMP` é a cifra, baseada em AES. Isto é **WPA2, de
+   2004** — não há nada de Wi-Fi 6 nesta etapa.
+2. **`CTRL-EVENT-CONNECTED`** — a associação terminou; o link existe.
+3. **`net_dhcpv4: Received: ...`** — só agora há **IP**. Associação e endereço são coisas
+   separadas, e o lab 7 mostra isso ainda mais claramente.
 
-| Banda | Canal | Link Mode reportado | RSSI |
-|---|---|---|---|
-| 2,4 GHz | 6 | **WIFI 6 (802.11ax/HE)** | -38 |
-| 5 GHz | 52 | UNKNOWN | -47 / -53 |
+### 4. `wifi status` — o estado do link
 
-O 5 GHz reportou `UNKNOWN` em duas conexões seguidas, mesmo depois de deixar o link
-assentar — não é evidência de que o 5 GHz não seja `ax`, é o driver não preenchendo
-esse campo para essa BSS. O 2,4 GHz é a evidência positiva de que o AP é Wi-Fi 6 de
-verdade.
+```
+wifi_shell:~$ wifi status
+Status: successful
+==================
+State: COMPLETED          Interface Mode: STATION
+Link Mode: UNKNOWN        SSID: PepeuNet-6G
+BSSID: 44:89:6D:61:58:CE  Band: 5GHz           Channel: 52
+Security: WPA2-PSK        MFP: Optional        RSSI: -50
+Beacon Interval: 100      DTIM: 3              TWT: Not supported
+Current PHY TX rate (Mbps) : 537179.8
+```
 
-> **Cuidado com o `Current PHY TX rate`.** Logo depois de conectar, esse campo veio
-> com um valor absurdo (537179,8 Mbps); segundos depois, valores plausíveis (1,0 /
-> 8,6 Mbps). Não usar esse campo como métrica no curso — ele não é confiável logo
-> após a associação.
+| Campo | O que é | Geração |
+|---|---|---|
+| `State: COMPLETED` | associado. Outros valores: `SCANNING`, `AUTHENTICATING`, `DISCONNECTED` | — |
+| `Interface Mode: STATION` | é cliente, não ponto de acesso (o lab 8a mostra o outro modo) | — |
+| `Link Mode` | a geração negociada: `WIFI 4 (802.11n)`, `WIFI 5 (ac)`, **`WIFI 6 (802.11ax/HE)`** | ver abaixo |
+| `Beacon Interval: 100` | o AP anuncia a cada 100 ms | 802.11 original |
+| **`DTIM: 3`** | a cada 3 beacons, um carrega o DTIM — **300 ms**. **Quem decide é o AP**; a estação só lê | 802.11 original |
+| **`TWT`** | se o AP negocia *Target Wake Time* | **Wi-Fi 6** |
+| `MFP: Optional` | 802.11w. Note que o scan dizia `Disable` e aqui diz `Optional` | 802.11w |
 
+**Duas armadilhas medidas neste comando:**
+
+- **`Link Mode: UNKNOWN` em 5 GHz.** Reconectando o **mesmo AP** em 2,4 GHz, o campo vem
+  `WIFI 6 (802.11ax/HE)`. Não significa que a BSS de 5 GHz não seja `ax` — é o driver não
+  preenchendo o campo naquela BSS. **A evidência positiva de que o AP é Wi-Fi 6 vem do
+  rádio de 2,4 GHz.**
+- **`Current PHY TX rate` não serve como métrica.** Logo depois de conectar veio
+  **537179,8 Mbps**, um valor impossível; segundos depois, 1,0 e 8,6 Mbps. Não use esse
+  campo para nada.
+
+### 5. `net iface` — a visão da pilha IP
+
+```
+wifi_shell:~$ net iface
+Interface wlan0 (WiFi) [1]
+Link addr : F4:CE:36:00:D2:10       MTU : 1492
+Status    : oper=UP, admin=UP, carrier=ON
+Ethernet capabilities supported: TX checksum offload, RX checksum offload, ...
+IPv4 unicast addresses (max 1): 192.168.15.19/255.255.255.0 DHCP preferred
+IPv4 gateway : 192.168.15.1         DHCPv4 lease time : 14400
+IPv6 unicast addresses: fe80::f6ce:36ff:fe00:d210
+                        2804:7f4:c013:9aa9:f6ce:36ff:fe00:d210
+```
+
+Três coisas para apontar:
+
+- **`Link addr` é o MAC do nRF7002**, gravado na OTP do próprio companion.
+- **Aparece "Ethernet capabilities" numa interface Wi-Fi.** Não é erro: o nRF7002 é
+  **FullMAC** — o 802.11 roda dentro dele, e o host troca **quadros Ethernet** pelo SPI.
+  Para a pilha do Zephyr, `wlan0` é uma placa de rede comum.
+- **Um IPv6 global subiu sozinho** (`2804:...`), por SLAAC, sem ninguém pedir.
+
+### 6. `wifi ps` — o estado de economia de energia
+
+```
+wifi_shell:~$ wifi ps
+PS status: Power save enabled     PS mode: Legacy power save
+PS listen_interval: 10            PS wake up mode: DTIM
+PS timeout: 100 ms                PS exit strategy: Custom algorithm
+No TWT flows
+```
+
+| Campo | O que é |
+|---|---|
+| `PS status` | **já vem ligado** — o rádio dorme entre beacons por padrão |
+| `PS mode: Legacy` | o algoritmo clássico; a alternativa é `WMM` |
+| `PS listen_interval: 10` | quantos beacons a estação **pode** pular. Só vale se o modo de acordar for `listen_interval` |
+| `PS wake up mode: DTIM` | acordando no DTIM — 300 ms aqui. A alternativa é `listen_interval` |
+| `PS timeout: 100 ms` | o *inactivity timer* do **dynamic power save**: depois de tráfego, o rádio fica acordado 100 ms antes de voltar a dormir |
+| `No TWT flows` | nenhuma sessão TWT ativa — coerente com o `TWT: Not supported` do `status` |
+
+O `PS timeout` explica um comportamento que confunde muita gente: **pings em rajada medem
+~8 ms** e escondem completamente o efeito do power save, porque depois do primeiro pacote
+o rádio fica acordado. O lab 11 mede isso direito, com pings isolados.
+
+### Os LEDs neste lab
+
+**Nenhum.** O `wifi_shell` não aciona LED algum — tudo acontece no console. Vale dizer,
+porque os labs 7, 8a, 8b, 9 e 10 usam LEDs e o aluno pode ficar procurando sinal na placa.
 ## TWT — Wi-Fi 6 não garante TWT
 
 O AP da bancada é 802.11ax confirmado (seção anterior). Mesmo assim, ele **não é
