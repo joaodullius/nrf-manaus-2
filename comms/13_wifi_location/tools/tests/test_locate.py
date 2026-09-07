@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 """Testes de wifi_locate.py -- sem hardware, sem chamar a API de verdade
 (localizacao e servico cobrado: os testes automaticos usam resposta gravada).
+
+Os BSSIDs de exemplo (00:00:5e:00:53:xx) vem do bloco reservado pela RFC 7042
+para documentacao e exemplos -- nunca corresponde a um ponto de acesso real,
+o que importa aqui porque BSSID e exatamente o dado que este lab usa para
+localizar um ponto fisico.
 """
 import socket
 
@@ -13,11 +18,11 @@ from wifi_locate import montar_requisicao, parse_scan, resolver
 # --- parse_scan -------------------------------------------------------------
 
 def test_parse_scan_le_a_linha_do_firmware():
-    linha = 'AP,d8:ec:5e:8f:66:19,-49,5180,cia-linksys\n'
-    assert parse_scan(linha) == {"macAddress": "d8:ec:5e:8f:66:19",
+    linha = 'AP,00:00:5e:00:53:01,-49,5180,rede-exemplo\n'
+    assert parse_scan(linha) == {"macAddress": "00:00:5e:00:53:01",
                                  "signalStrength": -49,
                                  "frequency": 5180,
-                                 "ssid": "cia-linksys"}
+                                 "ssid": "rede-exemplo"}
 
 
 def test_parse_scan_rejeita_outras_linhas():
@@ -36,13 +41,13 @@ def test_parse_scan_rejeita_mac_localmente_administrado():
 # --- montar_requisicao -------------------------------------------------------
 
 def test_requisicao_tem_o_formato_do_nrf_cloud():
-    aps = [{"macAddress": "d8:ec:5e:8f:66:19", "signalStrength": -49,
+    aps = [{"macAddress": "00:00:5e:00:53:01", "signalStrength": -49,
             "frequency": 5180, "ssid": "a"},
-           {"macAddress": "c8:7f:54:de:23:b8", "signalStrength": -60,
+           {"macAddress": "00:00:5e:00:53:02", "signalStrength": -60,
             "frequency": 2412, "ssid": "b"}]
     corpo = montar_requisicao(aps)
     assert list(corpo.keys()) == ["accessPoints"]
-    assert corpo["accessPoints"][0]["macAddress"] == "d8:ec:5e:8f:66:19"
+    assert corpo["accessPoints"][0]["macAddress"] == "00:00:5e:00:53:01"
     assert corpo["accessPoints"][0]["signalStrength"] == -49
     # So macAddress/signalStrength vao no corpo -- e o que a API aceita;
     # frequency/ssid sao so para a lista impressa no PC.
@@ -51,7 +56,7 @@ def test_requisicao_tem_o_formato_do_nrf_cloud():
 
 def test_requisicao_exige_pelo_menos_dois_aps():
     with pytest.raises(ValueError, match="dois"):
-        montar_requisicao([{"macAddress": "d8:ec:5e:8f:66:19", "signalStrength": -49}])
+        montar_requisicao([{"macAddress": "00:00:5e:00:53:01", "signalStrength": -49}])
 
 
 def test_requisicao_rejeita_lista_vazia():
@@ -74,8 +79,8 @@ class _RespostaFalsa:
 
 
 def _aps_validos():
-    return [{"macAddress": "d8:ec:5e:8f:66:19", "signalStrength": -49},
-            {"macAddress": "c8:7f:54:de:23:b8", "signalStrength": -60}]
+    return [{"macAddress": "00:00:5e:00:53:01", "signalStrength": -49},
+            {"macAddress": "00:00:5e:00:53:02", "signalStrength": -60}]
 
 
 def test_resolver_devolve_lat_lon_incerteza(monkeypatch):
@@ -129,7 +134,7 @@ def test_resolver_exige_pelo_menos_dois_aps_antes_de_chamar_a_api(monkeypatch):
     monkeypatch.setattr(wifi_locate.requests, "post", post_falso)
 
     with pytest.raises(ValueError, match="dois"):
-        resolver([{"macAddress": "d8:ec:5e:8f:66:19", "signalStrength": -49}],
+        resolver([{"macAddress": "00:00:5e:00:53:01", "signalStrength": -49}],
                  "org-x", "proj-y", "token-qualquer")
 
     assert chamou["post"] is False, "nao pode chamar a API (cobrada) sem dois APs"
@@ -141,8 +146,8 @@ def test_receber_scan_junta_linhas_e_para_no_fim():
     servidor, cliente = socket.socketpair()
     try:
         cliente.sendall(
-            b"AP,d8:ec:5e:8f:66:19,-49,5180,cia-linksys\n"
-            b"AP,c8:7f:54:de:23:b8,-60,2412,outra-rede\n"
+            b"AP,00:00:5e:00:53:01,-49,5180,rede-exemplo\n"
+            b"AP,00:00:5e:00:53:02,-60,2412,outra-rede\n"
             b"linha invalida sem o prefixo AP\n"
             b"AP,02:00:00:00:00:01,-40,2412,mac-local\n"
             b"FIM\n"
@@ -154,4 +159,4 @@ def test_receber_scan_junta_linhas_e_para_no_fim():
 
     # A linha invalida e o MAC localmente administrado sao descartados;
     # sobram so os dois APs validos.
-    assert [ap["macAddress"] for ap in aps] == ["d8:ec:5e:8f:66:19", "c8:7f:54:de:23:b8"]
+    assert [ap["macAddress"] for ap in aps] == ["00:00:5e:00:53:01", "00:00:5e:00:53:02"]
