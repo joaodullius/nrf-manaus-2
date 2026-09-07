@@ -413,11 +413,15 @@ e `..._PASSWORD`. Serve aos labs 7, 9, 11, 12 e 13 (o 10 compila a partir do 09 
 
 ```
 west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild \
-  -- -D<app>_SHIELD="nrf7002eb2" -D<app>_SNIPPET=nrf70-wifi -DEXTRA_CONF_FILE=minha_rede.conf
+  -- -D<app>_SHIELD="nrf7002eb2" -D<app>_SNIPPET=nrf70-wifi \
+  -D<app>_EXTRA_CONF_FILE=minha_rede.conf
 ```
 
 No VS Code, shield e snippet vão em **Extra CMake arguments**. O `SHIELD` é escopado por
-imagem no sysbuild (`<app>_SHIELD`), como nos `sample.yaml` da Nordic.
+imagem no sysbuild (`<app>_SHIELD`), como nos `sample.yaml` da Nordic. O prefixo é
+**obrigatório** para `SHIELD` e `SNIPPET` e **opcional** para `EXTRA_CONF_FILE` e para
+`CONFIG_*`; o material escreve sempre com prefixo, nos oito labs, para o aluno não ter de
+guardar a exceção.
 
 ### 5.3 Console
 

@@ -7,10 +7,13 @@
 > (`comms/06_wifi_shell/README.md`, Passo 2).
 
 > **Origem.** Cópia integral de `nrf/samples/wifi/twt` do **nRF Connect SDK v3.4.0**.
-> Licença Nordic preservada em [LICENSE](LICENSE). `prj.conf` e `CMakeLists.txt` levam
-> o cabeçalho `ORIGEM:` do curso; a divergência é a mesma dos labs 7 e 9: as
-> credenciais saem para `minha_rede.conf` e o `CMakeLists.txt` ganha uma falha
-> proposital de build quando ele está vazio.
+> Licença Nordic preservada em [LICENSE](LICENSE). Todos os arquivos vindos do SDK
+> levam o cabeçalho `ORIGEM:` do curso — `prj.conf`, `CMakeLists.txt`, `src/main.c` e
+> os seis de `modules/traffic_gen/`. A única divergência é a mesma dos labs 7 e 9, e
+> está nos dois primeiros: as credenciais saem para `minha_rede.conf` e o
+> `CMakeLists.txt` ganha uma falha proposital de build quando ele está vazio. O
+> `src/main.c` e o `modules/traffic_gen/` estão byte a byte iguais ao SDK, e o
+> cabeçalho de cada um diz isso e traz o `diff` para conferir.
 
 Este lab fecha o bloco de **energia e transporte** da frente de Wi-Fi — depois dele
 o módulo segue para os dois temas que diferenciam Wi-Fi 6 na prática, coexistência
@@ -119,7 +122,13 @@ de 307 ms (média perto da metade, máximo perto do período); com listen interv
 sobre DTIM 3 a estação acorda a cada 9 beacons, 922 ms — medido mediana 525 e
 máximo 938.
 
-Escalando o listen interval, o máximo cresce de forma monotônica:
+Escalando o listen interval, o máximo cresce de forma monotônica. A linha do listen
+interval 10 aparece nas duas tabelas com números um pouco diferentes (525/938 acima,
+527/913 aqui) porque são **duas corridas separadas** do mesmo regime: cada quadro
+espera uma fração aleatória do período de dormida, então a mediana e o máximo de uma
+amostra finita não se repetem exatamente. A diferença entre as duas corridas — 2 ms na
+mediana, 25 ms no máximo — é da ordem de grandeza dessa variação, e é ela própria a
+medida de quanto confiar em uma corrida só.
 
 | listen interval | acordar previsto | mediana medida | máximo medido |
 |---|---|---|---|

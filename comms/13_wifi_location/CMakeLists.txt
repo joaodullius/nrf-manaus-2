@@ -9,8 +9,8 @@ if(NOT CONFIG_LAB_SERVIDOR_IP)
     "CONFIG_LAB_SERVIDOR_IP nao definido.\n"
     "Descubra o IP do seu PC na rede da sala (ipconfig) e passe:\n"
     "  -D13_wifi_location_CONFIG_LAB_SERVIDOR_IP=\"192.168.0.100\"\n"
-    "O prefixo 13_wifi_location e o nome da imagem no sysbuild -- sem ele o\n"
-    "valor nao chega neste aplicativo. Precisa bater com o nome da pasta do lab.")
+    "O prefixo 13_wifi_location e o nome da imagem no sysbuild, e e a forma que o\n"
+    "curso usa em todos os labs. Precisa bater com o nome da pasta do lab.")
 endif()
 
 target_sources(app PRIVATE src/main.c)

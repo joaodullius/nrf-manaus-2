@@ -401,8 +401,10 @@ dois sentidos (telemetria subindo, comando de LED descendo):**
   voltar, como documentado no lab 9.
 
 **Ainda a confirmar na bancada:**
-- Botão (amostra imediata com `"botao":true`) nas três variantes —
-  comportamento herdado do lab 9, não re-testado gesto a gesto neste lab.
+- Botão (amostra imediata com `"botao":true`) nas três variantes — o caminho é
+  herdado do lab 9, mas **lá o gesto também não foi exercitado**: o `sw0` ainda não
+  foi apertado por ninguém em nenhum dos dois labs. O código está revisado nos dois;
+  o que falta é o dedo na placa.
 - Captura com Wireshark ou `tcpdump` no PC durante uma amostra de cada
   variante, para confirmar os números da tabela "Bytes por amostra" contra
   tráfego de Wi-Fi de verdade (a medição deste README é em loopback — ver a

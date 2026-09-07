@@ -67,13 +67,18 @@ Cada aluno preenche o seu localmente com a rede da sala e compila com:
 -D12_wifi_coex_EXTRA_CONF_FILE=minha_rede.conf
 ```
 
-Opções de Kconfig e arquivos de fragmento como este, no sysbuild, já valem para a
-**aplicação principal** com ou sem o prefixo de imagem — as duas formas são
-equivalentes (`-DEXTRA_CONF_FILE=minha_rede.conf`, sem prefixo, funciona igual;
-confirmado compilando os dois jeitos no lab 7: binário byte a byte idêntico). O curso
-escreve sempre a forma prefixada, em todos os labs, para o aluno não ter de guardar
-qual opção aceita as duas formas e qual não aceita: para o `SHIELD` e o `SNIPPET` do
-Passo 1 o prefixo **é** obrigatório, por um motivo diferente (ver a seção abaixo).
+Opções de Kconfig e arquivos de fragmento como este, no sysbuild, valem para a
+**aplicação principal** com ou sem o prefixo de imagem — é assim de propósito, para o
+mesmo comando funcionar com ou sem sysbuild. No lab 7, compilar dos dois jeitos deu
+binário byte a byte idêntico.
+
+Mesmo assim, **o curso escreve sempre a forma prefixada**, em todos os labs. Dois
+motivos. O primeiro é não obrigar o aluno a guardar qual opção aceita as duas formas e
+qual não aceita — para o `SHIELD` e o `SNIPPET` do Passo 1 o prefixo **é** obrigatório,
+por um motivo diferente (ver a seção abaixo). O segundo é uma observação de bancada que
+continua sem explicação: no lab 9, um build com `EXTRA_CONF_FILE` **sem** prefixo saiu
+com a senha vazia, o que a forma prefixada não reproduziu. Não sabemos por quê, não
+conseguimos reproduzir sob demanda, e não vale arriscar a aula: use a forma prefixada.
 
 **Nunca commitar a senha real.** Antes de qualquer commit, esvaziar o arquivo de
 volta:
