@@ -26,7 +26,7 @@ Instale o [nRF Connect for Desktop](https://www.nordicsemi.com/Products/Developm
 |-----|--------------|
 | **Programmer** | Gravação de firmware e recovery dos kits |
 | **Serial Terminal** | Console UART dos labs |
-| **Power Profiler** | Medições de energia (lab NPU vs CPU) — requer PPK2 |
+| **Power Profiler** | Medições de energia (lab NPU vs CPU do Edge AI; lab 11 de Wi-Fi) — requer PPK2 |
 | **Board Configurator** | Configuração dos DKs quando necessário |
 
 ### 4. Ferramentas de linha de comando
