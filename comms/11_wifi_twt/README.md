@@ -277,6 +277,10 @@ Bancada de 2026-09-07: nRF54LM20-DK var. B + nRF7002-EB II, SB10 cortado, PPK2 e
 amperímetro no P10 (VIN no pad 3/P3V6, VOUT no pad 2/VBAT, GND no pad 1), firmware do
 **lab 6**, **22 s por regime**. AP Askey 802.11ax, beacon 100 ms, DTIM 3, sem TWT.
 
+Cada tabela desta Parte A tem o script que a produziu em
+[`tools/`](tools/) — nenhum deles guarda credencial, e o README de lá diz qual
+script fez qual tabela.
+
 ![A escada de economia de energia, medida](wifi_escada_psm.png)
 
 | Regime | Corrente média | Mediana | Pico |
