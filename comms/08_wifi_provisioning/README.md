@@ -61,6 +61,47 @@ só reafirma o que o `prj.conf` já liga) — e a variante B nunca precisou do s
 próprio arquivo porque não falta nada para ela. **Nenhum `.conf` de board foi criado
 neste lab.**
 
+## `meu_softap.conf` — o SSID do seu kit
+
+Numa sala com vários kits, **todos anunciariam o mesmo SSID** (`nrf-wifiprov`, o
+padrão da biblioteca) e não haveria como saber em qual deles você entrou. O SoftAP
+é uma rede **aberta** — a biblioteca não expõe opção de senha —, então o SSID é a
+única coisa que distingue um kit do outro no ar.
+
+Por isso este lab tem um fragmento por aluno, no mesmo idioma do `minha_rede.conf`
+dos labs 7, 9, 11, 12 e 13:
+
+```
+CONFIG_SOFTAP_WIFI_PROVISION_SSID="nrf-wifiprov"
+```
+
+Ele **já vem com o valor padrão** — o mesmo que o app da Nordic sugere — e é o que
+sai da caixa funcionando. Para ter o seu próprio nome, troque o valor e compile com
+`-D08_wifi_provisioning_EXTRA_CONF_FILE=meu_softap.conf`.
+
+> **Cuidado ao escolher o nome, se for usar o app.** O campo **"Edit SSID"** do
+> nRF Wi-Fi Provisioner tem um defeito, observado nesta bancada em 2026-09-07: a tela
+> se redesenha sozinha e o teclado **volta para as letras** toda vez que se troca para
+> a página de símbolos. Dá para digitar letras com paciência, mas **não** se consegue
+> pôr um `-`. Como o próprio padrão `nrf-wifiprov` tem hífen, isso significa que, pelo
+> app, só é digitável um SSID **sem caracteres especiais**. Duas saídas:
+>
+> - escolha um nome **só com letras e números** (ex.: `nrfprov07`) — o app digita; ou
+> - use o `scripts/provision.py`, que **não olha o SSID do SoftAP**: você entra na rede
+>   na mão e ele fala com `wifiprov.local`. Por script, qualquer nome serve.
+
+Duas diferenças em relação ao `minha_rede.conf`, e as duas importam:
+
+- **Este valor não é segredo.** Pode ser commitado à vontade; não há senha nenhuma
+  aqui. O `minha_rede.conf` é rastreado e vazio justamente porque guarda senha — este
+  é rastreado e **com valor de verdade**.
+- **Não mexa no `CONFIG_NET_HOSTNAME` por causa disto.** O certificado do servidor
+  HTTPS é amarrado ao **hostname** (`wifiprov.local`), não ao SSID, e é o hostname que
+  o `provision.py` resolve. Mudar só o SSID **não** obriga a regerar certificado
+  (ver "O certificado de servidor"). O hostname pode continuar igual em todos os
+  kits sem colidir: cada SoftAP é uma rede isolada, com o kit em `192.168.0.1`, e o
+  PC entra em uma de cada vez.
+
 ## Passo 1 — compilar e gravar
 
 Shield e snippet são escopados pela imagem — que o sysbuild nomeia
@@ -68,7 +109,7 @@ Shield e snippet são escopados pela imagem — que o sysbuild nomeia
 
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/08_wifi_provisioning/build_lm20 C:/work/nrf-manaus-2/comms/08_wifi_provisioning -- -D08_wifi_provisioning_SHIELD="nrf7002eb2" -D08_wifi_provisioning_SNIPPET=nrf70-wifi
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/08_wifi_provisioning/build_lm20 C:/work/nrf-manaus-2/comms/08_wifi_provisioning -- -D08_wifi_provisioning_SHIELD="nrf7002eb2" -D08_wifi_provisioning_SNIPPET=nrf70-wifi -D08_wifi_provisioning_EXTRA_CONF_FILE=meu_softap.conf
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/08_wifi_provisioning/build_lm20
 ```
 
@@ -88,7 +129,7 @@ board.
 ## O que este sample realmente é
 
 **Não é um formulário no navegador.** A DK sobe um Access Point próprio (SSID padrão
-`nrf-wifiprov`, definido por `CONFIG_SOFTAP_WIFI_PROVISION_SSID`) e um servidor
+`nrf-wifiprov`, trocado pelo seu em `meu_softap.conf` — ver a seção acima) e um servidor
 HTTPS na porta 443 (`CONFIG_SOFTAP_WIFI_PROVISION_TCP_PORT`), com um certificado
 autoassinado embutido em `certs/`. O protocolo de conteúdo é **protobuf**, não HTML:
 o cliente busca `GET https://wifiprov.local/prov/networks` e recebe a lista de redes
@@ -117,6 +158,54 @@ o primeiro da lista (`led0`, rotulado `Green LED 0`) e `DK_LED2` é o segundo
 (`led1`, `Green LED 1`). Na serigrafia da nRF54LM20-DK, que numera a partir de 0
 igual ao devicetree, isso é **LED0** (modo AP) e **LED1** (conectado) — sem
 deslocamento na placa, só entre o nome do macro e o índice que ele usa.
+
+## Os nomes e endereços deste lab — quem é quem
+
+Este é o lab com mais nomes circulando ao mesmo tempo, e a confusão típica é achar
+que são o mesmo. **Há dois SSIDs e um hostname**, e eles vivem em camadas diferentes:
+
+| O quê | Valor | De onde vem | Em que camada vive | Único por kit? |
+|---|---|---|---|---|
+| **SSID do SoftAP** | `nrf-prov-XX` | `meu_softap.conf` | rádio — é a rede que aparece na lista do PC | **sim** |
+| **SSID da rede-alvo** | a rede da sala | digitado no `provision.py`, em tempo de execução | rádio — é o que está sendo provisionado | não (é a mesma para todos) |
+| **Hostname** | `wifiprov` → `wifiprov.local` | `CONFIG_NET_HOSTNAME` + `CONFIG_MDNS_RESPONDER` | nome, resolvido por mDNS dentro do SoftAP | não |
+| **Certificado** | `CN`/SAN = `wifiprov.local` | `certs/*.pem`, registrado no boot | TLS — prova que o servidor é quem diz ser | não |
+| **IP do AP** | `192.168.0.1` | `CONFIG_SOFTAP_WIFI_PROVISION_IPV4_ADDRESS` | IP — e é a base do servidor DHCP do kit | não |
+| **Porta** | `443` | `CONFIG_SOFTAP_WIFI_PROVISION_TCP_PORT` | TCP | não |
+| **`sec_tag`** | `88` | `CONFIG_SOFTAP_WIFI_PROVISION_CERTIFICATE_SEC_TAG` | índice do cofre de credenciais TLS | não |
+
+**Por que só o SSID do SoftAP precisa ser único.** Ele é a única coisa que os kits
+disputam: todos anunciam no mesmo ar, e o aluno escolhe pelo nome. Todo o resto vive
+*dentro* de um SoftAP, e cada SoftAP é uma rede isolada — seis kits têm seis redes
+separadas, cada uma com um `wifiprov.local` em `192.168.0.1`, sem se enxergarem. O PC
+entra em uma de cada vez.
+
+**Por que o certificado se amarra ao hostname e não ao SSID.** No TLS, o cliente
+verifica se o nome que ele pediu aparece no certificado do servidor. O
+`provision.py` pede `https://wifiprov.local/...`; o certificado traz
+`SAN: DNS:wifiprov.local`. Bate, o handshake fecha. O SSID nunca entra nessa
+verificação — ele é o nome da *rede*, não o nome do *servidor*. Por isso trocar o
+SSID não obriga a regerar nada, e trocar o **hostname** obriga a regerar o
+certificado **e** a editar a URL no `provision.py`, que a tem fixa no código.
+
+**A cadeia de nomes, do começo ao fim:** o aluno vê `nrf-prov-XX` na lista de redes
+do PC → entra nela e recebe um IP do servidor DHCP do kit → o `provision.py` resolve
+`wifiprov.local` por mDNS e chega em `192.168.0.1` → abre TLS na porta 443 e confere o
+certificado contra esse nome → pede `/prov/networks` e recebe protobuf → devolve
+`/prov/configure` com o SSID da rede-alvo e a senha.
+
+**Sem `--certificate`, o TLS não autentica ninguém.** Essa flag do `provision.py` vira
+o `verify=` do `requests`, e o **default é `False`**: a conexão continua criptografada,
+mas o cliente aceita qualquer certificado — inclusive o de um impostor que tenha subido
+um `nrf-prov-XX` falso. Passar `--certificate ../certs/server_certificate.pem` é o que
+diz ao PC em quem confiar. Vale rodar as duas formas em aula: as duas "funcionam", e a
+diferença entre elas é justamente o que o certificado existe para resolver.
+
+**Onde a credencial vai parar.** Depois do `/prov/configure`, o kit grava SSID e senha
+no armazenamento persistente (`CONFIG_WIFI_CREDENTIALS` sobre `fs_zms`, o
+`9 Sectors of 4096 bytes` que aparece na primeira linha do boot). Nos próximos boots ele
+**não** sobe mais o SoftAP: lê a credencial e conecta direto. Para voltar ao modo de
+provisionamento, `sw0` apaga a credencial salva.
 
 ## O certificado de servidor
 
@@ -208,7 +297,8 @@ Python `protobuf` (7.35.0) presentes.
 
 Checklist para fechar esses dois pontos, na UART correta:
 
-- [ ] Conectar o notebook na rede Wi-Fi `nrf-wifiprov` (fecha o item que ficou
+- [ ] Conectar o notebook na rede Wi-Fi do **seu** kit (o SSID que você pôs em
+      `meu_softap.conf`) — fecha o item que ficou
       inconclusivo nesta bancada — confirma de fato que o SoftAP está visível).
 - [ ] Rodar `python provision.py --certificate ../certs/server_certificate.pem`.
 - [ ] Conferir que o script **lista as redes que a DK viu** (SSID, RSSI, banda,
