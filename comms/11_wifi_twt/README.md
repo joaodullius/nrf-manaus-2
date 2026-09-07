@@ -12,16 +12,21 @@
 > credenciais saem para `minha_rede.conf` e o `CMakeLists.txt` ganha uma falha
 > proposital de build quando ele está vazio.
 
-Este é o último lab da frente de Wi-Fi, e ele fecha o tema com o que costuma ficar
-menos claro no material introdutório: economia de energia não é uma escolha entre
-"antigo" e "moderno", é uma **escada de três degraus**. Cada degrau tem um dono
-diferente do intervalo de dormida, e só o último exige Wi-Fi 6.
+Este lab fecha o bloco de **energia e transporte** da frente de Wi-Fi — depois dele
+o módulo segue para os dois temas que diferenciam Wi-Fi 6 na prática, coexistência
+(lab 12) e locationing (lab 13). Ele trata do que costuma ficar menos claro no
+material introdutório: economia de energia não é uma escolha entre "antigo" e
+"moderno", é uma **escada de três degraus**. Cada degrau tem um dono diferente do
+intervalo de dormida, e só o último exige Wi-Fi 6.
 
 O lab tem duas partes:
 
 - **Parte A — degraus 1 e 2 (DTIM e listen interval).** Não depende de Wi-Fi 6 nem de
-  um AP com TWT. Fecha por completo com o firmware do **lab 6** (o shell) e um
-  `ping` do PC — o efeito de cada regime aparece direto na **latência de descida**.
+  um AP com TWT. **Passo 1**, por latência: fecha por completo com o firmware do
+  **lab 6** (o shell) e um `ping` do PC — o efeito de cada regime aparece direto na
+  **latência de descida**. **Passo 2**, por corrente: o mesmo firmware, agora com o
+  PPK2 — roteiro pronto, valores pendentes da decisão do instrutor sobre o solder
+  bridge da EB II.
 - **Parte B — degrau 3 (TWT).** Depende de um AP que negocie TWT individual. Na
   bancada de preparação, a ONT da sala é 802.11ax confirmado e respondeu
   `Peer not TWT capable` — fica pendente de um AP com TWT (EX3000).
@@ -70,7 +75,7 @@ latência baixa; TWT é melhor para dormidas de dezenas de segundos com tráfego
 periódico previsível; o listen interval fica no meio e é a resposta para quem não
 tem AP com TWT.
 
-## Passo 1 — a escada por latência, sem PPK2 (firmware do lab 6)
+## Parte A, Passo 1 — a escada por latência, sem PPK2 (firmware do lab 6)
 
 Grave `comms/06_wifi_shell` (não este diretório) e conecte na rede da sala. A partir
 daqui, tudo é shell — nenhuma linha de firmware deste lab entra no Passo 1.
@@ -100,8 +105,8 @@ setar.
 ### Resultado medido — latência de descida (20 pings por regime, `ping` do PC)
 
 Bancada: ONT Askey RTF8225VW-SV, 2,4 GHz, canal 6, 802.11ax/HE, RSSI −44.
-`Beacon Interval: 100` (~102,4 ms), `DTIM: 3` (~307 ms). Zero perdas nos três
-regimes. Detalhe completo em `.superpowers/sdd/2026-09-06-wifi/bancada-dtim.md`.
+`Beacon Interval: 100` (~102,4 ms), `DTIM: 3` (~307 ms). 20 pings por regime, zero
+perdas nos três.
 
 | Regime | mediana | máximo |
 |---|---|---|
@@ -129,7 +134,7 @@ demais puxam a mediana para baixo — é por isso que a linha de listen interval
 tem mediana 1116 e máximo 5130. **Com dormida longa, a estatística que significa
 alguma coisa é o máximo, não a mediana.**
 
-## Passo 2 — a escada por corrente, com o PPK2
+## Parte A, Passo 2 — a escada por corrente, com o PPK2
 
 > **A confirmar na bancada.** Este passo é o roteiro; nenhum valor de corrente foi
 > medido ainda. As linhas da tabela abaixo ficam pendentes até a medida.
