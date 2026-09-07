@@ -17,7 +17,7 @@ Implementação e validação das principais tecnologias de conectividade e loca
 | [`05_cs_iq_music/`](05_cs_iq_music/) | **CS 5** — IQ para o PC: port do `cs_de` em NumPy reproduz o chip; MUSIC (skig/waves, MIT) sobre o mesmo IQ; dois caminhos de antena e a escolha entre eles; obstrução; painel ao vivo (`cs_dash.py`). Tese: o firmware fornece os dados, a distância é do algoritmo | LM20-DK + TAG + PC | ✅ (conforme o tempo) |
 | [`06_wifi_shell/`](06_wifi_shell/) | **Lab 6** — Shell de Wi-Fi da própria Nordic (`wifi scan`/`connect`/`status`) puro sobre a EB II, sem lógica de aplicação. Base dos labs seguintes; primeira aparição da troca de console (VCOM) e do achado de que "802.11ax no rótulo" não garante TWT | nRF54LM20-DK + nRF7002-EBII | ✅ |
 | [`07_wifi_sta/`](07_wifi_sta/) | **Lab 7** — Associação programática por `minha_rede.conf`: o firmware conecta e sobe IP sozinho, sem shell; falha proposital de build sem a credencial preenchida | nRF54LM20-DK + nRF7002-EBII | ✅ |
-| [`08_wifi_provisioning/`](08_wifi_provisioning/) | **Lab 8** — Provisionamento por SoftAP: a DK sobe como AP, escaneia sozinha e recebe a credencial por HTTPS/protobuf via `provision.py` — sem formulário web | nRF54LM20-DK + nRF7002-EBII | ✅ (fluxo completo pendente) |
+| [`08a_wifi_provisioning/`](08a_wifi_provisioning/) | **Lab 8a** — Provisionamento por SoftAP: a DK sobe como AP, escaneia sozinha e recebe a credencial por HTTPS/protobuf via `provision.py` — sem formulário web | nRF54LM20-DK + nRF7002-EBII | ✅ (fluxo completo pendente) |
 | [`09_wifi_tcp/`](09_wifi_tcp/) | **Lab 9** — Lab central da frente: telemetria por socket TCP puro, mesmo payload do lab 10; reconexão com backoff e queda de conexão como o próprio ponto do lab | nRF54LM20-DK + nRF7002-EBII | ✅ (falta apertar o `sw0`) |
 | [`10_wifi_http_mqtt/`](10_wifi_http_mqtt/) | **Lab 10** — O mesmo payload do lab 9 recompilado sobre HTTP e MQTT: comparação medida de bytes por amostra, FLASH/RAM, e o custo estrutural do polling HTTP | nRF54LM20-DK + nRF7002-EBII | ✅ |
 | [`11_wifi_twt/`](11_wifi_twt/) | **Lab 11** — A escada de economia de energia: DTIM e listen interval medidos por latência com o firmware do lab 6 (Parte A, Passo 1) e preparados para medida de corrente com PPK2 (Parte A, Passo 2, pendente da decisão do instrutor sobre o solder bridge da EB II); TWT (Parte B) depende de um AP que negocie | nRF54LM20-DK + nRF7002-EBII | ✅ (Passo 2 e Parte B pendentes) |
@@ -48,7 +48,7 @@ não do firmware). Um `meu_tag.conf` serve para os três initiators.
 ```
 Lab 6   shell da Nordic          "o companion visivel"           scan, connect, status
 Lab 7   associacao programada    "conectar sem intervencao"      minha_rede.conf
-Lab 8   provisionamento SoftAP   "a DK escaneia por voce"        HTTPS + protobuf, sem web
+Lab 8a  provisionamento SoftAP   "a DK escaneia por voce"        HTTPS + protobuf, sem web
 Lab 9   telemetria TCP           "o lab central"                 payload reaproveitado no lab 10, backoff
 Lab 10  HTTP e MQTT              "um payload, tres transportes"  bytes por amostra, polling
 Lab 11  economia de energia      "a escada de tres degraus"      DTIM, listen interval, TWT

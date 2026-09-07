@@ -1,4 +1,4 @@
-# Wi-Fi · Lab 8 — Provisionamento por SoftAP
+# Wi-Fi · Lab 8a — Provisionamento por SoftAP
 
 > **Antes de tudo: com a EB II acoplada, a VCOM do console muda.** Sem o shield, o
 > console desta DK fica na `uart20`, que sai na **segunda** VCOM do chip de interface
@@ -47,7 +47,7 @@ e `CONFIG_SETTINGS`). Não existe `nrf54lm20dk_nrf54lm20b_cpuapp.conf`.
 Antes de criar qualquer arquivo, o build foi tentado direto para a variante B:
 
 ```
-west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild ... -- -D08_wifi_provisioning_SHIELD="nrf7002eb2" -D08_wifi_provisioning_SNIPPET=nrf70-wifi
+west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild ... -- -D08a_wifi_provisioning_SHIELD="nrf7002eb2" -D08a_wifi_provisioning_SNIPPET=nrf70-wifi
 ```
 
 **Compilou sem erro, `exit 0`, sem precisar de `.conf` novo para a variante B.** O
@@ -77,7 +77,7 @@ CONFIG_SOFTAP_WIFI_PROVISION_SSID="nrf-wifiprov"
 
 Ele **já vem com o valor padrão** — o mesmo que o app da Nordic sugere — e é o que
 sai da caixa funcionando. Para ter o seu próprio nome, troque o valor e compile com
-`-D08_wifi_provisioning_EXTRA_CONF_FILE=meu_softap.conf`.
+`-D08a_wifi_provisioning_EXTRA_CONF_FILE=meu_softap.conf`.
 
 > **Cuidado ao escolher o nome, se for usar o app.** O campo **"Edit SSID"** do
 > nRF Wi-Fi Provisioner tem um defeito, observado nesta bancada em 2026-09-07: a tela
@@ -105,12 +105,12 @@ Duas diferenças em relação ao `minha_rede.conf`, e as duas importam:
 ## Passo 1 — compilar e gravar
 
 Shield e snippet são escopados pela imagem — que o sysbuild nomeia
-`08_wifi_provisioning`, igual ao nome da pasta:
+`08a_wifi_provisioning`, igual ao nome da pasta:
 
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/08_wifi_provisioning/build_lm20 C:/work/nrf-manaus-2/comms/08_wifi_provisioning -- -D08_wifi_provisioning_SHIELD="nrf7002eb2" -D08_wifi_provisioning_SNIPPET=nrf70-wifi -D08_wifi_provisioning_EXTRA_CONF_FILE=meu_softap.conf
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/08_wifi_provisioning/build_lm20
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/08a_wifi_provisioning/build_lm20 C:/work/nrf-manaus-2/comms/08a_wifi_provisioning -- -D08a_wifi_provisioning_SHIELD="nrf7002eb2" -D08a_wifi_provisioning_SNIPPET=nrf70-wifi -D08a_wifi_provisioning_EXTRA_CONF_FILE=meu_softap.conf
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/08a_wifi_provisioning/build_lm20
 ```
 
 Build limpo, `exit 0`, imagem única (o nRF7002 é um companion por SPI, não um
@@ -119,8 +119,8 @@ segundo SoC; sem partition manager — `SB_CONFIG_PARTITION_MANAGER=n` no
 
 | Região | Usado | Região total | % usado |
 |---|---|---|---|
-| FLASH | 728012 B | 2036 KB | 34,92% |
-| RAM | 271789 B | 511 KB | 51,94% |
+| FLASH | 728140 B | 2036 KB | 34,93% |
+| RAM | 271813 B | 511 KB | 51,95% |
 
 Os únicos avisos do CMake são os do próprio sample (credenciais em memória
 não segura, `__ASSERT()` habilitado globalmente) — nada relacionado à variante da
@@ -250,7 +250,7 @@ O schema protobuf do sample não é versionado como Python pronto — ele é ger
 disponíveis):
 
 ```
-cd comms/08_wifi_provisioning/scripts
+cd comms/08a_wifi_provisioning/scripts
 protoc --proto_path=C:/ncs/v3.4.0/nrf/subsys/net/lib/softap_wifi_provision/proto --python_out=. common.proto
 ```
 
@@ -400,8 +400,8 @@ precisa estar na rede, ou seja, já teria a credencial.
 - nRF Connect SDK v3.4.0 — `zephyr/boards/shields/nrf7002eb2` (overlay do console:
   desabilita `uart20`, habilita `uart30`, remove `sw3`)
 - Medição local, 2026-09-06 — nRF54LM20-DK var. B: build limpo para
-  `nrf54lm20dk/nrf54lm20b/cpuapp` com `-D08_wifi_provisioning_SHIELD="nrf7002eb2"
-  -D08_wifi_provisioning_SNIPPET=nrf70-wifi`, sem `.conf` de board para a variante B;
+  `nrf54lm20dk/nrf54lm20b/cpuapp` com `-D08a_wifi_provisioning_SHIELD="nrf7002eb2"
+  -D08a_wifi_provisioning_SNIPPET=nrf70-wifi`, sem `.conf` de board para a variante B;
   `protoc` 25.3 gerando `common_pb2.py` sem erro
 - Medição local, 2026-09-06 — `openssl x509` sobre `certs/server_certificate.pem`:
   `CN=wifiprov.local`, SAN `DNS:wifiprov.local`/`DNS:*.wifiprov.local`, validade

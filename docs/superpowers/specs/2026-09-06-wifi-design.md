@@ -298,7 +298,7 @@ Numerados na sequência da aula, continuando o módulo (`06`–`13`, depois dos 
 |---|---|---|---|---|
 | 6 | `06_wifi_shell/` | `nrf/samples/wifi/shell` | LM20-DK + EB II | circuito companion |
 | 7 | `07_wifi_sta/` | `nrf/samples/wifi/sta` | idem | circuito companion |
-| 8 | `08_wifi_provisioning/` | `nrf/samples/wifi/provisioning/softap` | idem + notebook | **provisionamento** |
+| 8 | `08a_wifi_provisioning/` | `nrf/samples/wifi/provisioning/softap` | idem + notebook | **provisionamento** |
 | 9 | `09_wifi_tcp/` | código do curso, esqueleto do `sta` | idem + servidor no PC | **socket TCP/IP** |
 | 10 | `10_wifi_http_mqtt/` | o mesmo do 9, transporte por Kconfig | idem + broker | bônus |
 | 11 | `11_wifi_twt/` | `nrf/samples/wifi/twt` | idem + **AP Wi-Fi 6** + PPK2 | bônus (Wi-Fi 6) |
@@ -718,7 +718,7 @@ gente na sala, de hardware que ainda não chegou, ou de uma decisão do instruto
    solder bridge SB10**. Ver §7.2. Fica **pendente de decisao do instrutor** qual das tres
    saidas adotar.
 4. ~~**`provisioning/softap` na variante B**~~ — **fechado em 2026-09-06.** Compila e roda na
-   variante B; o lab 8 traz o que foi preciso. Ver `comms/08_wifi_provisioning/`.
+   variante B; o lab 8 traz o que foi preciso. Ver `comms/08a_wifi_provisioning/`.
 5. **Fluxo completo do `provision.py`** — `protoc`, certificado, `/prov/networks`,
    `/prov/configure`, e a DK associando depois. Fechado até o SoftAP no ar com DHCP; falta o
    fluxo do PC, que exige tirar a máquina da rede e entrar no `nrf-wifiprov`.

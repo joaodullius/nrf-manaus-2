@@ -3,7 +3,7 @@
 #   SDK     : nRF Connect SDK v3.4.0
 #   Upstream: nrf/samples/wifi/provisioning/softap/scripts/provision.py
 #   Local   : C:/ncs/v3.4.0/nrf/samples/wifi/provisioning/softap/scripts/provision.py
-#   Copiado : 2026-09-06 — curso nrf-manaus-2, modulo comms/08_wifi_provisioning
+#   Copiado : 2026-09-06 — curso nrf-manaus-2, modulo comms/08a_wifi_provisioning
 #
 # Para conferir se divergiu do SDK:
 #   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/wifi/provisioning/softap/scripts/provision.py

@@ -156,13 +156,13 @@ Para compilar modelos TFLite → Axon **na nuvem**, use o próprio Edge AI Lab (
 - **nRF Wi-Fi Provisioner** (Android/iOS) — só para a demo de provisionamento por BLE do
   instrutor. O lab de provisionamento é por SoftAP e **não usa navegador**: o fluxo é HTTPS com
   corpo em protobuf, e o cliente é o `scripts/provision.py` do próprio SDK. Ver
-  `comms/08_wifi_provisioning/README.md`.
+  `comms/08a_wifi_provisioning/README.md`.
 - Rede Wi-Fi de teste em sala (2.4/5 GHz) e um endpoint TCP acessível — **desejável, não
   obrigatório**: o plano B dos labs de transporte é um **hotspot** de celular ou o
   compartilhamento de conexão do PC, com o kit e o PC associados nele. **Não** serve a DK em
   SoftAP: o firmware desses labs é estação, não ponto de acesso. Wi-Fi corporativo com portal
   cativo ou WPA2-Enterprise não serve.
-- **`protoc`** e o pacote Python **`protobuf`**, para o lab 8 (provisionamento): o
+- **`protoc`** e o pacote Python **`protobuf`**, para o lab 8a (provisionamento): o
   cliente `provision.py` fala protobuf com a DK, e o schema (`common_pb2.py`) é gerado
   localmente a partir do `.proto` do SDK — sem `protoc`, o script falha no `import`.
 - **`paho-mqtt`** (Python) e um broker **mosquitto** local, para o lab 10 (MQTT).
