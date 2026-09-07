@@ -225,20 +225,22 @@ Pré-requisitos antes de ligar qualquer coisa:
       Com a **TAG** (que não tem console) o botão seria o único caminho, e o `README` do
       sample publica **duas numerações** conforme a placa (`Button 1/2` numas, `Button
       0/1` noutras) — mais uma razão para preferir a DK.
-- [x] **Servidor de tráfego: usamos um sorvedouro UDP em Python, não o iPerf.** O
-      `C:\iperf-2.0.5` desta bancada é **código-fonte, sem binário compilado**, e o
-      `iperf3` fala outro protocolo. O sorvedouro absorve o tráfego na porta 5001 e mede
-      do lado do PC — que é o número que vale.
+- [x] **Servidor de tráfego: iPerf 2.2.1 no PC.** `iperf -s -u -i 1 -p 5001`. A série 2.x
+      fala o protocolo que o `zperf` do Zephyr espera; o **`iperf3` não serve**.
 
-      **Ressalva medida:** o sorvedouro não implementa a troca de relatório do protocolo
-      iperf 2, então o `zperf` do kit termina com `net_zperf: Stats receive timeout` e
-      `ble_coex: UDP session error`. **Isso é esperado com este método** — o tráfego
-      passou (7154 pacotes contados), só o relatório de volta não existe. Para ter o
-      número pelos dois lados seria preciso compilar o iPerf 2.0.5.
+      > **Baixe o binário da arquitetura certa.** As páginas de release publicam x64 e
+      > ARM64 com o mesmo nome de arquivo. O ARM64 numa máquina Intel falha com uma
+      > mensagem que não denuncia a causa (`not a valid application for this OS platform`).
+      > Aconteceu nesta bancada. Ver `PREREQUISITOS.md`.
+
+      **Alternativa sem iPerf, se faltar o binário:** um sorvedouro UDP em Python mede o
+      throughput do lado do PC. Funciona, mas não devolve o relatório do protocolo iperf 2,
+      então o `zperf` do kit termina com `net_zperf: Stats receive timeout` e
+      `ble_coex: UDP session error` — **esperado com esse método**, e some com o iPerf de
+      verdade. Também não dá perda nem jitter.
 
       **Firewall:** este lab usa **UDP 5001**, a quarta porta diferente do módulo. Sem a
-      regra de entrada o teste mede zero, em silêncio dos dois lados — ver
-      `PREREQUISITOS.md`.
+      regra de entrada o teste mede zero, em silêncio dos dois lados.
 - [x] Gravar a nRF54LM20-DK com `build_on` (primeira rodada).
 - [ ] Abrir a porta serial certa (aviso no topo deste README — primeira VCOM com o
       shield acoplado) e confirmar a conexão Wi-Fi e o pareamento BLE no log de
@@ -257,35 +259,43 @@ Checklist de medição, uma passada por regime (`build_on`, depois `build_off`):
 
 | Regime | Wi-Fi UDP TX | BLE |
 |---|---|---|
-| Coexistência **desligada** (`MPSL_CX=n`) | 2,232 Mbps | **598 kbps** |
-| Coexistência **ligada** (`MPSL_CX=y`) | 2,254 Mbps | **660 kbps** |
-| **Efeito do árbitro** | +1% (ruído) | **ver o aviso abaixo** |
+| **Wi-Fi sozinho** (`TEST_TYPE_WLAN_ONLY`) | **3,07 Mbps** | — |
+| **BLE sozinho** (`TEST_TYPE_BLE_ONLY`) | — | **568 kbps** |
+| Ambos · coexistência **desligada** | 2,95 ± 0,03 Mbps (n=3) | 455 ± 61 kbps (n=3) |
+| Ambos · coexistência **ligada** | 2,91 ± 0,02 Mbps (n=4) | 414 ± 23 kbps (n=4) |
 
-> **Atenção — uma medida por regime não distingue o efeito do ruído.** Uma segunda rodada,
-> com o iPerf real no lugar do sorvedouro, deu o **oposto**: coex ligada 429 kbps contra
-> desligada 501 kbps. Somando as duas rodadas, o BLE variou de **429 a 660 kbps na mesma
-> configuração** — dispersão maior que a diferença entre os regimes. **Não há efeito
-> demonstrado com `n=1`.** Os números acima ficam como uma amostra, não como conclusão;
-> a linha de efeito só pode ser preenchida com repetições.
+Medido em 2026-09-07 com **iPerf 2.2.1** no PC (`iperf -s -u -i 1 -p 5001`) e o par BLE
+numa nRF54L15-DK. Perda de pacotes Wi-Fi: **0%** em todas as rodadas; jitter 2,2–3,2 ms.
 
-Medido em 2026-09-07. O BLE foi lido nas duas pontas e elas concordam (`[local] 660 kbps`,
-`[peer] 663739 bps`). O número de Wi-Fi é o medido **no PC** — ver a ressalva do iPerf
-abaixo.
+### Como ler esta tabela
 
-**O ganho aqui é dez vezes menor que o da referência da Nordic, e a razão é de hardware.**
-Lá o árbitro dá +230% no BLE e custa −16% no Wi-Fi; aqui dá +10% e não cobra nada.
-Conferido nas duas `.config` geradas: **`CONFIG_NRF70_SR_COEX_RF_SWITCH` fica `n` nos dois
-binários** — a opção depende de `srrf-switch-gpios` no nó `nrf70`, que o overlay da EB II
-nesta placa não declara, e todo build emite o aviso `was assigned the value 'y' but got
-the value 'n'`. O que difere entre `build_on` e `build_off` é só o `MPSL_CX`, o árbitro de
-**software** (556 B de FLASH de diferença). A chave de RF, que comuta a antena, não existe
-nesta montagem.
+**O custo da convivência é real e assimétrico:** pondo os dois rádios para trabalhar
+juntos, o Wi-Fi perde **4%** (3,07 → 2,95 Mbps) e o BLE perde **20%** (568 → 455 kbps).
+O rádio mais fraco paga a conta.
 
-É uma lição melhor do que o número bonito teria sido: **coexistência é hardware mais
-software, e o Kconfig sozinho não entrega o ganho.**
+**O árbitro de coexistência não recupera nada nesta montagem** — pelo contrário, deixa os
+dois marginalmente piores (Wi-Fi −1,4%, BLE dentro do ruído). Isso não é um defeito do
+lab; é o resultado, e ele tem duas explicações que se somam:
 
-Segunda razão provável para o efeito pequeno: a carga de Wi-Fi aqui foi de 2,2 Mbps contra
-10,2 Mbps da referência — menos disputa, menos a arbitrar.
+1. **A chave de RF não existe aqui.** Conferido nas `.config` das duas variantes:
+   `CONFIG_NRF70_SR_COEX_RF_SWITCH` fica **`n`** nos dois binários — a opção depende de
+   `srrf-switch-gpios` no nó `nrf70`, que o overlay da EB II nesta placa não declara, e
+   todo build emite o aviso `was assigned the value 'y' but got the value 'n'`. O que
+   difere entre `build_on` e `build_off` é só o `MPSL_CX`, o árbitro de **software** (556 B
+   de FLASH). Ele sinaliza, mas não há hardware para agir sobre o sinal — sobra o custo.
+2. **Há pouco tráfego para arbitrar.** Nossa carga de Wi-Fi é de 3 Mbps; a referência da
+   Nordic roda a 10,2 Mbps. Com menos tempo de ar disputado, há menos colisão a evitar.
+
+O contraste com a referência mostra isso com números: lá, **sem** árbitro o BLE despenca
+**87%** (1107 → 145 kbps), e o árbitro recupera boa parte (→ 478 kbps, ao custo de −19% no
+Wi-Fi). Aqui o BLE perde só 20% sem árbitro — **o problema que o árbitro existe para
+resolver mal aparece nesta bancada.**
+
+> **Sobre o número de repetições.** A primeira rodada, com uma única medida por regime,
+> sugeriu que o árbitro dava +10% no BLE. A segunda deu o contrário. Só com 3–4 repetições
+> ficou claro que o BLE varia de 385 a 501 kbps na mesma configuração — dispersão da ordem
+> da diferença entre os regimes. **Uma medida por regime não decide nada aqui**, e vale
+> dizer isso à turma: é a diferença entre medir e concluir.
 
 O `README.rst` original do SDK publica números de referência para o **nRF7002 DK**
 (host nRF5340, antenas separadas, Wi-Fi 802.11n em 2,4 GHz): Wi-Fi-only 10,2 Mbps,
