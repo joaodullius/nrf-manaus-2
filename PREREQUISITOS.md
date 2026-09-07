@@ -188,18 +188,76 @@ Para compilar modelos TFLite → Axon **na nuvem**, use o próprio Edge AI Lab (
   sample), para o lab 12 (coexistência) — o par do central BLE deste lab. O candidato
   natural é o nRF54L15-TAG do módulo de Channel Sounding.
 
-### Firewall do Windows — bloqueia os servidores Python dos labs Wi-Fi por padrão
+### Ferramentas e bibliotecas Python do módulo `comms/`
 
-Os labs 9, 10, 12 e 13 sobem um servidor Python no PC (TCP, HTTP, ou o broker
-mosquitto) que a DK precisa alcançar pela rede. O firewall do Windows bloqueia essa
-entrada por padrão em rede classificada como Private, e o sintoma não avisa ninguém:
-o servidor fica ouvindo e nada chega, sem erro nenhum. Pior — se o aluno já tiver
-clicado em "Cancelar" num diálogo de rede do Windows para o Python alguma vez, fica
-registrada uma regra de **bloqueio por programa** que **vence qualquer permissão
-criada só por porta**. O conserto completo (dois comandos em PowerShell como
-administrador: remover as regras de bloqueio do Python e liberar a porta do lab) está
-em `comms/09_wifi_tcp/README.md`, seção "Pegadinhas" — resolva lá, testando com o
-próprio lab 9, antes do curso.
+Um ambiente só serve para tudo (o mesmo do Edge AI serve). Instalação de uma vez:
+
+```
+pip install -r comms/05_cs_iq_music/tools/requirements.txt
+pip install -r comms/09_wifi_tcp/tools/requirements.txt
+pip install -r comms/10_wifi_http_mqtt/tools/requirements.txt
+pip install -r comms/13_wifi_location/tools/requirements.txt
+pip install protobuf
+```
+
+| Pacote | Serve para | Sem ele |
+|---|---|---|
+| `numpy`, `matplotlib` | lab CS 5 (IQ/MUSIC) e o painel `cs_dash.py` | o painel não abre |
+| `pyserial` | leitura de serial nos utilitários | os scripts de captura não rodam |
+| `pytest` | os testes de PC dos labs 9, 10 e 13 | só perde os testes; os labs rodam |
+| `paho-mqtt` (≥ 2.0) | **lab 10, variante MQTT** — o assinante `wifi_mqtt_sub.py` | o lab 10 MQTT não roda |
+| `requests` (≥ 2.31) | **lab 13** — fala HTTPS com o nRF Cloud | o lab 13 não roda |
+| `protobuf` + o executável **`protoc`** | **lab 8a** — gera `common_pb2.py` do schema do SDK | `provision.py` falha no `import` |
+
+Fora do Python, dois executáveis: um broker **mosquitto** local (lab 10 MQTT) e o
+**`iperf` 2.0.5** (lab 12 — o `iperf3` **não** serve; ver o item acima).
+
+### Firewall do Windows — a armadilha que mais custa tempo de aula
+
+Os labs 9, 10, 12 e 13 sobem um servidor Python no PC que a DK precisa alcançar pela rede.
+O firewall do Windows bloqueia essa entrada por padrão, e **o sintoma não avisa ninguém**:
+o servidor fica ouvindo, nada chega, e nenhum erro aparece nele. Do lado do kit sai só um
+código de erro (`-116`, `ETIMEDOUT`).
+
+São **dois** problemas diferentes, e o segundo foi medido nesta bancada em 2026-09-07:
+
+**1. Bloqueio por programa.** Se alguém já clicou em "Cancelar" num diálogo de rede do
+Windows para o Python, fica registrada uma regra de **bloqueio por programa** que **vence
+qualquer permissão criada por porta**. Conserto em `comms/09_wifi_tcp/README.md`, seção
+"Pegadinhas".
+
+**2. A regra é por PORTA — e cada transporte usa uma porta diferente.** Este é o que pega
+quem já fez o lab 9 funcionar: a regra criada lá vale para a **9000** e só para ela. Ao
+passar para o lab 10, o kit tenta a **8000** (HTTP) ou a **1883** (MQTT) e trava, com o
+servidor mudo. Aconteceu exatamente assim nesta bancada.
+
+Libere as três de uma vez, em **PowerShell como administrador**, antes do curso:
+
+```powershell
+New-NetFirewallRule -DisplayName "nrf-manaus lab9 TCP"   -Direction Inbound -Protocol TCP -LocalPort 9000 -Action Allow -Profile Private
+New-NetFirewallRule -DisplayName "nrf-manaus lab10 HTTP" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow -Profile Private
+New-NetFirewallRule -DisplayName "nrf-manaus lab10 MQTT" -Direction Inbound -Protocol TCP -LocalPort 1883 -Action Allow -Profile Private
+```
+
+Conferir depois (não precisa de administrador):
+
+```
+netsh advfirewall firewall show rule name=all dir=in status=enabled | findstr /C:"8000" /C:"9000" /C:"1883"
+```
+
+> **A rede tem de estar classificada como "Particular"** — as regras acima usam o perfil
+> `Private`. Numa rede marcada como Pública o Windows aplica outro conjunto e elas não valem.
+
+### Os servidores dos labs precisam de terminal — não rode em background
+
+Medido nesta bancada em 2026-09-07: `wifi_server.py` (lab 9) e `wifi_http_server.py`
+(lab 10) leem o teclado num laço, para aceitar os comandos de LED (`l`, `d`, `q`). Rodados
+**sem terminal** — em background, com a saída redirecionada, ou por um script — o `input()`
+recebe EOF imediatamente e o programa **sai em silêncio**, tendo imprimido só a linha
+"Ouvindo...". Quem fizer `python wifi_server.py > log.txt &` vai jurar que o lab travou.
+
+Rode sempre num terminal interativo. Se quiser guardar a saída, copie do terminal ou use
+`tee` num shell que preserve a entrada.
 
 ### Conta nRF Cloud, para o lab 13 (locationing)
 
