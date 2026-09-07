@@ -259,7 +259,14 @@ Checklist de medição, uma passada por regime (`build_on`, depois `build_off`):
 |---|---|---|
 | Coexistência **desligada** (`MPSL_CX=n`) | 2,232 Mbps | **598 kbps** |
 | Coexistência **ligada** (`MPSL_CX=y`) | 2,254 Mbps | **660 kbps** |
-| **Efeito do árbitro** | +1% (ruído) | **+10,4%** |
+| **Efeito do árbitro** | +1% (ruído) | **ver o aviso abaixo** |
+
+> **Atenção — uma medida por regime não distingue o efeito do ruído.** Uma segunda rodada,
+> com o iPerf real no lugar do sorvedouro, deu o **oposto**: coex ligada 429 kbps contra
+> desligada 501 kbps. Somando as duas rodadas, o BLE variou de **429 a 660 kbps na mesma
+> configuração** — dispersão maior que a diferença entre os regimes. **Não há efeito
+> demonstrado com `n=1`.** Os números acima ficam como uma amostra, não como conclusão;
+> a linha de efeito só pode ser preenchida com repetições.
 
 Medido em 2026-09-07. O BLE foi lido nas duas pontas e elas concordam (`[local] 660 kbps`,
 `[peer] 663739 bps`). O número de Wi-Fi é o medido **no PC** — ver a ressalva do iPerf
