@@ -39,6 +39,11 @@ LOG_MODULE_REGISTER(lab_transporte, CONFIG_LOG_DEFAULT_LEVEL);
 static int sock = -1;
 static K_MUTEX_DEFINE(transporte_mutex);
 
+/* Maior tempo que transporte_receber() pode ficar parado no poll segurando o
+ * mutex do transporte. Ver a explicacao completa na propria funcao.
+ */
+#define TCP_POLL_FATIA_MS 50
+
 /* So chamar com o mutex ja adquirido. */
 static void fechar_interno(void)
 {
@@ -132,9 +137,67 @@ int transporte_receber(char *buf, size_t len, k_timeout_t espera)
 	pfd.events = ZSOCK_POLLIN;
 	pfd.revents = 0;
 
+	/* A espera e cumprida em FATIAS, soltando o mutex entre elas.
+	 *
+	 * Antes, o poll usava o timeout inteiro (1 s, como esta thread pede)
+	 * com o mutex do transporte na mao. Como transporte_enviar() precisa do
+	 * mesmo mutex, a thread de telemetria ficava esperando por ele: medido
+	 * na bancada em 2026-09-07, com CONFIG_LAB_INTERVALO_MS=2000 o ciclo
+	 * real dava ~3000 ms, e os ~1000 ms extras eram exatamente este
+	 * timeout. O transporte HTTP nao tinha o problema porque dorme FORA da
+	 * regiao critica -- por isso o mesmo firmware media ~2095 ms de ciclo
+	 * em HTTP e ~3000 ms em TCP, o que parecia (e nao era) vantagem do
+	 * HTTP.
+	 *
+	 * Com fatias de TCP_POLL_FATIA_MS, o mutex fica livre entre uma e
+	 * outra, e quem quer enviar entra. O custo e reentrar no poll algumas
+	 * dezenas de vezes por segundo, o que e barato perto de segurar o
+	 * transporte parado.
+	 */
 	timeout_ms = K_TIMEOUT_EQ(espera, K_FOREVER) ? -1 : (int)k_ticks_to_ms_floor64(espera.ticks);
 
-	ret = zsock_poll(&pfd, 1, timeout_ms);
+	if (timeout_ms < 0 || timeout_ms > TCP_POLL_FATIA_MS) {
+		int64_t fim = (timeout_ms < 0) ? 0 : k_uptime_get() + timeout_ms;
+
+		for (;;) {
+			int fatia = TCP_POLL_FATIA_MS;
+
+			if (timeout_ms >= 0) {
+				int64_t falta = fim - k_uptime_get();
+
+				if (falta <= 0) {
+					/* Espera esgotada sem nada chegar. */
+					k_mutex_unlock(&transporte_mutex);
+					return 0;
+				}
+				if (falta < fatia) {
+					fatia = (int)falta;
+				}
+			}
+
+			ret = zsock_poll(&pfd, 1, fatia);
+			if (ret != 0) {
+				break;
+			}
+
+			/* Nada nesta fatia: solta o transporte, da a vez a quem
+			 * quer enviar, e volta para a proxima fatia.
+			 */
+			k_mutex_unlock(&transporte_mutex);
+			k_yield();
+			k_mutex_lock(&transporte_mutex, K_FOREVER);
+
+			if (sock < 0) {
+				k_mutex_unlock(&transporte_mutex);
+				return -ENOTCONN;
+			}
+			pfd.fd = sock;
+			pfd.revents = 0;
+		}
+	} else {
+		ret = zsock_poll(&pfd, 1, timeout_ms);
+	}
+
 	if (ret < 0) {
 		ret = -errno;
 		k_mutex_unlock(&transporte_mutex);
@@ -512,6 +575,11 @@ static K_MUTEX_DEFINE(transporte_mutex);
  */
 #define MQTT_CLIENT_ID "nrf-manaus-2-lab10"
 
+/* Maior tempo que transporte_receber() pode ficar parado no poll segurando o
+ * mutex do transporte. Ver a explicacao completa na propria funcao.
+ */
+#define MQTT_POLL_FATIA_MS 50
+
 struct mqtt_slot {
 	struct mqtt_client cliente;
 	struct net_sockaddr_in endereco_broker;
@@ -759,9 +827,55 @@ int transporte_receber(char *buf, size_t len, k_timeout_t espera)
 	pfd.events = ZSOCK_POLLIN;
 	pfd.revents = 0;
 
+	/* Espera em FATIAS, soltando o mutex entre elas -- mesma correcao do
+	 * transporte TCP, pelo mesmo motivo. Segurar o mutex durante o timeout
+	 * inteiro faz a thread de telemetria esperar por ele em
+	 * transporte_enviar(): medido na bancada em 2026-09-07, o ciclo real
+	 * com CONFIG_LAB_INTERVALO_MS=2000 dava ~3000 ms em TCP e em MQTT
+	 * (carimbos do mosquitto), contra ~2095 ms em HTTP -- e o HTTP so
+	 * escapava porque dorme fora da regiao critica.
+	 */
 	timeout_ms = K_TIMEOUT_EQ(espera, K_FOREVER) ? -1 : (int)k_ticks_to_ms_floor64(espera.ticks);
 
-	ret = zsock_poll(&pfd, 1, timeout_ms);
+	if (timeout_ms < 0 || timeout_ms > MQTT_POLL_FATIA_MS) {
+		int64_t fim = (timeout_ms < 0) ? 0 : k_uptime_get() + timeout_ms;
+
+		for (;;) {
+			int fatia = MQTT_POLL_FATIA_MS;
+
+			if (timeout_ms >= 0) {
+				int64_t falta = fim - k_uptime_get();
+
+				if (falta <= 0) {
+					ret = 0;
+					break;
+				}
+				if (falta < fatia) {
+					fatia = (int)falta;
+				}
+			}
+
+			ret = zsock_poll(&pfd, 1, fatia);
+			if (ret != 0) {
+				break;
+			}
+
+			k_mutex_unlock(&transporte_mutex);
+			k_yield();
+			k_mutex_lock(&transporte_mutex, K_FOREVER);
+
+			slot = slot_ativo;
+			if (!slot->conectado) {
+				k_mutex_unlock(&transporte_mutex);
+				return -ENOTCONN;
+			}
+			pfd.fd = slot->cliente.transport.tcp.sock;
+			pfd.revents = 0;
+		}
+	} else {
+		ret = zsock_poll(&pfd, 1, timeout_ms);
+	}
+
 	if (ret < 0) {
 		ret = -errno;
 		k_mutex_unlock(&transporte_mutex);
