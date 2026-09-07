@@ -188,6 +188,20 @@ o que persiste e o que não persiste são coisas diferentes aqui.
 > desta seção vêm do `README.rst` do sample e do `src/main.c` (as strings de `printk`
 > são literais do código), não de uma captura local.
 
+## O terceiro botão do app: NFC
+
+Ao abrir o nRF Wi-Fi Provisioner o aluno vê **três** transportes: Bluetooth LE (o deste
+lab), Wi-Fi/SoftAP (o do lab 8a) e **NFC**. Não existe lab 8c, e o motivo não é escolha
+do curso: **a Nordic não tem sample de referência de provisionamento por NFC.**
+
+No lançamento do nRF Connect SDK 2.7.0 a Nordic anunciou o suporte a NFC no app dizendo
+que o sample viria "num release futuro"; até o v3.4.0, usado neste curso, ele não veio —
+a página de samples de provisionamento lista apenas `ble/`, `internal/` e `softap/`.
+
+Sem o lado do dispositivo publicado, implementar exigiria descobrir por engenharia reversa
+o formato que o app espera. Fica registrado como possibilidade futura, não como lacuna do
+material.
+
 ## Pegadinhas
 
 - **A VCOM muda com o shield — não é sempre a mesma porta.** Ver o aviso no topo
