@@ -69,6 +69,15 @@ espelhado em `src/payload.c`):
 | `rssi_dbm` | inteiro | RSSI da associação Wi-Fi atual |
 | `botao` | booleano | `true` só na amostra disparada pelo `sw0`; `false` nas periódicas |
 
+> **O intervalo real bate com o configurado — mas só desde 2026-09-07.** Até essa data a
+> thread de recepção segurava o mutex do transporte durante o segundo inteiro do `poll`,
+> e a de telemetria esperava por ele: com `CONFIG_LAB_INTERVALO_MS=2000` o ciclo medido
+> era de **3000 ms**. O `poll` passou a ser feito em fatias de 50 ms, soltando o mutex
+> entre elas, e o ciclo caiu para **2050 ms** (o mesmo defeito existia no transporte MQTT
+> do lab 10: 3002 → 2053 ms). Só apareceu porque os três transportes foram medidos lado a
+> lado — o HTTP não tinha o problema, porque dorme fora da região crítica, e parecia
+> "mais rápido".
+
 Duas sentinelas de `src/main.c` valem saber ao ler os dados na bancada: `temp_cc =
 INT16_MIN` (aparece como `-327,68` em `temp_c`) significa sensor de temperatura
 indisponível; `rssi_dbm = -128` significa falha ao consultar o status do Wi-Fi. Nenhum
@@ -107,11 +116,23 @@ saudável só porque está mais espaçada que o limite de leitura.
 
 1. **O botão.** Apertar o `sw0` manda uma amostra imediata, fora do intervalo
    periódico, com `"botao":true` — dá para ver no servidor sem esperar o próximo tick.
-   Caminho implementado e revisado no código; ao contrário dos outros dois gestos
-   abaixo, esse é o único ainda não observado na bancada ponta a ponta.
+   **Validado na bancada em 2026-09-07**, e o `uptime_ms` é a prova: as periódicas caíram
+   em 180058 e 182060 ms, e a do botão em **181399** — no meio do intervalo, não é uma
+   periódica marcada.
+
+   Detalhe que rende em aula: o `rssi_dbm` cai de −48 para **−55** exatamente nas amostras
+   `BOTAO`. É a mão do operador perto da antena — RSSI demonstrado sem instrumento nenhum.
 2. **O comando de LED.** Teclar `l` no servidor manda a linha `LED 1`; o firmware
    (`thread_recepcao()`) lê essa linha do transporte e acende o **LED1**. `d` manda
-   `LED 0` e apaga.
+   `LED 0` e apaga. Validado na bancada — no console do kit saem
+   `LED1 aceso (comando do servidor)` e `LED1 apagado (comando do servidor)`.
+
+   > **A tecla é `l` minúsculo, a letra ele de "liga" — não o algarismo `1`.** O menu do
+   > servidor imprime `l liga o LED1`, onde a letra e o número ficam lado a lado e são
+   > quase idênticos em fonte de terminal. Teclas não reconhecidas são **descartadas em
+   > silêncio**. E há um agravante medido: se o LED já estiver apagado, o `d` funciona sem
+   > nada mudar na placa — o mecanismo parece quebrado quando está certo. Na dúvida, ligue
+   > antes de desligar.
 3. **A queda de conexão.** Afastar o kit até a conexão cair (e voltar) mostra o
    `seq` pulando — um buraco na sequência — porque as amostras enviadas durante a
    queda se perdem; o firmware reconecta sozinho com espera crescente
@@ -298,8 +319,8 @@ tempo limite de leitura, com um limite pequeno passado só para o teste.
 2. Gravar a DK com o IP do PC (Passo 1).
 3. Conferir: amostras chegando a cada `CONFIG_LAB_INTERVALO_MS` (padrão 2 s), `seq`
    incrementando.
-4. Apertar o **botão 1** (`sw0`) → amostra imediata, com `"botao":true` (gesto ainda
-   não observado na bancada — ver a nota em "Os três gestos do lab").
+4. Apertar o **botão 1** (`sw0`) → amostra imediata, com `"botao":true`. **Validado em
+   2026-09-07** — ver "Os três gestos do lab".
 5. Teclar `l` no servidor → **LED1** acende; `d` → apaga.
 6. Andar com o kit até a conexão cair e voltar → **buraco no `seq`**, o ponto do lab.
 7. Encostar o dedo no chip → `temp_c` sobe.
@@ -326,6 +347,37 @@ tempo limite de leitura, com um limite pequeno passado só para o teste.
 
    Passa (`OK, ...`) ou falha alto (`AssertionError`) — não é uma inspeção visual, é
    uma checagem que quebra se o firmware e o servidor divergirem no formato.
+
+## A escada do backoff — provoque de propósito
+
+O jeito mais barato de mostrar a reconexão é **gravar o kit antes de subir o servidor**.
+Foi o que aconteceu por acidente nesta bancada, e rendeu melhor que provocar a queda:
+
+```
+<err> lab_transporte: Falha ao conectar em 192.168.15.15:9000 (-116)
+<wrn> lab_wifi_tcp: Falha ao abrir o transporte (-116); nova tentativa em 4000 ms
+                                                  ... nova tentativa em 8000 ms
+                                                  ... nova tentativa em 16000 ms
+<err> lab_wifi_tcp: Sem conseguir conectar depois de 5 tentativas -- confira
+      CONFIG_LAB_SERVIDOR_IP e CONFIG_LAB_PORTA, se o PC e o kit estao na mesma rede,
+      e se o firewall do PC deixa o servidor receber conexao nessa porta
+                                                  ... nova tentativa em 30000 ms
+[servidor sobe aqui]
+<inf> lab_transporte: Conectado em 192.168.15.15:9000
+```
+
+O `-116` é `ETIMEDOUT`. A espera dobra até o teto de 30 s (`abrir_com_backoff()`), e na
+quinta tentativa o firmware imprime **a lista do que conferir** — inclusive o firewall,
+que é a causa mais comum. Quando o servidor sobe, o kit entra sozinho no ciclo seguinte,
+**sem reset**.
+
+### O log é mudo no sucesso
+
+Depois que a conexão funciona, **o console não imprime mais nada** — só falha gera linha.
+A prova de que está funcionando é a *ausência* de erro, mais as linhas de LED quando se
+manda um comando. Todo o resto da evidência está do lado do servidor. Vale avisar, senão
+o aluno fica olhando um terminal parado achando que travou.
+
 
 ## Plano B — sem rede utilizável na sala, ou com isolamento de cliente
 
