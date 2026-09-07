@@ -186,14 +186,46 @@ MAC local no meio do fluxo) sem precisar de hardware.
    algum passou), comparar com a nota da Nordic sobre endereços localmente
    administrados.
 
-> **A confirmar na bancada:**
-> - A lista real de pontos de acesso vista pelo kit na sala do treinamento.
-> - A posição resolvida (`lat`, `lon`, `incerteza`) e o erro medido contra a posição
->   real da sala (distância entre a coordenada devolvida e a posição real, em metros).
->   Uma chamada com cinco pontos de acesso desta bancada devolveu incerteza de cerca
->   de 14 metros — mas esse número veio direto da ferramenta de PC, sem passar pelo
->   firmware; o fluxo completo (kit → TCP → `wifi_locate.py` → nRF Cloud) ainda está
->   por confirmar.
+## Ciclo completo, validado com hardware
+
+```
+KIT: Aguardando o supplicant do Wi-Fi ficar pronto...
+KIT: Conectado ao Wi-Fi
+KIT: IP obtido por DHCP: <ip do kit>
+KIT: Scan solicitado...
+KIT: Scan (21 AP(s)) enviado para <ip do pc>:9000
+PC : Conexao de <ip do kit>:<porta>
+PC : 16 ponto(s) de acesso recebido(s)
+PC : Posicao: lat=... lon=... incerteza=13.404 m
+```
+
+Do reset até a coordenada impressa: **cerca de 15 segundos** de tempo de máquina —
+não é a duração do lab em sala, é só o intervalo entre ligar o kit e a ferramenta
+responder —, dos quais **~5,5 s** são a varredura Wi-Fi em si.
+
+### 21 varridos, 16 usados
+
+O kit enxergou **21** pontos de acesso; a ferramenta usou **16** para resolver a
+posição. A diferença são MACs administrados localmente (nesta bancada, redes de
+operadora com BSSID começando em `02:` e `96:`), descartados **antes** de chamar a
+API (ver "MAC localmente administrado", acima) — um endereço administrado
+localmente não identifica um ponto de acesso físico fixo, então não serve para
+posicionar. É um bom número para discutir em aula: o aluno vê 21 na tela do kit e 16
+na do PC, e a pergunta "por que sumiram cinco" tem resposta técnica, não é bug nem
+perda de dado.
+
+### Precisão: mais vizinhos ajudam, mas o ganho satura
+
+Com os 16 pontos de acesso do ciclo completo acima, a incerteza devolvida foi
+**13,4 m** — contra os **14,1 m** de uma chamada anterior, feita só com a ferramenta
+de PC (sem passar pelo firmware) e apenas cinco pontos de acesso. A melhora existe,
+mas é pequena: o ganho de mais vizinhos satura rápido. Dá para medir isso na hora,
+variando quantos APs a requisição inclui.
+
+> **Pendente — só o instrutor pode julgar:** o erro de posição **real**, isto é, a
+> distância entre a coordenada devolvida e a posição verdadeira da sala do
+> treinamento. Isso exige saber onde a sala fica de fato; nenhuma medição automática
+> substitui essa comparação.
 
 ## Pegadinhas
 
