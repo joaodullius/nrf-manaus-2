@@ -320,6 +320,107 @@ argumento concreto, não uma preferência de estilo: HTTP request/response não
 tem primitiva de push: o preço do polling é estrutural do protocolo, não um
 detalhe de implementação deste lab.
 
+## A bancada — os dois transportes, medidos
+
+Executado em 2026-09-07, as duas variantes, com os três gestos do lab 9 (telemetria,
+botão `sw0`, comando de LED). **Os dois funcionaram por inteiro.**
+
+### HTTP — o que muda no log já na primeira linha
+
+```
+<inf> lab_wifi_tcp: IP obtido por DHCP: 192.168.15.19
+<inf> lab_transporte: HTTP pronto para 192.168.15.15:8000 (uma conexao por requisicao)
+```
+
+Compare com o TCP do lab 9, que diz `Conectado em <ip>:9000`. **Aqui a mensagem já avisa
+a diferença arquitetural**: no TCP há uma conexão que fica aberta; no HTTP o kit abre,
+manda o `POST`, fecha, e repete a cada amostra.
+
+Do lado do servidor, a saída é igual à do lab 9 — mesma tabela, mesmo `payload_ref.py`:
+
+```
+seq=    66  uptime_ms=  401711  temp_c= 25.00  rssi_dbm= -54
+seq=    68  uptime_ms=  406015  temp_c= 25.00  rssi_dbm= -52 BOTAO
+seq=    69  uptime_ms=  406326  temp_c= 25.25  rssi_dbm= -58
+```
+
+O botão funciona igual: `seq=68` entrou em 406015 ms, entre as periódicas de 404230 e
+406326 — fora do ritmo.
+
+**No lado do kit, o log é mudo enquanto dá certo.** Só o comando de LED aparece:
+
+```
+<inf> lab_wifi_tcp: LED1 aceso (comando do servidor)
+<inf> lab_wifi_tcp: LED1 apagado (comando do servidor)
+```
+
+### MQTT — o protocolo aparece por nome no broker
+
+O log do **mosquitto** é material de aula pronto, porque nomeia cada etapa:
+
+```
+New connection from 192.168.15.19:61359 on port 1883.
+New client connected from 192.168.15.19:61359 as nrf-manaus-2-lab10 (p2, c1, k60).
+Sending CONNACK to nrf-manaus-2-lab10 (0, 0)
+Received SUBSCRIBE from nrf-manaus-2-lab10
+    nrf-manaus/telemetria/comando (QoS 0)
+Sending SUBACK to nrf-manaus-2-lab10
+Received PUBLISH from nrf-manaus-2-lab10 (d0, q0, r0, m0, 'nrf-manaus/telemetria', ... (73 bytes))
+```
+
+| O que aparece | O que é |
+|---|---|
+| `as nrf-manaus-2-lab10 (p2, c1, k60)` | o *client id* (`CONFIG_LAB_MQTT_CLIENT_ID`), protocolo 5, *clean session*, *keepalive* 60 s |
+| `CONNACK` | o broker aceitou |
+| `SUBSCRIBE` em `.../comando` | **o kit assina o tópico de comando antes de publicar** — é assim que o downlink chega sem ele perguntar |
+| `PUBLISH ... (73 bytes)` | cada amostra. Compare com os **74 bytes** do payload cru: o MQTT acrescenta cabeçalho e o nome do tópico |
+
+**O contraste com o HTTP está aqui:** no HTTP o kit **pergunta** por comando
+(`GET /comando`, 147 B por consulta, tenha ou não comando); no MQTT ele **assina uma vez**
+e o broker empurra. É a diferença que a seção "Por que o downlink separa os três" explica,
+agora visível no log.
+
+### Uma armadilha do lado do PC, não do firmware
+
+O `wifi_mqtt_sub.py` ficou **mudo** enquanto o broker mostrava `PUBLISH` chegando — como
+se o kit não estivesse publicando. Causa: **havia dois brokers na máquina.** O instalador
+do mosquitto no Windows registra um **serviço que sobe sozinho**, e o mosquitto 2.x por
+padrão escuta só em `localhost` e recusa conexão anônima — ou seja, esse serviço **não
+serve** para o lab. O broker do lab, com `listener 0.0.0.0`, ficava com o endereço de
+rede; o assinante, usando `localhost`, caía no outro.
+
+Conserto e diagnóstico estão em `PREREQUISITOS.md`. O contorno imediato é
+`python wifi_mqtt_sub.py --host <ip-do-pc>`.
+
+## O defeito que a comparação dos três transportes revelou
+
+Este lab existe para comparar transportes — e a comparação achou um bug no firmware que
+nem o lab 9 nem os testes de PC pegariam.
+
+Medindo o ciclo real de telemetria com `CONFIG_LAB_INTERVALO_MS=2000` nos três:
+
+| Transporte | Ciclo medido (antes) | Ciclo medido (depois) |
+|---|---|---|
+| TCP | **3000 ms** | 2050 ms |
+| MQTT | **3002 ms** | 2053 ms |
+| HTTP | 2095 ms | 2095 ms |
+
+O HTTP parecia **900 ms mais rápido** que os outros dois. Não era mérito do protocolo:
+em TCP e MQTT, `transporte_receber()` fazia `k_mutex_lock()` e **só então** o `poll` com o
+timeout inteiro — 1 s, que é o que a thread de recepção pede. Como `transporte_enviar()`
+precisa do mesmo mutex, a thread de telemetria ficava presa nele, e cada ciclo virava
+`2000 ms de sono + até 1000 ms esperando`.
+
+**O HTTP escapava porque dorme fora da região crítica**: ele faz o `GET /comando` curto,
+destrava, e só então `k_sleep()`.
+
+Corrigido em 2026-09-07: os dois passaram a cumprir a espera em **fatias de 50 ms**,
+soltando o mutex entre elas. Os três convergiram para ~2050 ms.
+
+> **A lição de método:** o defeito estava no código desde sempre, passava em todos os
+> testes de PC, e o `poll` dentro do mutex parece inofensivo na leitura. **Só apareceu
+> quando os três transportes foram medidos lado a lado** — e a pista foi um número que
+> parecia bom demais.
 ## Ferramentas de PC
 
 ### `tools/wifi_http_server.py`
