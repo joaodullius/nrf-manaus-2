@@ -28,8 +28,8 @@ O lab tem duas partes:
   um AP com TWT. **Passo 1**, por latência: fecha por completo com o firmware do
   **lab 6** (o shell) e um `ping` do PC — o efeito de cada regime aparece direto na
   **latência de descida**. **Passo 2**, por corrente: o mesmo firmware, agora com o
-  PPK2 — roteiro pronto, valores pendentes da decisão do instrutor sobre o solder
-  bridge da EB II.
+  PPK2 no P10 da EB II — **medido**, e é onde a economia deixa de ser argumento e
+  vira número.
 - **Parte B — degrau 3 (TWT).** Depende de um AP que negocie TWT individual. Na
   bancada de preparação, a ONT da sala é 802.11ax confirmado e respondeu
   `Peer not TWT capable` — fica pendente de um AP com TWT (EX3000).
@@ -41,7 +41,7 @@ O lab tem duas partes:
 | **nRF54LM20-DK** (variante B, `nrf54lm20b`) | roda o firmware; host do Wi-Fi |
 | **nRF7002 EB-II** | shield companion Wi-Fi 6, encaixado no header de expansão |
 | **PC** | terminal serial, `ping` (Parte A) e `traffic_gen_server.py` (Parte B) |
-| **PPK2** | corrente dos regimes (Passo 2) — roteiro pronto, valores a confirmar |
+| **PPK2** | corrente dos regimes (Passo 2), em **modo amperímetro** no P10 da EB II |
 
 ## A escada de três degraus
 
@@ -143,10 +143,53 @@ demais puxam a mediana para baixo — é por isso que a linha de listen interval
 tem mediana 1116 e máximo 5130. **Com dormida longa, a estatística que significa
 alguma coisa é o máximo, não a mediana.**
 
-## Parte A, Passo 2 — a escada por corrente, com o PPK2
+### Uma segunda corrida — e o que ela acrescenta
 
-> **A confirmar na bancada.** Este passo é o roteiro; nenhum valor de corrente foi
-> medido ainda. As linhas da tabela abaixo ficam pendentes até a medida.
+O mesmo experimento foi repetido em 2026-09-07, agora com pings **isolados** e junto
+com a captura de corrente do Passo 2, para as duas medidas descreverem o mesmo
+instante:
+
+| Regime | mín | mediana | máximo | sem resposta |
+|---|---|---|---|---|
+| sem economia | 6 ms | 8 ms | 44 ms | 0/12 |
+| DTIM 3 | 40 ms | 55 ms | 247 ms | 0/12 |
+| listen interval 10 | 360 ms | 663 ms | 673 ms | 0/12 |
+| listen interval 30 | 308 ms | 1775 ms | 2728 ms | **3/14** (6 s) |
+
+Duas coisas novas aparecem aqui. A primeira é a coluna da direita: **no listen
+interval 30, 3 pings de 14 não voltaram** em 6 s — a degradação do downlink começa a
+ser visível antes de o enlace morrer (o teto disso está no Passo 2).
+
+A segunda é uma **discordância entre as duas corridas que não se resolveu**: em DTIM,
+a primeira deu mediana de 168 ms e esta deu 55 ms. As duas concordam em ordem de
+grandeza nos outros regimes. A explicação candidata — **não verificada** — é o
+*inactivity timer* de 100 ms: o próprio pedido de ping sai pelo uplink e mantém o
+rádio acordado, e uma resposta que chega dentro dessa janela **não espera o DTIM**;
+nesta corrida a mediana (55 ms) cabe na janela e o máximo (247 ms) é o caso em que
+não coube. Com 12 a 20 pings por regime, nenhuma das duas amostras decide a questão.
+
+**A leitura que sobrevive às duas corridas** — e é a que vai para o slide — é a razão
+entre os degraus, não o valor exato: **~10 ms → ~0,1 s → ~0,7 s → ~2 s**.
+
+![Economia de energia e latência são a mesma escolha](../../doc/comms/img/wifi_troca_energia_latencia.png)
+
+A figura junta esta tabela com a corrente do Passo 2, e é a imagem que resume o lab: do
+regime sem economia ao listen interval 10, a **corrente cai ~45×** e a **latência sobe
+~80×**. Não há degrau bom e degrau ruim — **escolher o regime é escolher quanto atraso a
+aplicação aguenta.**
+
+> **Duas armadilhas de método, as duas medidas aqui.**
+>
+> **Pings em rajada não medem nada.** Com o *dynamic power save* ligado (o padrão), o
+> rádio fica acordado 100 ms depois de cada pacote; uma rajada mede **~8 ms em
+> qualquer regime** e o efeito do power save some da tela.
+>
+> **E o espaçamento pode bater com o ciclo de dormida.** A primeira medida do listen
+> interval 30 usou pings de 3 em 3 s contra um ciclo de ~2,7 s, e deu mediana de
+> **53 ms** — *aliasing*, não latência, e um número que contradizia toda a tese do
+> lab. Refeita com espaçamento **aleatório de 7 a 12 s**, deu 1775 ms. Se o resultado
+> desmente a teoria, desconfie do relógio antes de desconfiar da teoria.
+## Parte A, Passo 2 — a escada por corrente, com o PPK2
 
 ### Ponto de medição — levantado, e não é o óbvio
 
@@ -171,16 +214,17 @@ da EB II depois da medida: jumper em P10, ou refazer o curto de SB10.
 
 ![Ponto de medição do PPK2 na EB II — P10, VBAT, solder bridge SB10](wifi_ppk2_eb2.png)
 
-**Decisão pendente do instrutor — três saídas, sem escolha feita aqui:**
+**Como ficou, e é a saída 1 de três que estavam sobre a mesa:** o **kit do instrutor**
+teve o SB10 cortado e a medida é **projetada para a turma**. Os alunos rodam os regimes
+e leem a diferença no `wifi ps` e na latência (Passo 1); a corrente aparece uma vez, no
+kit preparado. Custo: uma solda, num kit só. As alternativas descartadas eram medir o
+hospedeiro em P14 em todos os kits — que mede o SoC, **não** o rádio, e não prova nada
+sobre Wi-Fi — ou cortar SB10 nos seis kits, seis soldas mais o retrabalho de restaurar.
 
-1. **Um kit do instrutor com SB10 cortado**, e a medida projetada para a turma: os
-   alunos rodam os regimes e leem a diferença no `wifi ps` e na latência (Passo 1);
-   a corrente aparece uma vez, no kit preparado. Custo: uma solda, num kit só.
-2. **Medir o hospedeiro em P14 em todos os kits**, deixando claro que aquilo é o
-   consumo do SoC e **não** o do rádio Wi-Fi — serve para falar de instrumentação,
-   não para provar a economia do Wi-Fi.
-3. **Cortar SB10 nos seis kits**, dá a medida certa em toda bancada e custa seis
-   soldas mais o retrabalho de restaurar depois.
+> **O que estes números são, e o que não são.** Tudo abaixo é a corrente do trilho
+> **VBAT** — só o rádio. O **IOVDD** (P4, ponte SB9) ficou **fora** da medida por
+> decisão do instrutor, então os valores são um **piso** do consumo do companion, não o
+> total. Vale para as tabelas e para as duas figuras deste lab.
 
 ### Por que não dá para usar um multímetro
 
@@ -215,14 +259,146 @@ a 100 kSa/s e a média é feita sobre a janela que o operador escolhe.
    aparecem alinhados, em vez de pedir para o aluno acreditar que a coincidência
    temporal é o despertar negociado. Custa um pino livre e um trecho de firmware
    (alternar o GPIO ao entrar/sair do período ativo); o lab funciona sem isso.
-5. Repetir os três regimes do Passo 1, 60 s por regime, corrente média:
+5. Repetir os regimes do Passo 1, **22 s por regime**, e anotar média, mediana e pico:
 
-   | Regime | Comando | Corrente média |
-   |---|---|---|
-   | sem economia | `wifi ps off` | > **A confirmar na bancada.** |
-   | DTIM (padrão) | `wifi ps on` + `wifi ps_wakeup_mode dtim` | > **A confirmar na bancada.** |
-   | listen interval 10 | `wifi ps_listen_interval 10` (antes de conectar) + `wifi ps_wakeup_mode listen_interval` | > **A confirmar na bancada.** |
+   | Regime | Comando |
+   |---|---|
+   | sem economia | `wifi ps off` |
+   | DTIM (padrão) | `wifi ps on` + `wifi ps_wakeup_mode dtim` |
+   | listen interval 10 | `wifi ps_listen_interval 10` (antes de conectar) + `wifi ps_wakeup_mode listen_interval` |
 
+   **Anote sempre a mediana junto da média** — é ela que mostra que o rádio dorme, e a
+   comparação das duas é metade da leitura do resultado. Os valores medidos estão logo
+   abaixo.
+
+### A escada, medida
+
+Bancada de 2026-09-07: nRF54LM20-DK var. B + nRF7002-EB II, SB10 cortado, PPK2 em
+amperímetro no P10 (VIN no pad 3/P3V6, VOUT no pad 2/VBAT, GND no pad 1), firmware do
+**lab 6**, **22 s por regime**. AP Askey 802.11ax, beacon 100 ms, DTIM 3, sem TWT.
+
+![A escada de economia de energia, medida](../../doc/comms/img/wifi_escada_psm.png)
+
+| Regime | Corrente média | Mediana | Pico |
+|---|---|---|---|
+| sem conectar (rádio ocioso) | 0,014 mA | 0,011 mA | 0,04 mA |
+| 2,4 GHz · **sem economia** | **51,33 mA** | 50,59 mA | 182 mA |
+| 5 GHz · sem economia | 53,95 mA | 54,36 mA | 244 mA |
+| 2,4 GHz · **DTIM 3** | **2,29 mA** | 0,010 mA | 252 mA |
+| 5 GHz · DTIM 3 | 2,26 mA | 0,010 mA | 245 mA |
+| 2,4 GHz · **listen interval 10** | **1,13 mA** | 0,011 mA | 252 mA |
+| 2,4 GHz · listen interval 30 | 0,62 mA | 0,011 mA | 254 mA |
+| 5 GHz · listen interval 10 | **0,53 mA** | 0,010 mA | 242 mA |
+
+**Ligar o power save corta 22×** — 51,33 para 2,29 mA. É a manchete do lab, e ela não
+custa Wi-Fi 6 nenhum: é o degrau 1, ligado por padrão.
+
+**A mediana denuncia o mecanismo.** Em todos os regimes com economia ela fica em
+**~10 µA**: na maior parte do tempo o rádio está *dormindo*. A média de 2,29 mA é feita
+inteiramente dos picos de acordar, que chegam a **250 mA**. Sem economia, média e
+mediana coincidem em ~51 mA — ele nunca dorme. E o piso de 12–14 µA bate com os **15 µA**
+de `ISLEEP` do datasheet do nRF7002, o que valida a cadeia de medição antes de qualquer
+conclusão.
+
+### A anatomia do despertar
+
+Segmentando os pulsos acima de 2 mA dentro dos 22 s de cada captura:
+
+| Regime | Despertares | Período | Duração | Carga por despertar | Carga nos pulsos |
+|---|---|---|---|---|---|
+| 2,4 GHz · DTIM | 73 | 305 ms | 18,2 ms | 694 µC | 99% |
+| 5 GHz · DTIM | 73 | 305 ms | 17,2 ms | 686 µC | 99% |
+| 2,4 GHz · listen interval 10 | 25 | 891 ms | 24,0 ms | 998 µC | 99% |
+| 5 GHz · listen interval 10 | 24 | 928 ms | 13,5 ms | 480 µC | 97% |
+| 2,4 GHz · listen interval 30 | 7 | 3182 ms | 38,4 ms | 1929 µC | 98% |
+
+**A fórmula do lab inteiro está nesta tabela:**
+`média = carga por despertar × frequência de despertar`. O piso de sono é desprezível —
+98 a 99% da carga está nos pulsos. Economizar é acordar menos vezes, ou acordar mais
+barato.
+
+E os períodos confirmam a teoria da abertura sem folga: **305 ms** é DTIM 3 × beacon de
+100 ms; **891 ms** é o listen interval 10 **arredondado para 9 beacons**, o múltiplo do
+DTIM que cabe em 10 — exatamente o arredondamento descrito lá em cima, agora visível num
+osciloscópio de corrente.
+
+**Quanto mais dorme, mais custa acordar.** O listen interval 30 tem pulso de 38,4 ms e
+1929 µC, contra 24,0 ms e 998 µC do listen interval 10. É o custo de **ressincronizar** —
+ao acordar de um sono longo o rádio precisa reencontrar a grade de beacons. Por isso o
+ganho do 30 sobre o 10 (1,13 → 0,62 mA) é **menor que a razão dos intervalos**, e por isso
+a escada tem rendimento decrescente.
+
+### O efeito da banda existe — mas num regime só, e não onde o datasheet diz
+
+No **listen interval**, 5 GHz custa **metade** de 2,4 GHz: 0,53 contra 1,13 mA, com pulso
+de 13,5 contra 24,0 ms. No **DTIM**, as duas bandas custam praticamente o mesmo por
+despertar — 686 contra 694 µC.
+
+Isso **contradiz o datasheet**, que dá 0,56 mA (5 GHz) contra 1,12 mA (2,4 GHz)
+justamente em **DTIM 3**. A razão de ~2× existe na nossa bancada, mas aparece no listen
+interval, não no DTIM. **A coincidência dos valores é uma armadilha:** é tentador dizer
+que nossos 0,53 e 1,13 mA "batem com o datasheet" — são outro regime.
+
+Hipótese **não verificada**, para investigar e não para afirmar em aula: depois do beacon
+DTIM o AP despeja o tráfego de grupo da casa, igual nas duas bandas, e isso domina o
+despertar; no listen interval a estação acorda num beacon *não*-DTIM, pula essa rajada, e
+o que sobra é o tempo de ar do beacon — 1 Mbps em 2,4 GHz contra 6 Mbps em 5 GHz. **Ponta
+solta que a hipótese não explica:** o pulso do listen interval em 2,4 GHz (24 ms) é
+*maior* que o do DTIM (18 ms).
+
+> **O datasheet é piso, não previsão.** Nosso DTIM 3 deu 2,29 mA contra 1,12 mA do
+> catálogo. O datasheet mede com beacon de 3,8 ms numa rede limpa; a ONT da bancada tem
+> outros clientes e tráfego de broadcast o tempo todo. A diferença é a rede, não a peça —
+> e é exatamente por isso que o lab mede em vez de citar.
+
+### Até onde o listen interval leva — e o que isso adianta da Parte B
+
+![Até onde o listen interval leva](../../doc/comms/img/wifi_li_longo.png)
+
+| Listen interval | Sono | Corrente média | Downlink |
+|---|---|---|---|
+| 10 | 0,9 s | 1,13 mA | ok |
+| 30 | 3,2 s | 0,62 mA | degradado — 3 de 14 pings perdidos |
+| 100 | 10 s | 0,295 mA | **morto** |
+| 300 | 30 s | 0,168 mA | **morto** |
+| **600** | **72 s** | **0,031 mA** | **morto** |
+
+**O listen interval 600 chega a 31 µA** — o mesmo patamar que o datasheet atribui ao TWT
+de 1 minuto (29,5 µA). Guarde esse número: ele é o que torna a Parte B uma discussão de
+determinismo e não de economia.
+
+**O que se perde pelo caminho é o downlink.** Num teste de ping ininterrupto com listen
+interval 600, voltou **1 resposta em 481 pings**, aos 237,6 s — e com RTT de **20 ms**. O
+enlace não está quebrado: a janela é que é minúscula. O rádio fica acordado 27,5 ms a
+cada 72 s (**0,04%** do tempo); a chance de um ping de 900 ms acertar a janela é ~1,25%, e
+observamos 0,21%. **Um dispositivo assim só funciona se ele for quem inicia a conversa.**
+
+**O limite útil fica nas dezenas.** A API do Zephyr aceita 0–65535, e o AP da bancada
+**associou em todos os valores testados**, até 65535 (1,8 h de sono) — o que quebra não é
+a associação, é o tráfego. A partir de ~50 os pings morrem, coerente com o aviso da
+Nordic de que o AP descarta os quadros bufferizados que passam do *MPDU/MSDU lifetime*.
+**Associar não é ser alcançável**, e essa é a frase do degrau 2.
+
+### As regras de bancada do PPK2 — custaram três reinícios
+
+1. **Modo amperímetro**, nunca *source meter*. A instrução de *source* que aparece na
+   documentação da Nordic é para a **nRF7002-DK**, outra placa; aqui quem alimenta a EB II
+   continua sendo a LM20-DK.
+2. Pelo `ppk2-api`, dois passos parecem desnecessários e não são:
+   **`set_source_voltage(3600)` é obrigatório mesmo em amperímetro** (ali ele só informa a
+   escala) e **`toggle_DUT_power("ON")` também** — em amperímetro isso apenas *fecha a
+   chave* de medição. Sem ele, o PPK2 lê **zero** e parece defeito.
+3. **A ordem importa:** feche a chave do PPK2 **antes** de resetar a DK. Ao contrário, o
+   driver inicia com o companion sem VBAT e tudo falha com
+   **`RPU is unresponsive for 10 sec`**.
+4. **Quando o script que segura o PPK2 termina, a serial fecha e o PPK2 ABRE a chave** — o
+   companion cai. O script seguinte tem de reabrir, fechar a chave, resetar a DK e
+   reconectar. Em sala, o equivalente é **recolocar o jumper no P10** sempre que não
+   estiver medindo.
+5. Depois de usar o app gráfico do PPK2, sobra lixo binário no buffer e o
+   `get_modifiers()` do `ppk2-api` quebra em UTF-8. Drenar a serial e retentar resolve.
+6. **`wifi disconnect` com o companion já em shutdown derruba o driver** de vez — só um
+   reset traz de volta.
 ## Parte B — TWT (pendente do AP)
 
 TWT é um **acordo**: a estação negocia com o AP o seu próprio horário de despertar,
