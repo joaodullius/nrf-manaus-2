@@ -83,7 +83,11 @@ Gravar com `west flash -d <pasta do build>`, igual ao lab 9.
 ## FLASH e RAM medidos
 
 Mesmo board (`nrf54lm20dk/nrf54lm20b/cpuapp`), mesmo `prj.conf` de base,
-única variável é `CONFIG_LAB_TRANSPORTE_*`:
+única variável é `CONFIG_LAB_TRANSPORTE_*`. **Os três binários abaixo não
+são só tamanho compilado**: os três foram gravados e exercitados com
+hardware real, nos dois sentidos (telemetria subindo, comando de LED
+descendo — ver "Roteiro de bancada" mais adiante) — a tabela é tamanho de
+binário que comprovadamente roda, não só que compila limpo.
 
 | Transporte | FLASH | % FLASH (2036 KB) | RAM | % RAM (511 KB) |
 |---|---|---|---|---|
@@ -138,12 +142,13 @@ que a mesma `http_client_req()` roda tanto em `transporte_enviar()`
 transporte escolhido. `telemetria_id` e `botao_id` chamam a mesma função
 (`montar_e_enviar()`), então não há motivo para uma ter menos pilha que a
 outra — a assimetria anterior (2048 vs. 1024) não vinha de nenhuma análise
-de caminho, só nunca tinha estourado. **Confirmado na bancada**: HTTP (POST
-de telemetria e GET de comando) e MQTT (PUBLISH de telemetria) rodaram com
-hardware real sobre esse dimensionamento sem `USAGE FAULT` — não é uma
-prova exaustiva (reconexão sob perda de rede e o comando de LED por MQTT
-especificamente ainda não foram exercitados, ver "Roteiro de bancada"
-abaixo), mas é evidência de bancada, não só de precedente lido no fonte.
+de caminho, só nunca tinha estourado. **Confirmado na bancada**: os três
+transportes — TCP, HTTP (POST de telemetria e GET de comando) e MQTT
+(PUBLISH de telemetria e o comando de LED via assinatura) — rodaram com
+hardware real sobre esse dimensionamento sem `USAGE FAULT`, nos dois
+sentidos. Não é uma prova exaustiva (reconexão sob perda de rede ainda não
+foi exercitada com hardware, ver "Roteiro de bancada" abaixo), mas é
+evidência de bancada, não só de precedente lido no fonte.
 
 ## Bytes por amostra — medido em loopback
 
@@ -332,34 +337,38 @@ Gravar cada variante com o servidor certo rodando no PC:
 - `build_MQTT` → mosquitto com o arquivo de configuração da seção
   `tools/wifi_mqtt_sub.py` acima, depois `python tools/wifi_mqtt_sub.py --porta 1883`
 
-**Já confirmado na bancada, com hardware real:**
-- **HTTP**: telemetria chegando no `wifi_http_server.py` e o comando de LED
-  (`l`/`d` no servidor) acendendo/apagando o LED1 no kit — round-trip
-  completo confirmado visualmente.
-- **MQTT**: telemetria fluindo do kit pelo broker até o `wifi_mqtt_sub.py`,
-  com sequência (`seq`) contínua.
+**Já confirmado na bancada, com hardware real — os três transportes, nos
+dois sentidos (telemetria subindo, comando de LED descendo):**
+- **TCP**: telemetria e comando de LED (`l`/`d` no `wifi_server.py` →
+  LED1) confirmados visualmente pelo instrutor.
+- **HTTP**: telemetria e comando de LED (`l`/`d` no `wifi_http_server.py`
+  → LED1) confirmados visualmente pelo instrutor.
+- **MQTT**: telemetria com sequência (`seq`) contínua, e o comando de LED
+  (`l`/`d` no `wifi_mqtt_sub.py` → assinatura do kit em `<tópico>/comando`
+  → LED1) confirmado pelo console do próprio kit:
+  ```
+  lab_transporte: MQTT conectado em <ip>:<porta>, publicando em nrf-manaus/telemetria
+  lab_wifi_tcp: LED1 aceso (comando do servidor)
+  lab_wifi_tcp: LED1 apagado (comando do servidor)
+  ```
 
 **Ainda a confirmar na bancada:**
-- **MQTT, o comando de LED** (`l`/`d` no `wifi_mqtt_sub.py` → assinatura do
-  kit em `<tópico>/comando` → LED1): a telemetria (uplink) foi validada, mas
-  o downlink deste transporte especificamente ainda não teve o console do
-  kit capturado durante o teste do comando.
-- Botão (amostra imediata com `"botao":true`) e queda de conexão
-  (reconecta sozinho) nas três variantes — comportamento herdado do lab 9,
-  não re-testado gesto a gesto neste lab.
+- Botão (amostra imediata com `"botao":true`) nas três variantes —
+  comportamento herdado do lab 9, não re-testado gesto a gesto neste lab.
+- Reconexão sob perda de rede nas três variantes: tem teste automático (o
+  caminho de erro é exercitado pelas suítes de PC), mas não foi exercitada
+  com hardware real numa queda de associação Wi-Fi de verdade.
 - Captura com Wireshark ou `tcpdump` no PC durante uma amostra de cada
   variante, para confirmar os números da tabela "Bytes por amostra" contra
   tráfego de Wi-Fi de verdade (a medição deste README é em loopback — ver a
   ressalva na própria seção).
-- Se algum transporte estourar pilha (sintoma: `USAGE FAULT` na serial que
-  parece bug de código, não erro de rede): as pilhas de `telemetria_id`/
-  `botao_id`/`recepcao_id` foram dimensionadas pelo piso do sample de
-  referência do Zephyr para `http_client_req()` (seção "Comparação de
-  pilha e heap" acima), não por medição na bancada real — `CONFIG_STACK_
-  SENTINEL` e `CONFIG_DEBUG_COREDUMP` (já ligados, herdados do lab 9)
-  tornam esse tipo de estouro diagnosticável em vez de silencioso, mas o
-  HTTP e o MQTT já rodaram na bancada (item acima) sem esse sintoma
-  aparecer.
+- Se algum transporte estourar pilha sob reconexão (sintoma: `USAGE FAULT`
+  na serial que parece bug de código, não erro de rede): as pilhas de
+  `telemetria_id`/`botao_id`/`recepcao_id` foram dimensionadas pelo piso do
+  sample de referência do Zephyr para `http_client_req()` (seção
+  "Comparação de pilha e heap" acima) — os três transportes já rodaram na
+  bancada (itens acima) sem esse sintoma aparecer, mas isso cobre o
+  caminho normal, não especificamente uma reconexão sob perda de rede.
 
 ## Plano B — sem rede utilizável na sala, ou com isolamento de cliente
 
