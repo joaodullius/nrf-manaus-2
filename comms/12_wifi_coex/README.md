@@ -291,6 +291,32 @@ O contraste com a referência mostra isso com números: lá, **sem** árbitro o 
 Wi-Fi). Aqui o BLE perde só 20% sem árbitro — **o problema que o árbitro existe para
 resolver mal aparece nesta bancada.**
 
+### Por que o Wi-Fi só dá 3 Mbps, e não 10
+
+O sample **pede** 10 Mbps: `CONFIG_WIFI_ZPERF_RATE=10000` (kbps), que o `main.c` passa
+como `params.rate_kbps`. Entregamos 3,07 — então não é configuração faltando, é um teto.
+
+**O teto é o barramento com o companion.** O overlay da EB II fixa
+`spi-max-frequency = <DT_FREQ_M(8)>`, e todo boot confirma:
+
+```
+<inf> wifi_nrf_bus: SPIM spi@c8000: freq = 8 MHz
+```
+
+São 8 Mbit/s **brutos** numa única linha de dados, dos quais sobra ~3 Mbps de payload UDP
+depois dos cabeçalhos e das transações de registrador — cerca de 38% de eficiência.
+
+**A referência da Nordic usa outro barramento.** Os 10,2 Mbps do `README.rst` do SDK são
+da nRF7002-**DK**, onde o companion é ligado por **QSPI** — quatro linhas de dados e clock
+maior. Não é o rádio que difere, é a ponte até ele. **Por isso os números da Nordic não
+são comparáveis aos desta bancada**, e essa é uma distinção que não se faz sozinho: os
+dois usam o mesmo nRF7002.
+
+**E as duas anomalias deste lab têm a mesma raiz.** Com 3 Mbps em vez de 10, o rádio Wi-Fi
+ocupa muito menos tempo de ar; sobra espaço para o BLE, o BLE perde só 20% em vez de 87%,
+e o árbitro de coexistência fica sem trabalho a fazer. O barramento explica tanto o
+throughput quanto o efeito pequeno da coexistência.
+
 > **Sobre o número de repetições.** A primeira rodada, com uma única medida por regime,
 > sugeriu que o árbitro dava +10% no BLE. A segunda deu o contrário. Só com 3–4 repetições
 > ficou claro que o BLE varia de 385 a 501 kbps na mesma configuração — dispersão da ordem
