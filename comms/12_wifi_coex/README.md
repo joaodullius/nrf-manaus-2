@@ -140,6 +140,27 @@ antena dedicada) ou compartilhada (`n`). O `TEST_TYPE_WLAN_BLE` (Wi-Fi e BLE
 concorrentes, os dois ligados) é o `default` do `Kconfig` do sample e não muda entre
 os dois builds.
 
+## O IP do servidor de tráfego — `CONFIG_NET_CONFIG_PEER_IPV4_ADDR`
+
+Além da credencial Wi-Fi, este lab precisa saber o IP do PC que roda o servidor
+de tráfego (iPerf, para o lado Wi-Fi) — o mesmo papel que `CONFIG_LAB_SERVIDOR_IP`
+tem no lab 9. O `Kconfig` do sample define `CONFIG_NET_CONFIG_PEER_IPV4_ADDR`
+com o padrão `192.168.1.253` — um endereço de exemplo do SDK que **não existe**
+na rede da sala. Compilar sem sobrescrever esse valor grava um kit que manda
+todo o tráfego Wi-Fi para um destino inexistente: o lado Wi-Fi da medida
+simplesmente não acontece, sem nenhum erro que aponte para a causa.
+
+Descubra o IP do PC na rede da sala (`ipconfig`, no PowerShell) e passe-o na
+linha de build, sem prefixo de imagem — é uma opção de Kconfig, mesma regra do
+`EXTRA_CONF_FILE` explicada acima:
+
+```
+-DCONFIG_NET_CONFIG_PEER_IPV4_ADDR=\"<ip-do-pc>\"
+```
+
+**Nunca commitar o IP real** — ele só entra na linha de comando, nunca em um
+arquivo versionado.
+
 ## Passo 1 — compilar
 
 Caminho de build curto (evita o limite de caminho do Windows no passo de
@@ -149,14 +170,14 @@ Coexistência **ligada**:
 
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_on C:/work/nrf-manaus-2/comms/12_wifi_coex -- -D12_wifi_coex_SHIELD="nrf7002eb2;nrf7002eb2_coex" -D12_wifi_coex_SNIPPET=nrf70-wifi -D12_wifi_coex_EXTRA_CONF_FILE=minha_rede.conf -DCONFIG_MPSL_CX=y -DCONFIG_COEX_SEP_ANTENNAS=y
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_on C:/work/nrf-manaus-2/comms/12_wifi_coex -- -D12_wifi_coex_SHIELD="nrf7002eb2;nrf7002eb2_coex" -D12_wifi_coex_SNIPPET=nrf70-wifi -D12_wifi_coex_EXTRA_CONF_FILE=minha_rede.conf -DCONFIG_NET_CONFIG_PEER_IPV4_ADDR=\"<ip-do-pc>\" -DCONFIG_MPSL_CX=y -DCONFIG_COEX_SEP_ANTENNAS=y
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_on
 ```
 
 Coexistência **desligada**:
 
 ```
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_off C:/work/nrf-manaus-2/comms/12_wifi_coex -- -D12_wifi_coex_SHIELD="nrf7002eb2;nrf7002eb2_coex" -D12_wifi_coex_SNIPPET=nrf70-wifi -D12_wifi_coex_EXTRA_CONF_FILE=minha_rede.conf -DCONFIG_MPSL_CX=n
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_off C:/work/nrf-manaus-2/comms/12_wifi_coex -- -D12_wifi_coex_SHIELD="nrf7002eb2;nrf7002eb2_coex" -D12_wifi_coex_SNIPPET=nrf70-wifi -D12_wifi_coex_EXTRA_CONF_FILE=minha_rede.conf -DCONFIG_NET_CONFIG_PEER_IPV4_ADDR=\"<ip-do-pc>\" -DCONFIG_MPSL_CX=n
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_off
 ```
 
@@ -187,12 +208,20 @@ e BLE — abertas e ativas ao mesmo tempo, em vez de uma de cada vez.
 Pré-requisitos antes de ligar qualquer coisa:
 
 - [ ] Gravar o par BLE (nRF54L15-TAG ou segunda DK) com `nrf/samples/bluetooth/
-      throughput`, papel **periférico**.
-- [ ] Subir o servidor iPerf 2.0.5 no PC: `iperf -s -i 1 -u` (Wi-Fi UDP, o DUT é
-      cliente). Se o firewall do Windows bloquear a porta na entrada em rede
-      Private, ver a seção de pegadinhas do `comms/09_wifi_tcp/README.md` — mesmo
-      sintoma (conexão trava sem erro visível dos dois lados), mesmo conserto
-      (`New-NetFirewallRule`), porta do iPerf em vez de 9000.
+      throughput`, papel **periférico**. O papel (central/periférico) desse
+      sample se escolhe por botão ou pelo shell — e o nRF54L15-TAG não tem
+      console de UART, então só resta o botão. Confirmar no `README` desse
+      sample qual botão seleciona o papel antes de gravar.
+- [ ] Subir o servidor de tráfego Wi-Fi no PC. O gerador do Zephyr fala o
+      protocolo do **iPerf 2.0.5**; **essa versão não está instalada nesta
+      bancada** — só a 3, incompatível em protocolo com a 2.0.5. Instalar a
+      2.0.5 (`iperf -s -i 1 -u`) ou usar um receptor UDP em Python como
+      alternativa são as duas opções; decisão de qual seguir fica com o
+      instrutor. Se o firewall do Windows bloquear a porta na entrada em rede
+      Private, ver a seção de pegadinhas do `comms/09_wifi_tcp/README.md` —
+      mesmo sintoma (conexão trava sem erro visível dos dois lados), mesmo
+      conserto (`New-NetFirewallRule`), porta do servidor escolhido em vez de
+      9000.
 - [ ] Gravar a nRF54LM20-DK com `build_on` (primeira rodada).
 - [ ] Abrir a porta serial certa (aviso no topo deste README — primeira VCOM com o
       shield acoplado) e confirmar a conexão Wi-Fi e o pareamento BLE no log de
@@ -218,17 +247,26 @@ O `README.rst` original do SDK publica números de referência para o **nRF7002 
 (host nRF5340, antenas separadas, Wi-Fi 802.11n em 2,4 GHz): Wi-Fi-only 10,2 Mbps,
 BLE-only 1107 kbps, coexistência desligada 9,9 Mbps / 145 kbps, coexistência ligada
 8,3 Mbps / 478 kbps. São números da Nordic, em outro hardware — citados aqui só como
-ordem de grandeza, atribuídos, e **não entram na tabela do curso**: os quatro valores
-acima são os medidos nesta bancada, com este par de kits.
+ordem de grandeza, atribuídos, e **não entram na tabela do curso**: a tabela acima
+está reservada para os quatro valores desta bancada, ainda não medidos — o que se
+compara é a mesma imagem (mesmo firmware, mesmo par) com e sem o árbitro de
+coexistência ligado.
 
 ## Pegadinhas
 
 - **A VCOM muda com o shield — não é sempre a mesma porta.** Ver o aviso no topo
   deste README.
 - **`sw3` não existe mais** com o shield acoplado nesta versão do SDK.
+- **O IP padrão do peer Wi-Fi não existe na rede da sala.** `CONFIG_NET_CONFIG_
+  PEER_IPV4_ADDR` vem `192.168.1.253` de fábrica; sem sobrescrever, o kit manda
+  o tráfego Wi-Fi para um destino que não existe, sem erro nenhum que aponte
+  para a causa. Ver a seção acima, antes do Passo 1.
 - **O TAG do Channel Sounding não está conectado nesta bancada agora.** Sem um par
   BLE gravado com o sample de throughput, o central deste lab não tem para onde
   conectar — o teste concorrente não roda. Ver "Hardware" acima.
+- **O iPerf 2.0.5 não está instalado nesta bancada.** Só a versão 3 está
+  disponível, e ela não fala o mesmo protocolo que o gerador do Zephyr espera
+  (2.0.5). Ver o checklist do Passo 2.
 - **A coexistência é escolha de build, não de shell.** Trocar de regime exige
   recompilar e regravar (`build_on`/`build_off`), não existe comando em runtime para
   isso neste sample.
