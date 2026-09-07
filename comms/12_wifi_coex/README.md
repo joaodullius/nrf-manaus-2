@@ -210,45 +210,75 @@ e BLE — abertas e ativas ao mesmo tempo, em vez de uma de cada vez.
 
 ## Passo 2 — bancada
 
-> **A confirmar na bancada.**
+> **Medido em 2026-09-07.** Kit nRF54LM20-DK var. B + nRF7002-EB II (shield duplo), par
+> BLE na nRF54L15-DK. Os resultados estão na tabela de throughput, mais abaixo.
 
 Pré-requisitos antes de ligar qualquer coisa:
 
-- [ ] Gravar o par BLE (nRF54L15-TAG ou segunda DK) com `nrf/samples/bluetooth/
-      throughput`, papel **periférico**. O papel (central/periférico) desse
-      sample se escolhe por botão ou pelo shell — e o nRF54L15-TAG não tem
-      console de UART, então só resta o botão. Confirmar no `README` desse
-      sample qual botão seleciona o papel antes de gravar.
-- [ ] Subir o servidor de tráfego Wi-Fi no PC. O gerador do Zephyr fala o
-      protocolo do **iPerf 2.0.5**; **essa versão não está instalada nesta
-      bancada** — só a 3, incompatível em protocolo com a 2.0.5. Instalar a
-      2.0.5 (`iperf -s -i 1 -u`) ou usar um receptor UDP em Python como
-      alternativa são as duas opções; decisão de qual seguir fica com o
-      instrutor. Se o firewall do Windows bloquear a porta na entrada em rede
-      Private, ver a seção de pegadinhas do `comms/09_wifi_tcp/README.md` —
-      mesmo sintoma (conexão trava sem erro visível dos dois lados), mesmo
-      conserto (`New-NetFirewallRule`), porta do servidor escolhido em vez de
-      9000.
-- [ ] Gravar a nRF54LM20-DK com `build_on` (primeira rodada).
+- [x] **Par BLE: use a nRF54L15-DK, não a TAG.** Gravar com
+      `nrf/samples/bluetooth/throughput` (`-b nrf54l15dk/nrf54l15/cpuapp`) e escolher o
+      papel **digitando `peripheral` no shell** — o sample tem `CONFIG_SHELL=y`, então
+      **não é preciso apertar botão nenhum**. Medido nesta bancada: o console dessa DK é
+      a **segunda VCOM** (COM7 aqui); a primeira fica muda. A resposta esperada é
+      `Peripheral. Starting advertising`.
+
+      Com a **TAG** (que não tem console) o botão seria o único caminho, e o `README` do
+      sample publica **duas numerações** conforme a placa (`Button 1/2` numas, `Button
+      0/1` noutras) — mais uma razão para preferir a DK.
+- [x] **Servidor de tráfego: usamos um sorvedouro UDP em Python, não o iPerf.** O
+      `C:\iperf-2.0.5` desta bancada é **código-fonte, sem binário compilado**, e o
+      `iperf3` fala outro protocolo. O sorvedouro absorve o tráfego na porta 5001 e mede
+      do lado do PC — que é o número que vale.
+
+      **Ressalva medida:** o sorvedouro não implementa a troca de relatório do protocolo
+      iperf 2, então o `zperf` do kit termina com `net_zperf: Stats receive timeout` e
+      `ble_coex: UDP session error`. **Isso é esperado com este método** — o tráfego
+      passou (7154 pacotes contados), só o relatório de volta não existe. Para ter o
+      número pelos dois lados seria preciso compilar o iPerf 2.0.5.
+
+      **Firewall:** este lab usa **UDP 5001**, a quarta porta diferente do módulo. Sem a
+      regra de entrada o teste mede zero, em silêncio dos dois lados — ver
+      `PREREQUISITOS.md`.
+- [x] Gravar a nRF54LM20-DK com `build_on` (primeira rodada).
 - [ ] Abrir a porta serial certa (aviso no topo deste README — primeira VCOM com o
       shield acoplado) e confirmar a conexão Wi-Fi e o pareamento BLE no log de
       boot.
 
 Checklist de medição, uma passada por regime (`build_on`, depois `build_off`):
 
-- [ ] Duração do teste igual nos dois rádios (`CONFIG_WIFI_TEST_DURATION` e
+- [x] Duração do teste igual nos dois rádios (`CONFIG_WIFI_TEST_DURATION` e
       `CONFIG_BLE_TEST_DURATION`, ambos 20000 ms no sample — não alterados pelo
       curso).
-- [ ] Ler o throughput Wi-Fi UDP TX no terminal do iPerf, no PC.
-- [ ] Ler o throughput BLE no console serial do par (nRF54L15-TAG ou segunda DK).
-- [ ] Repetir para o outro binário e preencher a tabela abaixo.
+- [x] Ler o throughput Wi-Fi UDP TX **no sorvedouro do PC** (com iPerf 2.0.5 seria no terminal dele; ver acima).
+- [x] Ler o throughput BLE no console serial do par (nRF54L15-TAG ou segunda DK).
+- [x] Repetir para o outro binário e preencher a tabela abaixo.
 
 ### Tabela de throughput (a preencher na bancada)
 
 | Regime | Wi-Fi UDP TX | BLE |
 |---|---|---|
-| Coexistência desligada | > **A confirmar na bancada.** | > **A confirmar na bancada.** |
-| Coexistência ligada | > **A confirmar na bancada.** | > **A confirmar na bancada.** |
+| Coexistência **desligada** (`MPSL_CX=n`) | 2,232 Mbps | **598 kbps** |
+| Coexistência **ligada** (`MPSL_CX=y`) | 2,254 Mbps | **660 kbps** |
+| **Efeito do árbitro** | +1% (ruído) | **+10,4%** |
+
+Medido em 2026-09-07. O BLE foi lido nas duas pontas e elas concordam (`[local] 660 kbps`,
+`[peer] 663739 bps`). O número de Wi-Fi é o medido **no PC** — ver a ressalva do iPerf
+abaixo.
+
+**O ganho aqui é dez vezes menor que o da referência da Nordic, e a razão é de hardware.**
+Lá o árbitro dá +230% no BLE e custa −16% no Wi-Fi; aqui dá +10% e não cobra nada.
+Conferido nas duas `.config` geradas: **`CONFIG_NRF70_SR_COEX_RF_SWITCH` fica `n` nos dois
+binários** — a opção depende de `srrf-switch-gpios` no nó `nrf70`, que o overlay da EB II
+nesta placa não declara, e todo build emite o aviso `was assigned the value 'y' but got
+the value 'n'`. O que difere entre `build_on` e `build_off` é só o `MPSL_CX`, o árbitro de
+**software** (556 B de FLASH de diferença). A chave de RF, que comuta a antena, não existe
+nesta montagem.
+
+É uma lição melhor do que o número bonito teria sido: **coexistência é hardware mais
+software, e o Kconfig sozinho não entrega o ganho.**
+
+Segunda razão provável para o efeito pequeno: a carga de Wi-Fi aqui foi de 2,2 Mbps contra
+10,2 Mbps da referência — menos disputa, menos a arbitrar.
 
 O `README.rst` original do SDK publica números de referência para o **nRF7002 DK**
 (host nRF5340, antenas separadas, Wi-Fi 802.11n em 2,4 GHz): Wi-Fi-only 10,2 Mbps,

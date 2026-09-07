@@ -226,7 +226,7 @@ Windows para o Python, fica registrada uma regra de **bloqueio por programa** qu
 qualquer permissão criada por porta**. Conserto em `comms/09_wifi_tcp/README.md`, seção
 "Pegadinhas".
 
-**2. A regra é por PORTA — e cada transporte usa uma porta diferente.** Este é o que pega
+**2. A regra é por PORTA — e cada lab usa uma porta diferente.** São **quatro** no módulo: 9000/TCP (lab 9), 8000/TCP (lab 10 HTTP), 1883/TCP (lab 10 MQTT) e **5001/UDP** (lab 12). Este é o que pega
 quem já fez o lab 9 funcionar: a regra criada lá vale para a **9000** e só para ela. Ao
 passar para o lab 10, o kit tenta a **8000** (HTTP) ou a **1883** (MQTT) e trava, com o
 servidor mudo. Aconteceu exatamente assim nesta bancada.
@@ -237,12 +237,13 @@ Libere as três de uma vez, em **PowerShell como administrador**, antes do curso
 New-NetFirewallRule -DisplayName "nrf-manaus lab9 TCP"   -Direction Inbound -Protocol TCP -LocalPort 9000 -Action Allow -Profile Private
 New-NetFirewallRule -DisplayName "nrf-manaus lab10 HTTP" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow -Profile Private
 New-NetFirewallRule -DisplayName "nrf-manaus lab10 MQTT" -Direction Inbound -Protocol TCP -LocalPort 1883 -Action Allow -Profile Private
+New-NetFirewallRule -DisplayName "nrf-manaus lab12 UDP"  -Direction Inbound -Protocol UDP -LocalPort 5001 -Action Allow -Profile Private
 ```
 
 Conferir depois (não precisa de administrador):
 
 ```
-netsh advfirewall firewall show rule name=all dir=in status=enabled | findstr /C:"8000" /C:"9000" /C:"1883"
+netsh advfirewall firewall show rule name=all dir=in status=enabled | findstr /C:"8000" /C:"9000" /C:"1883" /C:"5001"
 ```
 
 > **A rede tem de estar classificada como "Particular"** — as regras acima usam o perfil
