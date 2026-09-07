@@ -27,8 +27,8 @@ Decisões de escopo tomadas no brainstorming:
   coexistência e locationing, que o instrutor classificou como importantes, mais o transporte
   alternativo.
 - **Nada depende da rede da sala.** A rede ainda não foi definida. O lab de provisionamento
-  não precisa de AP nenhum (a DK *é* o AP) e os labs de transporte têm plano B com o PC
-  conectado ao SoftAP da própria DK.
+  não precisa de AP nenhum (a DK *é* o AP) e os labs de transporte têm plano B com um hotspot
+  de celular ou do próprio PC (§3.5).
 - **Provisionamento por SoftAP é o lab; por BLE é demo do instrutor** — mesmo padrão que o
   smartphone no Channel Sounding.
 - **Três transportes, um payload.** TCP puro (o que a súmula pede literalmente), HTTP e MQTT
@@ -346,7 +346,9 @@ No PC, `tools/wifi_server.py` — servidor TCP de ~40 linhas que imprime cada li
 aceita um comando de teclado para mandar o LED. Mesmo papel do `cs_capture.py`/`cs_dash.py`:
 o aluno vê os dois lados.
 
-**Plano B sem rede:** a DK em SoftAP e o PC conectado nela; o lab roda sem infraestrutura.
+**Plano B sem rede:** hotspot do celular ou compartilhamento de conexão do PC, com os dois
+associados nele. **Não** serve a DK em SoftAP: o firmware deste lab é estação, não ponto de
+acesso (§3.5).
 
 ### 4.5 Lab 10 — o mesmo payload, outro transporte
 
@@ -715,7 +717,8 @@ Nada aqui foi rodado em hardware ainda, além do build de fumaça do §2.1.
 7. **Botões e LEDs com o shield** — confirmar `sw0`–`sw2` e os quatro LEDs; confirmar que
    `sw3` sumiu.
 8. **Temperatura do die** — o sensor está habilitado no board; confirmar leitura plausível.
-9. **Plano B em SoftAP** — o PC conectar no AP da DK e o TCP funcionar sem infraestrutura.
+9. **Plano B por hotspot** — PC e kit associados a um hotspot, e o TCP funcionando sem a
+   infraestrutura da sala.
 10. **TWT — o teste de cinco minutos, a fazer no dia em que o EX3000 chegar.** Decide se o lab
    11 existe; se falhar, dá tempo de trocar dentro do prazo de devolução:
 
