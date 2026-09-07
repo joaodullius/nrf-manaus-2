@@ -105,7 +105,7 @@ comando — não gravada em `minha_rede.conf`):
 
 | Região | Usado | Região total | % usado |
 |---|---|---|---|
-| FLASH | 553536 B | 2036 KB | 26,55% |
+| FLASH | 553520 B | 2036 KB | 26,55% |
 | RAM | 187256 B | 511 KB | 35,79% |
 
 ## A ferramenta de PC (`tools/wifi_locate.py`)
@@ -190,10 +190,10 @@ MAC local no meio do fluxo) sem precisar de hardware.
 > - A lista real de pontos de acesso vista pelo kit na sala do treinamento.
 > - A posição resolvida (`lat`, `lon`, `incerteza`) e o erro medido contra a posição
 >   real da sala (distância entre a coordenada devolvida e a posição real, em metros).
->   Na investigação desta task, uma chamada de teste com cinco pontos de acesso reais
->   desta bancada devolveu `uncertainty` de 14,1 m — não é o mesmo scan do kit
->   (aquele veio do PC direto, sem firmware), mas dá a ordem de grandeza esperada para
->   este ambiente.
+>   Uma chamada com cinco pontos de acesso desta bancada devolveu incerteza de cerca
+>   de 14 metros — mas esse número veio direto da ferramenta de PC, sem passar pelo
+>   firmware; o fluxo completo (kit → TCP → `wifi_locate.py` → nRF Cloud) ainda está
+>   por confirmar.
 
 ## Pegadinhas
 

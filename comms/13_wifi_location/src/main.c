@@ -82,13 +82,11 @@ static uint16_t canal_para_freq_mhz(enum wifi_frequency_bands band, uint8_t cana
 		return (canal == 14) ? 2484 : (uint16_t)(2407 + canal * 5);
 	case WIFI_FREQ_BAND_5_GHZ:
 		return (uint16_t)(5000 + canal * 5);
-	case WIFI_FREQ_BAND_6_GHZ:
-		/* Aproximacao (o nRF7002 desta bancada nao chegou a ver rede
-		 * de 6 GHz) -- suficiente para o formato de linha; o que
-		 * decide o AP no nRF Cloud e o BSSID, nao esta frequencia.
-		 */
-		return (uint16_t)(5950 + canal * 5);
 	default:
+		/* O nRF7002 e dual-band (2,4/5 GHz) e nunca emite
+		 * WIFI_FREQ_BAND_6_GHZ num scan -- sem caso real para validar
+		 * uma formula, essa banda fica so no default (0).
+		 */
 		return 0;
 	}
 }
