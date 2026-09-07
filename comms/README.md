@@ -93,7 +93,9 @@ problema está.
    +------+-----------------+
    | driver nrf_wifi        |   nRF Connect SDK      wifi_nrf:
    +------+-----------------+
-          |  SPI (spi22, ~8 MHz)
+   | barramento (SPI)       |   zephyr/modules       wifi_nrf_bus:
+   +------+-----------------+
+          |  spi22, ~8 MHz
    +------v-----------------+
    | nRF7002: MAC + PHY     |   blob binario na RAM do companion
    +------------------------+
@@ -106,6 +108,7 @@ problema está.
 | **Wi-Fi management (L2)** | traduz pedidos (`CONNECT`, `SCAN`, `PS`) em chamadas ao gerente de rede; hospeda o `wifi` do shell | `zephyr/subsys/net/l2/wifi/` | `net_wifi_mgmt:`, `wifi_nm:`, `net_wifi_shell:` |
 | **wpa_supplicant** | política de varredura, máquina de estados de associação, *4-way handshake*, WPA2/WPA3, credenciais | `modules/lib/hostap/` (fork do hostap) | `wpa_supp:` |
 | **Driver `nrf_wifi`** | fala com o companion, carrega o *blob* de firmware, mapeia a API do Zephyr no protocolo do chip | `zephyr/drivers/wifi/nrf_wifi/` + `modules/lib/nrf_wifi/` | `wifi_nrf:` |
+| **Barramento** | o transporte físico até o companion: SPI (aqui) ou QSPI (em placas que têm) | `zephyr/modules/nrf_wifi/bus/` | `wifi_nrf_bus:` |
 | **nRF7002** | MAC 802.11 e PHY, **dentro do silício** | o companion na EB II | não loga — é outro chip |
 
 **O ponto de contato é um só: `net_mgmt()`.** A aplicação nunca chama o supplicant nem
@@ -122,8 +125,15 @@ capabilities" numa interface Wi-Fi — não é erro —, e o host não gasta cic
 retransmissão, agregação ou temporização de rádio. Em compensação, **tudo o que o chip
 não implementa não existe** para nós: foi assim que o TWT ficou pendente de um AP no
 lab 11, e é por isso que o `nrf7002eb2` precisa do *blob*
-(`west blobs fetch nrf_wifi`, em `PREREQUISITOS.md`) — sem ele o companion não tem
-firmware para rodar.
+(`west blobs fetch nrf_wifi`, em [`PREREQUISITOS.md`](../PREREQUISITOS.md)) — sem ele
+o companion não tem firmware para rodar.
+
+**A camada de barramento é uma linha de log que vale conhecer.** O `wifi_nrf_bus:` é o
+mais baixo que aparece no console, e é onde surge a falha mais assustadora da frente —
+**`RPU is unresponsive for 10 sec`**, o companion sem alimentação ou sem responder ao
+SPI. No lab 11 ela aparece toda vez que o PPK2 abre a chave de medição antes de a placa
+resetar; foi o custo de três reinícios de bancada. Se a falha estiver nessa linha, o
+problema é elétrico ou de encaixe, **não** de configuração de rede.
 
 **O wpa_supplicant é o módulo que mais surpreende**, por três motivos práticos:
 
