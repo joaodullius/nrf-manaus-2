@@ -403,6 +403,15 @@ Nordic de que o AP descarta os quadros bufferizados que passam do *MPDU/MSDU lif
    `get_modifiers()` do `ppk2-api` quebra em UTF-8. Drenar a serial e retentar resolve.
 6. **`wifi disconnect` com o companion já em shutdown derruba o driver** de vez — só um
    reset traz de volta.
+### Os LEDs neste lab
+
+**Nenhum**, em nenhuma das duas partes. A Parte A roda com o firmware do **lab 6** (o
+shell, que também não acende nada) e a Parte B com o firmware deste diretório, que
+reporta tudo pelo console.
+
+Vale dizer em sala: este é um lab em que **a placa fica visualmente morta** enquanto
+tudo acontece. O que se observa é a curva do PPK2 e o `ping` — o silêncio da placa é o
+assunto do lab, não um sintoma.
 ## Parte B — TWT (pendente do AP)
 
 TWT é um **acordo**: a estação negocia com o AP o seu próprio horário de despertar,

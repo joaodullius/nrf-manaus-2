@@ -421,6 +421,20 @@ soltando o mutex entre elas. Os três convergiram para ~2050 ms.
 > testes de PC, e o `poll` dentro do mutex parece inofensivo na leitura. **Só apareceu
 > quando os três transportes foram medidos lado a lado** — e a pista foi um número que
 > parecia bom demais.
+## Os LEDs neste lab
+
+**Os mesmos do lab 9, porque o firmware é o mesmo** — só o transporte muda. O **LED1**
+acende com o comando do servidor e o **botão `sw0`** manda a amostra extra.
+
+E é exatamente por serem iguais que eles servem de **controle do experimento**: se o
+gesto do botão e o do LED funcionam nos três transportes, o que muda entre TCP, HTTP e
+MQTT está no protocolo, não na aplicação.
+
+O que muda é **como o comando chega até o LED**: no MQTT o kit assina o tópico e o
+broker empurra; no HTTP o kit **pergunta** a cada ciclo (`GET /comando`) e o LED só pode
+reagir na próxima pergunta. Com `CONFIG_LAB_INTERVALO_MS=2000`, isso é até 2 s de atraso
+entre a tecla e a luz — visível a olho nu, e é a demonstração mais barata do custo do
+polling.
 ## Ferramentas de PC
 
 ### `tools/wifi_http_server.py`

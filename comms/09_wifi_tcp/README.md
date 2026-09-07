@@ -405,6 +405,26 @@ saída é a mesma: hotspot alternativo, PC e DK os dois nele.
   exclusão mútua entre as threads que compartilham o mesmo socket prioriza corretude
   sobre regularidade — não sintoma de problema de rede ou do kit.
 
+## Os LEDs e o botão neste lab
+
+| Sinal | O que significa |
+|---|---|
+| **LED1** aceso | o servidor mandou `LED 1` — é o **downlink** chegando, o ponto do lab |
+| **LED1** apagado | o servidor mandou `LED 0`, ou o firmware acabou de iniciar |
+| **botão `sw0`** | manda uma amostra **extra e imediata**, com `"botao":true` |
+
+O LED1 é o único indicador visual, e ele **não diz nada sobre a conexão** — um kit
+desconectado fica com o LED exatamente como estava. Para saber o estado do enlace, o
+lugar é o console.
+
+**Por que o LED1 e não o LED0:** o alias do devicetree é `led1`, e a serigrafia da
+nRF54LM20-DK numera a partir de **LED0** — aqui os dois batem, e o `led1` é mesmo o LED
+marcado **LED1** na placa. (No lab 8a, que usa a `dk_buttons_and_leds`, a numeração é
+deslocada e `DK_LED1` acende o **LED0**. São bibliotecas diferentes.)
+
+**O que o botão prova:** a amostra dele **fura o ritmo** do envio periódico. No log do
+servidor ela aparece entre duas periódicas, com `uptime_ms` fora da cadência — é assim
+que se demonstra que o transporte não está apenas repetindo um relógio.
 ## Pegadinhas
 
 - **O firewall do Windows bloqueia o servidor sem avisar ninguém — e uma regra de

@@ -10,6 +10,9 @@ build*/
 *.zip
 # ... exceto os hex de referencia de cada passo (edge_ai/hex/build_all.py)
 !edge_ai/hex/*.hex
+# ... e os do modulo de Comunicacao (comms/hex/build_all.py). So os PUBLICOS:
+# os que levam credencial de rede saem em build/hex/_local/ e nao entram aqui.
+!comms/hex/*.hex
 
 # IDE / editor
 .vscode/

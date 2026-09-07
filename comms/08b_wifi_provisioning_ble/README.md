@@ -311,6 +311,15 @@ Sem o lado do dispositivo publicado, implementar exigiria descobrir por engenhar
 o formato que o app espera. Fica registrado como possibilidade futura, não como lacuna do
 material.
 
+## Os LEDs neste lab
+
+**Nenhum.** É a diferença visível para o lab 8a, que acende o LED0 enquanto o SoftAP
+está no ar e o LED1 depois de conectar. Aqui o sample não toca em LED algum: o estado
+vive todo no console e na tela do app.
+
+Em sala isso confunde — o aluno grava, olha a placa, não vê nada e acha que falhou. **O
+sinal de que o kit está pronto é o anúncio Bluetooth LE** (`PVxxxxxx` na lista do app),
+não uma luz.
 ## Pegadinhas
 
 - **A VCOM muda com o shield — não é sempre a mesma porta.** Ver o aviso no topo

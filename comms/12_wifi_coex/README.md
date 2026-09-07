@@ -354,6 +354,14 @@ está reservada para os quatro valores desta bancada, ainda não medidos — o q
 compara é a mesma imagem (mesmo firmware, mesmo par) com e sem o árbitro de
 coexistência ligado.
 
+## Os LEDs neste lab
+
+**Nenhum.** O sample de coexistência não usa LED: o resultado é numérico e sai no
+console (throughput de cada rádio) e no `iperf` do PC.
+
+Como as duas pilhas rodam ao mesmo tempo e nada pisca, a única forma de saber que o
+teste está de pé é o log — **os dois rádios anunciam o início separadamente**, e é isso
+que se projeta.
 ## Pegadinhas
 
 - **A VCOM muda com o shield — não é sempre a mesma porta.** Ver o aviso no topo

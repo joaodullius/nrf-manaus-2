@@ -227,6 +227,12 @@ variando quantos APs a requisição inclui.
 > treinamento. Isso exige saber onde a sala fica de fato; nenhuma medição automática
 > substitui essa comparação.
 
+## Os LEDs neste lab
+
+**Nenhum.** A varredura, o envio e a resposta do nRF Cloud aparecem só no console.
+
+Num lab cujo resultado é uma **coordenada**, não há estado local para indicar: o kit
+manda a vizinhança de APs e quem sabe a resposta é a nuvem.
 ## Pegadinhas
 
 - **O firewall do Windows bloqueia o servidor sem avisar ninguém**, mesmo sendo esta
