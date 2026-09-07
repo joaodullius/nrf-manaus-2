@@ -291,31 +291,41 @@ O contraste com a referência mostra isso com números: lá, **sem** árbitro o 
 Wi-Fi). Aqui o BLE perde só 20% sem árbitro — **o problema que o árbitro existe para
 resolver mal aparece nesta bancada.**
 
-### Por que o Wi-Fi só dá 3 Mbps, e não 10
+### Por que o Wi-Fi só dá 3 Mbps, e não 10 — o que se sabe e o que não
 
 O sample **pede** 10 Mbps: `CONFIG_WIFI_ZPERF_RATE=10000` (kbps), que o `main.c` passa
-como `params.rate_kbps`. Entregamos 3,07 — então não é configuração faltando, é um teto.
+como `params.rate_kbps`. Entregamos 3,07 — não é configuração faltando, é um teto. Onde
+ele está, porém, **não** foi determinado. Duas hipóteses foram testadas e as duas caíram:
 
-**O teto é o barramento com o companion.** O overlay da EB II fixa
-`spi-max-frequency = <DT_FREQ_M(8)>`, e todo boot confirma:
+**Hipótese 1 — o barramento SPI. REFUTADA por medida.** O overlay da EB II fixa
+`spi-max-frequency = <DT_FREQ_M(8)>`, e todo boot confirma `SPIM spi@c8000: freq = 8 MHz`.
+Parecia o suspeito óbvio: 8 Mbit/s brutos numa linha só. Mas subindo para **16 MHz** por
+overlay (`&nrf70 { spi-max-frequency = <16000000>; }`, e o log confirma `freq = 16 MHz`
+com `latency = 1`), o throughput foi de **3,07 para apenas 3,15 Mbps** — **+2,6% ao dobrar
+o barramento**, e apareceu uma perda de 0,05% que antes era zero. **Se o SPI fosse o
+gargalo, teria quase dobrado.** Ele nunca estava saturado.
 
-```
-<inf> wifi_nrf_bus: SPIM spi@c8000: freq = 8 MHz
-```
+**Hipótese 2 — usar QSPI, como a nRF7002-DK. IMPOSSÍVEL nesta placa.** O **nRF54LM20 não
+tem periférico QSPI** — não há uma única menção nos devicetree do SoC
+(`nrf54lm20a/b_cpuapp.dtsi`), e nenhum dos shields nRF7002 traz overlay QSPI nesta versão
+do SDK. O QSPI existe no **nRF5340**, que é o host da nRF7002-DK onde a Nordic mediu os
+10,2 Mbps. Mas, dado que o SPI não é o gargalo aqui, **o QSPI provavelmente também não
+explicaria a diferença**.
 
-São 8 Mbit/s **brutos** numa única linha de dados, dos quais sobra ~3 Mbps de payload UDP
-depois dos cabeçalhos e das transações de registrador — cerca de 38% de eficiência.
+**O que sobra como hipótese, não testado:** a pilha de rede e a CPU do host, a
+implementação do `zperf`, ou o enlace de rádio em si (banda de 2,4 GHz congestionada,
+modulação negociada). Medir em **5 GHz** seria o próximo passo barato e separaria as duas
+últimas.
 
-**A referência da Nordic usa outro barramento.** Os 10,2 Mbps do `README.rst` do SDK são
-da nRF7002-**DK**, onde o companion é ligado por **QSPI** — quatro linhas de dados e clock
-maior. Não é o rádio que difere, é a ponte até ele. **Por isso os números da Nordic não
-são comparáveis aos desta bancada**, e essa é uma distinção que não se faz sozinho: os
-dois usam o mesmo nRF7002.
+**Por que isso importa para a leitura da tabela:** os 10,2 Mbps do `README.rst` do SDK são
+de outro host (nRF5340), outro barramento e outra rede. **Não são comparáveis aos desta
+bancada**, e a razão exata da diferença continua em aberto — o que é uma resposta melhor
+do que uma explicação plausível e não verificada.
 
-**E as duas anomalias deste lab têm a mesma raiz.** Com 3 Mbps em vez de 10, o rádio Wi-Fi
-ocupa muito menos tempo de ar; sobra espaço para o BLE, o BLE perde só 20% em vez de 87%,
-e o árbitro de coexistência fica sem trabalho a fazer. O barramento explica tanto o
-throughput quanto o efeito pequeno da coexistência.
+> **Lição de método, registrada de propósito.** A primeira versão deste README afirmava,
+> com segurança, que o teto era o SPI de 8 MHz: a conta fechava (~38% de eficiência) e a
+> comparação com o QSPI da DK era elegante. **Estava errada**, e só se soube porque o
+> clock foi dobrado e medido. Explicação plausível que fecha a conta não é evidência.
 
 > **Sobre o número de repetições.** A primeira rodada, com uma única medida por regime,
 > sugeriu que o árbitro dava +10% no BLE. A segunda deu o contrário. Só com 3–4 repetições
