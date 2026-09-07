@@ -207,6 +207,16 @@ O companion mede-se na própria **EB II**:
 | Companion, domínio VBAT (o do rádio) | **P10** | cortar o solder bridge **SB10** (fechado de fábrica) | *ampere meter* |
 | Companion, domínio IOVDD | **P4** | cortar o solder bridge **SB9** (fechado de fábrica) | *ampere meter* |
 
+> **Os dois solder bridges ficam lado a lado, e trocá-los é o erro natural.** Nesta
+> bancada o **SB9 foi aberto por engano** antes do SB10 — e **o kit continuou
+> funcionando normalmente**, o que é justamente o problema: o erro não se anuncia, e só
+> aparece quando a medida de corrente dá zero ou não muda com o regime. Confira o
+> **rótulo na serigrafia** antes de cortar, não a posição.
+>
+> Como distinguir com o multímetro, medido aqui: no **P10**, o **pad 3** é o **P3V6** (o
+> lado da fonte, tem tensão) e o **pad 2** é o **VBAT** (o lado da carga, sem tensão com
+> o SB10 aberto); o **pad 1** é GND. O PPK2 entra com **VIN no 3** e **VOUT no 2**.
+
 Para o nosso caso o domínio que interessa é o **VBAT** (P10) — é ele que alimenta o
 rádio; o IOVDD é só a interface. PPK2 em **modo amperímetro**, ligado entre os
 pinos de P10, com GND em P9 ou no próprio P10. Para voltar ao funcionamento normal

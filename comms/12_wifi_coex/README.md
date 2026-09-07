@@ -255,7 +255,7 @@ Checklist de medição, uma passada por regime (`build_on`, depois `build_off`):
 - [x] Ler o throughput BLE no console serial do par (nRF54L15-TAG ou segunda DK).
 - [x] Repetir para o outro binário e preencher a tabela abaixo.
 
-### Tabela de throughput (a preencher na bancada)
+### Tabela de throughput — medida
 
 | Regime | Wi-Fi UDP TX | BLE |
 |---|---|---|
