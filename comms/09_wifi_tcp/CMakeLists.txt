@@ -8,7 +8,7 @@ if(NOT CONFIG_LAB_SERVIDOR_IP)
   message(FATAL_ERROR
     "CONFIG_LAB_SERVIDOR_IP nao definido.\n"
     "Descubra o IP do seu PC na rede da sala (ipconfig) e passe:\n"
-    "  -DCONFIG_LAB_SERVIDOR_IP=\"192.168.0.100\"")
+    "  -D09_wifi_tcp_CONFIG_LAB_SERVIDOR_IP=\"192.168.0.100\"")
 endif()
 
 target_sources(app PRIVATE src/main.c src/payload.c src/transporte.c)

@@ -70,10 +70,10 @@ Cada aluno preenche o seu localmente com a rede da sala e compila com:
 Opções de Kconfig e arquivos de fragmento como este, no sysbuild, já valem para a
 **aplicação principal** com ou sem o prefixo de imagem — as duas formas são
 equivalentes (`-DEXTRA_CONF_FILE=minha_rede.conf`, sem prefixo, funciona igual;
-confirmado compilando os dois jeitos no lab 7: binário byte a byte idêntico). O
-curso usa a forma prefixada aqui só por consistência visual com o `SHIELD` e o
-`SNIPPET` do Passo 1 — onde o prefixo **é** obrigatório, por um motivo diferente
-(ver a seção abaixo).
+confirmado compilando os dois jeitos no lab 7: binário byte a byte idêntico). O curso
+escreve sempre a forma prefixada, em todos os labs, para o aluno não ter de guardar
+qual opção aceita as duas formas e qual não aceita: para o `SHIELD` e o `SNIPPET` do
+Passo 1 o prefixo **é** obrigatório, por um motivo diferente (ver a seção abaixo).
 
 **Nunca commitar a senha real.** Antes de qualquer commit, esvaziar o arquivo de
 volta:
@@ -131,12 +131,14 @@ por regime:
 
 | Regime | Kconfig |
 |---|---|
-| Coexistência **desligada** | `-DCONFIG_MPSL_CX=n` |
-| Coexistência **ligada** | `-DCONFIG_MPSL_CX=y -DCONFIG_COEX_SEP_ANTENNAS=y` |
+| Coexistência **desligada** | `-D12_wifi_coex_CONFIG_MPSL_CX=n` |
+| Coexistência **ligada** | `-D12_wifi_coex_CONFIG_MPSL_CX=y -D12_wifi_coex_CONFIG_COEX_SEP_ANTENNAS=y` |
 
 `CONFIG_COEX_SEP_ANTENNAS` só importa com a coexistência ligada: controla se o
 driver assume antenas separadas para Wi-Fi e BLE (`y`, o caso da EB II, que tem
-antena dedicada) ou compartilhada (`n`). O `TEST_TYPE_WLAN_BLE` (Wi-Fi e BLE
+antena dedicada) ou compartilhada (`n`). Com o shield de coexistência ele já vem `y`
+por padrão — a linha de build o passa mesmo assim, para o regime ficar legível na
+própria linha em vez de depender do que o shield decide. O `TEST_TYPE_WLAN_BLE` (Wi-Fi e BLE
 concorrentes, os dois ligados) é o `default` do `Kconfig` do sample e não muda entre
 os dois builds.
 
@@ -151,11 +153,11 @@ todo o tráfego Wi-Fi para um destino inexistente: o lado Wi-Fi da medida
 simplesmente não acontece, sem nenhum erro que aponte para a causa.
 
 Descubra o IP do PC na rede da sala (`ipconfig`, no PowerShell) e passe-o na
-linha de build, sem prefixo de imagem — é uma opção de Kconfig, mesma regra do
-`EXTRA_CONF_FILE` explicada acima:
+linha de build — é uma opção de Kconfig, mesma regra do `EXTRA_CONF_FILE` explicada
+acima, e por isso escrita com o mesmo prefixo de imagem:
 
 ```
--DCONFIG_NET_CONFIG_PEER_IPV4_ADDR=\"<ip-do-pc>\"
+-D12_wifi_coex_CONFIG_NET_CONFIG_PEER_IPV4_ADDR=\"<ip-do-pc>\"
 ```
 
 **Nunca commitar o IP real** — ele só entra na linha de comando, nunca em um
@@ -170,14 +172,14 @@ Coexistência **ligada**:
 
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_on C:/work/nrf-manaus-2/comms/12_wifi_coex -- -D12_wifi_coex_SHIELD="nrf7002eb2;nrf7002eb2_coex" -D12_wifi_coex_SNIPPET=nrf70-wifi -D12_wifi_coex_EXTRA_CONF_FILE=minha_rede.conf -DCONFIG_NET_CONFIG_PEER_IPV4_ADDR=\"<ip-do-pc>\" -DCONFIG_MPSL_CX=y -DCONFIG_COEX_SEP_ANTENNAS=y
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_on C:/work/nrf-manaus-2/comms/12_wifi_coex -- -D12_wifi_coex_SHIELD="nrf7002eb2;nrf7002eb2_coex" -D12_wifi_coex_SNIPPET=nrf70-wifi -D12_wifi_coex_EXTRA_CONF_FILE=minha_rede.conf -D12_wifi_coex_CONFIG_NET_CONFIG_PEER_IPV4_ADDR=\"<ip-do-pc>\" -D12_wifi_coex_CONFIG_MPSL_CX=y -D12_wifi_coex_CONFIG_COEX_SEP_ANTENNAS=y
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_on
 ```
 
 Coexistência **desligada**:
 
 ```
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_off C:/work/nrf-manaus-2/comms/12_wifi_coex -- -D12_wifi_coex_SHIELD="nrf7002eb2;nrf7002eb2_coex" -D12_wifi_coex_SNIPPET=nrf70-wifi -D12_wifi_coex_EXTRA_CONF_FILE=minha_rede.conf -DCONFIG_NET_CONFIG_PEER_IPV4_ADDR=\"<ip-do-pc>\" -DCONFIG_MPSL_CX=n
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_off C:/work/nrf-manaus-2/comms/12_wifi_coex -- -D12_wifi_coex_SHIELD="nrf7002eb2;nrf7002eb2_coex" -D12_wifi_coex_SNIPPET=nrf70-wifi -D12_wifi_coex_EXTRA_CONF_FILE=minha_rede.conf -D12_wifi_coex_CONFIG_NET_CONFIG_PEER_IPV4_ADDR=\"<ip-do-pc>\" -D12_wifi_coex_CONFIG_MPSL_CX=n
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_off
 ```
 

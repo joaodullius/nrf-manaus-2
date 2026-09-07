@@ -41,5 +41,5 @@ if(NOT CONFIG_WIFI_CREDENTIALS_STATIC_SSID)
     "Preencha o minha_rede.conf com o SSID e a senha da rede da sala:\n"
     "  CONFIG_WIFI_CREDENTIALS_STATIC_SSID=\"nrf-curso\"\n"
     "  CONFIG_WIFI_CREDENTIALS_STATIC_PASSWORD=\"...\"\n"
-    "e compile com -DEXTRA_CONF_FILE=minha_rede.conf")
+    "e compile com -D12_wifi_coex_EXTRA_CONF_FILE=minha_rede.conf")
 endif()

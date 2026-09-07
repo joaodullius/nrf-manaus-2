@@ -52,7 +52,7 @@ CONFIG_WIFI_CREDENTIALS_STATIC_PASSWORD=""
 Cada aluno preenche o seu localmente com a rede da sala e compila com:
 
 ```
-west build ... -- -DEXTRA_CONF_FILE=minha_rede.conf
+west build ... -- -D07_wifi_sta_EXTRA_CONF_FILE=minha_rede.conf
 ```
 
 **Nunca commitar a senha real.** Antes de qualquer commit, esvaziar o arquivo de
@@ -65,7 +65,7 @@ git checkout comms/07_wifi_sta/minha_rede.conf
 ## Falha proposital sem a credencial
 
 Se o `minha_rede.conf` estiver vazio (o estado padrão do repositório) e o build for
-disparado sem `-DEXTRA_CONF_FILE`, o `CMakeLists.txt` para na configuração, antes de
+disparado sem `-D07_wifi_sta_EXTRA_CONF_FILE`, o `CMakeLists.txt` para na configuração, antes de
 compilar uma linha sequer, com:
 
 ```
@@ -77,7 +77,7 @@ CMake Error at CMakeLists.txt:29 (message):
     CONFIG_WIFI_CREDENTIALS_STATIC_SSID="nrf-curso"
     CONFIG_WIFI_CREDENTIALS_STATIC_PASSWORD="..."
 
-  e compile com -DEXTRA_CONF_FILE=minha_rede.conf
+  e compile com -D07_wifi_sta_EXTRA_CONF_FILE=minha_rede.conf
 ```
 
 Confirmado nesta máquina: o build sem o fragmento falha exatamente com essa

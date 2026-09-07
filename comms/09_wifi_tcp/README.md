@@ -124,16 +124,20 @@ Com `minha_rede.conf` preenchido e o IP do PC em mãos:
 
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/09_wifi_tcp/build_lm20 C:/work/nrf-manaus-2/comms/09_wifi_tcp -- -D09_wifi_tcp_SHIELD="nrf7002eb2" -D09_wifi_tcp_SNIPPET=nrf70-wifi -DEXTRA_CONF_FILE=minha_rede.conf -DCONFIG_LAB_SERVIDOR_IP=\"<ip-do-pc>\"
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/09_wifi_tcp/build_lm20 C:/work/nrf-manaus-2/comms/09_wifi_tcp -- -D09_wifi_tcp_SHIELD="nrf7002eb2" -D09_wifi_tcp_SNIPPET=nrf70-wifi -D09_wifi_tcp_EXTRA_CONF_FILE=minha_rede.conf -D09_wifi_tcp_CONFIG_LAB_SERVIDOR_IP=\"<ip-do-pc>\"
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/09_wifi_tcp/build_lm20
 ```
 
-Repare que `SHIELD` e `SNIPPET` levam o prefixo `09_wifi_tcp_` (o nome da imagem no
-sysbuild) e os outros dois, não: sem prefixo, `SHIELD`/`SNIPPET` valeriam para **todas**
-as imagens do sysbuild, o que pode quebrar as que não usam esse shield — por isso o
-prefixo é obrigatório ali. Já `EXTRA_CONF_FILE` e qualquer `CONFIG_*` (como
-`CONFIG_LAB_SERVIDOR_IP`) já valem para a aplicação principal sem prefixo nenhum — é
-assim de propósito, para o mesmo comando funcionar com ou sem sysbuild.
+Todas as quatro opções levam o prefixo `09_wifi_tcp_` — o nome da imagem no sysbuild.
+Para `SHIELD` e `SNIPPET` o prefixo é **obrigatório**: sem ele, os dois valeriam para
+**todas** as imagens do sysbuild, o que pode quebrar as que não usam esse shield. Para
+`EXTRA_CONF_FILE` e para qualquer `CONFIG_*` (como `CONFIG_LAB_SERVIDOR_IP`) o prefixo é
+**opcional** — sem ele a opção já vale para a aplicação principal, de propósito, para o
+mesmo comando funcionar com ou sem sysbuild.
+
+O curso escreve sempre com prefixo, nas oito linhas de build da frente. Não é exigência
+da ferramenta: é para o aluno ler uma linha só e saber, sem decorar exceção, a qual
+imagem cada opção se aplica.
 
 Resumo de memória:
 
