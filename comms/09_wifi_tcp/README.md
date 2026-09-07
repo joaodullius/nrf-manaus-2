@@ -118,6 +118,133 @@ saudável só porque está mais espaçada que o limite de leitura.
    (`abrir_com_backoff()`, em `src/main.c`) e a telemetria retoma sem intervenção. É o
    ponto do lab: a queda é esperada e tratada, não um bug.
 
+## Arquitetura do software — os blocos e o fluxo
+
+Esta seção descreve o firmware bloco a bloco. Serve de base para o diagrama do material.
+
+### Os blocos
+
+```
+                       +---------------------------------------+
+                       |               main()                  |
+                       |  orquestra a partida e larga 3 threads |
+                       +---------------------------------------+
+                                        |
+       +----------------+---------------+---------------+
+       |                |                               |
++--------------+  +--------------+              +----------------+
+| thread_      |  | thread_botao |              | thread_        |
+| telemetria   |  |              |              | recepcao       |
+| a cada       |  | espera o     |              | le do servidor |
+| INTERVALO_MS |  | semaforo     |              | e move o LED1  |
++--------------+  +--------------+              +----------------+
+       |                |                               |
+       +--------+-------+                               |
+                v                                       |
+       +------------------+                             |
+       | montar_e_enviar()|                             |
+       +------------------+                             |
+                |                                       |
+       +--------+--------+                              |
+       v                 v                              |
++-------------+   +--------------+                      |
+| sensores    |   | payload.c    |                      |
+| temp / RSSI |   | monta o JSON |                      |
++-------------+   +--------------+                      |
+                          |                             |
+                          v                             v
+                 +-----------------------------------------+
+                 |          transporte.h  (a interface)     |
+                 |  abrir / enviar / receber / fechar       |
+                 +-----------------------------------------+
+                                    |
+                 +------------------+------------------+
+                 |                  |                  |
+           +-----------+     +-----------+     +-----------+
+           |   TCP     |     |   HTTP    |     |   MQTT    |
+           +-----------+     +-----------+     +-----------+
+              (so UMA entra no binario, escolhida no Kconfig)
+                                    |
+                                    v
+                    pilha de rede do Zephyr -> Wi-Fi -> PC
+```
+
+| Bloco | Arquivo | Papel |
+|---|---|---|
+| Orquestrador | `src/main.c`, `main()` | registra callbacks, configura GPIO, espera rede, abre transporte, **inicia as três threads** |
+| Telemetria | `thread_telemetria()` | dorme `CONFIG_LAB_INTERVALO_MS` e chama `montar_e_enviar(false)` |
+| Botão | `thread_botao()` | bloqueia no semáforo `botao_apertado`; ao ser liberado chama `montar_e_enviar(true)` |
+| Recepção | `thread_recepcao()` | lê linhas do transporte e acende/apaga o **LED1** |
+| Montagem | `montar_e_enviar()` | lê os sensores, incrementa `seq`, chama `payload_montar()` e `transporte_enviar()` |
+| Serialização | `src/payload.c` | **só** transforma a struct em linha JSON — não sabe o que é rede |
+| Transporte | `src/transporte.h` + `transporte.c` | uma interface, **três** implementações |
+
+As três threads têm a mesma prioridade (7) e pilha de 3072 B, e são criadas paradas
+(`K_THREAD_DEFINE(..., -1)`): quem as inicia é o `main()`, **depois** de a rede estar de pé.
+É por isso que nenhuma amostra é montada antes de haver para onde mandar.
+
+### O fluxo de partida (e as linhas de log que ele produz)
+
+| # | O que `main()` faz | Log |
+|---|---|---|
+| 1 | registra os callbacks de `NET_EVENT_WIFI_CONNECT_RESULT` e `NET_EVENT_IPV4_DHCP_BOUND` | — |
+| 2 | configura `sw0` (interrupção) e `led1` (saída, apagado) | — |
+| 3 | espera o **supplicant** ficar pronto (`CONFIG_WIFI_READY_LIB`, até 10 s) | `Aguardando o supplicant do Wi-Fi ficar pronto...` |
+| 4 | pede a conexão com a credencial armazenada (`NET_REQUEST_WIFI_CONNECT_STORED`) | `Conexao Wi-Fi solicitada` |
+| 5 | bloqueia no semáforo `ip_pronto` | `Aguardando IP por DHCP...` |
+| 6 | (callback) associação concluída | `Conectado ao Wi-Fi` |
+| 7 | (callback) DHCP entregou endereço → libera o semáforo | `IP obtido por DHCP: <ip>` |
+| 8 | abre o transporte com espera crescente | `Conectado em <ip>:<porta>` |
+| 9 | inicia as três threads | (começam as amostras) |
+
+O passo 3 existe por um achado de bancada: pedir conexão antes de o `wpa_supplicant` ficar
+pronto falha com `-ENOTSUP` (−134). Não aparecia no build nem na revisão de código.
+
+### Os três caminhos em operação
+
+**Telemetria (periódico).** `thread_telemetria` → `montar_e_enviar(false)` → lê temperatura
+do die e RSSI → `payload_montar()` → `transporte_enviar()` → dorme `INTERVALO_MS`.
+
+**Botão (assíncrono).** A interrupção do `sw0` **não** monta amostra nenhuma: o handler só
+faz `k_sem_give(&botao_apertado)` e retorna. Quem monta é `thread_botao`, já fora do
+contexto de interrupção. É o padrão de sempre — trabalho pesado (ler sensor, serializar,
+mandar pela rede) nunca acontece dentro de uma ISR. As duas threads chamam **a mesma**
+`montar_e_enviar()`, só mudando o campo `botao`; por isso a amostra do botão fura o ritmo
+sem desalinhar o contador (`seq` é `atomic_t`).
+
+**Recepção (servidor → kit).** `thread_recepcao` fica em `transporte_receber()` com espera
+de 1 s, e trata cada retorno segundo o **contrato de erro** que os três transportes
+respeitam:
+
+| Retorno | Significa | O que a thread faz |
+|---|---|---|
+| `> 0` | chegou uma linha | interpreta `LED 1` / `LED 0` |
+| `0` | nada chegou em 1 s | **não é erro** — conexão presumida viva, tenta de novo |
+| `-ECONNRESET` | o outro lado fechou | reconecta |
+| `-EBADMSG` | erro de **aplicação**, não de conexão (só o HTTP produz) | loga e segue — reabrir não resolveria |
+| outro `< 0` | erro de rede | reconecta |
+
+Esse contrato é o que permite ao `main.c` ignorar qual transporte está compilado.
+
+### Reconexão: por que existe um mutex
+
+`abrir_com_backoff()` nunca desiste — espera crescente (4 s → 8 s → 16 s → 30 s de teto).
+Como **duas** threads podem detectar a queda ao mesmo tempo (a de envio e a de recepção),
+`reconectar_transporte()` é protegida por `reconexao_mutex`.
+
+E há um caso sutil, achado na bancada: `transporte_receber()` pode devolver `-ENOTCONN`
+porque **outra** thread já está no meio de abrir a conexão nova. Reconectar aí abriria uma
+**segunda** conexão por cima da que está nascendo — foi exatamente isso que fazia o comando
+de LED ir parar numa conexão abandonada. Por isso esse caso espera 100 ms e tenta de novo,
+em vez de reconectar.
+
+### A travessia — o ponto do lab
+
+O formato do payload existe **duas vezes**: `src/payload.c` no firmware e
+`tools/payload_ref.py` no PC. Não há geração de código nem schema compartilhado — os dois
+são escritos à mão e têm de concordar. É isso que o roteiro de bancada verifica na prática
+e o que `tools/tests/` cobre automaticamente.
+
 ## Passo 1 — compilar e gravar
 
 Com `minha_rede.conf` preenchido e o IP do PC em mãos:

@@ -30,13 +30,18 @@ CAMPOS = ("seq", "uptime_ms", "temp_c", "rssi_dbm", "botao")
 
 
 def montar(seq: int, uptime_ms: int, temp_cc: int, rssi_dbm: int, botao: bool) -> str:
-    return json.dumps({
-        "seq": seq,
-        "uptime_ms": uptime_ms,
-        "temp_c": round(temp_cc / 100.0, 2),
-        "rssi_dbm": rssi_dbm,
-        "botao": botao,
-    }, separators=(",", ":")) + "\n"
+    # temp_c e montado a mao, nao por json.dumps, para bater BYTE A BYTE com o
+    # firmware: o C usa "%d.%02d" e portanto imprime sempre duas casas ("25.00",
+    # "1.00", "0.00"), enquanto json.dumps de um float descarta o zero final
+    # ("25.0", "1.0", "0.0"). A divisao abaixo trunca em direcao a zero, como a
+    # divisao inteira do C -- e nao para baixo, como o // do Python faria com
+    # negativos (-450 // 100 = -5; o C da -4).
+    inteiro = temp_cc // 100 if temp_cc >= 0 else -((-temp_cc) // 100)
+    temp_c = "%d.%02d" % (inteiro, abs(temp_cc) % 100)
+    return (
+        '{"seq":%d,"uptime_ms":%d,"temp_c":%s,"rssi_dbm":%d,"botao":%s}\n'
+        % (seq, uptime_ms, temp_c, rssi_dbm, "true" if botao else "false")
+    )
 
 
 def _tipo_valido(campo: str, valor) -> bool:
