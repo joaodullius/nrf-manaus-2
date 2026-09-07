@@ -170,6 +170,13 @@ Para compilar modelos TFLite → Axon **na nuvem**, use o próprio Edge AI Lab (
   Cloud.
 - **`iperf` versão 2.0.5**, para o lab 12 (coexistência). **O `iperf3` não serve** — o
   gerador de tráfego (`zperf`) do Zephyr fala o protocolo do iperf 2, não o 3.
+  **Atenção: o iperf 2.0.5 não está instalado nesta bancada, e o `winget` não tem
+  esse pacote** — nesta máquina só o `iperf3` foi instalado, e ele não serve para
+  este lab. Resolva isso antes do curso (download direto do binário, por exemplo).
+  Alternativa em avaliação pelo instrutor: trocar o iPerf por um receptor UDP
+  simples em Python, já que o número que o lab compara vem do próprio kit
+  (`zperf`) e o servidor de PC só precisa ser o sorvedouro do tráfego — se essa
+  alternativa for adotada, o `README.md` do lab 12 passa a valer sobre este item.
 - **PPK2** (Power Profiler Kit II), para o lab 11 (energia) — mesmo instrumento do
   módulo Edge AI, agora medindo o companion Wi-Fi na própria EB II (não no jumper de
   corrente da DK).

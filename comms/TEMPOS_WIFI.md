@@ -50,15 +50,24 @@ interação com o kit.
 
 Só três labs têm medida de tempo de execução do zero, feita pelo instrutor:
 
-| Lab | O que foi medido | Tempo de máquina |
-|---|---|---|
-| 07 sta | do reset ao IP obtido por DHCP | ~7 s (dos quais ~4 s de varredura/associação) |
-| 08 provisionamento | do boot até o SoftAP no ar | ~5,6 s |
-| 13 locationing | do reset à coordenada resolvida | ~15 s (dos quais ~5,5 s de varredura) |
+| Lab | O que foi medido | Tempo de máquina | Onde mais esse número aparece |
+|---|---|---|---|
+| 07 sta | do reset ao IP obtido por DHCP | ~7 s (dos quais ~4 s de varredura/associação) | só aqui — medido pelo instrutor fora do README do lab. O `comms/07_wifi_sta/README.md` (Passo 2) ainda marca a checklist de bancada como "a confirmar"; o número é real, só não foi propagado para lá ainda |
+| 08 provisionamento | do boot até o SoftAP no ar | ~5,6 s | só aqui — mesmo caso do lab 7: medido pelo instrutor, mas o `comms/08_wifi_provisioning/README.md` (Passo 3) ainda marca o fluxo completo como "a confirmar" |
+| 13 locationing | do reset à coordenada resolvida | ~15 s (dos quais ~5,5 s de varredura) | também em `comms/13_wifi_location/README.md`, seção "Ciclo completo, validado com hardware" — as duas fontes batem |
 
-Os labs 06, 09, 10, 11 e 12 não têm esse tipo de medida — não porque sejam mais
-lentos ou mais rápidos, só porque o instrumento (cronômetro na bancada) não foi
-aplicado a eles nesta rodada.
+**Os números de 07 e 08 não são inventados nem contraditórios com os READMEs
+daqueles labs** — são reais, medidos pelo instrutor, só ainda não propagados para lá.
+A atualização dos dois READMEs (para que a checklist de bancada pare de dizer "a
+confirmar" quando o tempo já foi medido) é responsabilidade de quem mantém cada lab,
+não deste documento.
+
+Os labs 06, 09, 10, 11 e 12 não têm esse tipo de medida (reset→evento) registrada
+aqui — não porque sejam mais lentos ou mais rápidos, só porque o instrumento
+(cronômetro na bancada) não foi aplicado a eles nesta rodada. Os labs 09 e 10 têm,
+nos seus próprios READMEs, evidência de bancada de outro tipo (sequência de eventos,
+reconexão) que não é um tempo do reset a um evento único, e por isso não entra nesta
+tabela.
 
 ## Duração de cada lab em sala — pendente de cronometragem
 
