@@ -84,20 +84,31 @@ Gravar com `west flash -d <pasta do build>`, igual ao lab 9.
 
 Mesmo board (`nrf54lm20dk/nrf54lm20b/cpuapp`), mesmo `prj.conf` de base,
 única variável é `CONFIG_LAB_TRANSPORTE_*`. **Os três binários abaixo não
-são só tamanho compilado**: os três foram gravados e exercitados com
+são só tamanho compilado**: código equivalente foi gravado e exercitado com
 hardware real, nos dois sentidos (telemetria subindo, comando de LED
 descendo — ver "Roteiro de bancada" mais adiante) — a tabela é tamanho de
 binário que comprovadamente roda, não só que compila limpo.
 
 | Transporte | FLASH | % FLASH (2036 KB) | RAM | % RAM (511 KB) |
 |---|---|---|---|---|
-| TCP | 555360 B | 26,64% | 191952 B | 36,68% |
-| HTTP | 567020 B | 27,20% | 192200 B | 36,73% |
-| MQTT | 560756 B | 26,90% | 193392 B | 36,96% |
+| TCP | 555512 B | 26,64% | 191952 B | 36,68% |
+| HTTP | 567184 B | 27,20% | 192200 B | 36,73% |
+| MQTT | 560904 B | 26,90% | 193392 B | 36,96% |
+
+**O tamanho exato varia alguns bytes com o comprimento do SSID e da senha**,
+porque `minha_rede.conf` é compilado no binário (`CONFIG_WIFI_CREDENTIALS_
+STATIC_SSID`/`PASSWORD`) — os números acima vêm de um build com uma
+credencial de preenchimento (`minha_rede.conf` não pode ficar vazio, ver o
+lab 9), não da rede real de nenhuma sala. Comparando com a mesma imagem TCP
+no lab 9 (`../09_wifi_tcp/README.md`, medida com a credencial real de uma
+bancada): **555508 B**, 4 bytes a menos que aqui — a diferença é só o
+comprimento da credencial, não uma divergência de código. Se o seu número
+depois de compilar não bater exatamente com esta tabela, é essa a causa
+mais provável, não um erro seu.
 
 As três cabem com folga (RAM entre 36,68% e 36,96% dos 511 KB — a diferença
 entre elas é pequena, ~0,28 ponto percentual). **O MQTT não precisou virar
-referência lida**. HTTP custa mais FLASH que os outros dois (+11660 B sobre
+referência lida**. HTTP custa mais FLASH que os outros dois (+11672 B sobre
 o TCP, o parser HTTP embutido do Zephyr) mas pouco RAM a mais (+248 B) — o
 grosso do custo de HTTP é código, não estado. MQTT soma +1440 B de RAM sobre
 o TCP: é o preço de **dois slots** (`struct mqtt_slot`, ~720 B cada — dois
@@ -361,8 +372,16 @@ dois sentidos (telemetria subindo, comando de LED descendo):**
   Falha ao enviar a amostra 6 (-128); reconectando
   Falha ao mandar o CONNECT MQTT (-116); nova tentativa em 1000 ms
                                           nova tentativa em 2000 / 4000 / 8000 ms
-  MQTT conectado em 192.168.15.15:9000, publicando em nrf-manaus/telemetria
+  MQTT conectado em <ip>:1883, publicando em nrf-manaus/telemetria
   ```
+  A porta do log real desta bancada foi 9000 (reuso de uma regra de
+  firewall já existente, sem privilégio de administrador para criar outra)
+  — não é a porta que este README recomenda; redigida para 1883 aqui, para
+  o exemplo ficar coerente com o resto do lab (o `mosquitto.conf`, a regra
+  de firewall e o comando de build acima usam 1883). Qualquer porta livre
+  serve, desde que a mesma esteja em `CONFIG_LAB_PORTA` (build), no
+  `mosquitto.conf` e na regra de firewall — os três precisam bater.
+
   A queda foi detectada por **dois caminhos ao mesmo tempo** — a thread de
   recepção (`MQTT desconectado`) e a de telemetria (`Falha ao enviar`) — e
   mesmo assim só houve **uma** reconexão, não duas concorrentes: é a
