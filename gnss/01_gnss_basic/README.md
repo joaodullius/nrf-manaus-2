@@ -36,10 +36,14 @@ O nome da imagem no sysbuild é `01_gnss_basic`, igual ao nome da pasta — é o
 que as receitas de build dos labs 2 e 3 reaproveitam. O `.config` da imagem de
 aplicação sai em `build_9151/01_gnss_basic/zephyr/.config`.
 
-Build limpo, imagem única de aplicação mais o domínio de rede do modem (a nRF9151 é
-um SoC dual-core; o sysbuild cuida dos dois). Resumo de memória:
+Build limpo. O alvo `/ns` traz TF-M: o sysbuild gera a imagem segura (`tfm`) e a
+imagem de aplicação não seguro (`01_gnss_basic`) — a tabela abaixo é da **imagem de
+aplicação**, a que importa para este lab:
 
-<!-- BANCADA: preencher -->
+| Região | Usado | Região total | % usado |
+|---|---|---|---|
+| FLASH | 83052 B | 960 KB | 8,45% |
+| RAM | 33044 B | 211608 B | 15,62% |
 
 ## Passo 2 — abrir o console
 
