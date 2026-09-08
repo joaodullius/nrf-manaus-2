@@ -1,0 +1,22 @@
+/*
+ * ORIGEM: copia de arquivo do SDK — nao e codigo do curso.
+ *   SDK     : nRF Connect SDK v3.4.0
+ *   Upstream: nrf/samples/cellular/gnss/boards/nrf9151dk_nrf9151_ns.overlay
+ *   Local   : C:/ncs/v3.4.0/nrf/samples/cellular/gnss/boards/nrf9151dk_nrf9151_ns.overlay
+ *   Copiado : 2026-09-08 — curso nrf-manaus-2, modulo gnss/01_gnss_basic
+ *
+ * Para conferir se divergiu do SDK:
+ *   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/cellular/gnss/boards/nrf9151dk_nrf9151_ns.overlay
+ *
+ * DIVERGENCIA DO CURSO: nenhuma.
+ */
+
+/*
+ * Copyright (c) 2026 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+#include <samples/cellular/nrf91_no_bootloader_partitions.dtsi>
+
+#include <samples/cellular/nrf91_sram_partitions.dtsi>
