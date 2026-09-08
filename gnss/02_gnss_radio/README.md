@@ -15,7 +15,8 @@ Duas perguntas, quatro receitas:
   *time-to-first-fix* (TTFF): sem assistência, assistência mínima (offline), A-GNSS
   via nRF Cloud.
 - **O que muda quando o GNSS roda de olho na bateria, não só de olho no primeiro
-  fix?** — modo periódico, sem assistência, onde LTE e GNSS disputam o mesmo rádio.
+  fix?** — modo periódico com assistência mínima, onde LTE e GNSS disputam o mesmo
+  rádio.
 
 ## Parte A — os três degraus de assistência
 
@@ -64,9 +65,11 @@ lab, é herdada do `prj.conf` do sample.
 **O build da variante de nuvem não exige credencial nenhuma para compilar.**
 `CONFIG_GNSS_SAMPLE_ASSISTANCE_NRF_CLOUD` só liga a biblioteca cliente
 (`NRF_CLOUD_COAP`) no binário; o certificado e o provisionamento do dispositivo na
-nRF Cloud são passos de **runtime**, não de build — o firmware sobe sem eles e só
-falha ao tentar buscar dados de assistência de fato, em bancada. As três variantes
-compilaram limpo, `exit 0`.
+nRF Cloud são **pré-requisito para rodar o firmware em bancada, não para
+compilá-lo** — o build sobe sem eles e só falharia ao tentar buscar dados de
+assistência de fato, com o dispositivo ligado. Não confunda um binário que compila
+com um lab pronto para gravar: falta o certificado antes de ligar a placa com esta
+variante. As três variantes compilaram limpo, `exit 0`.
 
 ### FLASH e RAM medidos
 
@@ -147,19 +150,23 @@ cada janela que ele ganha (ou perde) para o LTE fica registrada.
 
 ```bash
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/01_gnss_basic/build_02_per C:/work/nrf-manaus-2/gnss/01_gnss_basic -- -D01_gnss_basic_CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=n -D01_gnss_basic_CONFIG_GNSS_SAMPLE_MODE_PERIODIC=y -D01_gnss_basic_CONFIG_GNSS_SAMPLE_LTE_ON_DEMAND=y
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/01_gnss_basic/build_02_per C:/work/nrf-manaus-2/gnss/01_gnss_basic -- -D01_gnss_basic_CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=n -D01_gnss_basic_CONFIG_GNSS_SAMPLE_MODE_PERIODIC=y -D01_gnss_basic_CONFIG_GNSS_SAMPLE_LTE_ON_DEMAND=y -D01_gnss_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=n -D01_gnss_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_MINIMAL=y
 cd C:/work/nrf-manaus-2
 sh gnss/02_gnss_radio/verifica_variantes.sh gnss/01_gnss_basic/build_02_per periodico
 ```
 
-Esta variante **não** liga nenhum grau de assistência — herda o padrão
-`GNSS_SAMPLE_ASSISTANCE_NONE` do Kconfig, igual ao lab 1. É deliberado: sem
-assistência é a condição em que o rádio compartilhado mais aparece (ver "A
-disciplina de agenda" abaixo).
+Esta variante liga o mesmo grau de assistência **mínima** da Parte A
+(`GNSS_SAMPLE_ASSISTANCE_MINIMAL`) — não por acaso: `GNSS_SAMPLE_LTE_ON_DEMAND` só
+existe no Kconfig quando alguma assistência está ligada (ver "Pegadinhas" abaixo),
+e a mínima é a que não exige certificado nem integração de nuvem, então o lab
+continua rodando em qualquer bancada. Isso muda o que o firmware faz com os
+downloads agendados de dado de navegação — ver "A disciplina de agenda" a seguir.
 
-FLASH e RAM desta variante ficam praticamente iguais ao lab 1 (82920 B / 8,44% de
-FLASH, 33044 B / 15,62% de RAM) — trocar de contínuo para periódico não muda
-biblioteca nenhuma, só o intervalo com que `nrf_modem_gnss_start()` é chamado.
+FLASH e RAM desta variante ficam próximos da variante **mínima** da Parte A
+(106544 B / 10,84% de FLASH, 36060 B / 17,04% de RAM contra 107092 B / 10,89% e
+36180 B / 17,10%) — a diferença é só o modo (periódico em vez de TTFF) e o
+`GNSS_SAMPLE_LTE_ON_DEMAND`, que não puxa biblioteca nova, só muda a lógica de
+`gnss/01_gnss_basic/src/main.c` que liga e desliga o LTE.
 
 ### As quatro mensagens, evidência do rádio dividido
 
@@ -185,7 +192,7 @@ Em modo periódico, o modem só baixa efemérides e almanaque **da própria
 transmissão dos satélites** (50 bps, lento) quando precisa — e, quando decide que
 precisa, ele **ignora temporariamente o intervalo e as tentativas configurados** e
 roda GNSS continuamente até terminar o download. É o que a *flag*
-`SCHED_DOWNLOAD` acima está anunciando quando aparece.
+`SCHED_DOWNLOAD` acima anuncia quando aparece.
 
 Existe um bit que desliga esse comportamento —
 `NRF_MODEM_GNSS_USE_CASE_SCHED_DOWNLOAD_DISABLE`, setado em
@@ -200,20 +207,32 @@ if (IS_ENABLED(CONFIG_GNSS_SAMPLE_MODE_PERIODIC) &&
 }
 ```
 
-A recomendação da Nordic é exatamente essa condição: desligar os downloads
-agendados **quando há assistência**, porque a assistência já entrega efemérides,
-almanaque e (no caso da nRF Cloud) os parâmetros do modelo ionosférico NeQuick — o
-GNSS não precisa mais parar a agenda para buscar isso sozinho. **Desligar esse bit
-sem nenhuma assistência ligada** — o que aconteceria se este lab usasse
-`GNSS_SAMPLE_ASSISTANCE_NONE` com o bit forçado desativado — significa que o
-receptor nunca recebe as correções ionosféricas: a precisão cai, silenciosamente,
-sem nenhum erro no log. Por isso esta variante (sem assistência) **mantém** os
-downloads agendados ligados: é o preço de não ter assistência, e é isso que as
-quatro mensagens acima tornam visível.
+**Esta variante usa assistência mínima, então essa condição é verdadeira**: o bit
+é setado, e os downloads agendados ficam desligados. É a recomendação da Nordic —
+desligar os downloads agendados **quando há assistência**, porque a assistência já
+entrega efemérides e almanaque, e o GNSS não precisa mais parar a agenda para
+buscar isso sozinho por conta própria. Na prática, isso quer dizer que a
+`Scheduled navigation data download` da tabela acima **não deve aparecer** nesta
+variante — o firmware está configurado para evitar exatamente essa interrupção.
 
-Disciplina de agenda (intervalo e retry respeitados ou não), assistência (dados
+O contraponto é a variante **sem** assistência da Parte A: se ela rodasse em modo
+periódico (o que este lab não faz, mas o Kconfig deixaria), a condição acima seria
+falsa, o bit ficaria desligado, e os downloads agendados continuariam — é o preço
+de não ter assistência nenhuma. **Desligar o bit à força sem nenhuma
+assistência ligada** — o que não é o caso de nenhuma receita deste lab, mas é a
+armadilha que o Kconfig evita ao recusar `GNSS_SAMPLE_LTE_ON_DEMAND` sem
+assistência (ver "Pegadinhas" abaixo) — significa que o receptor nunca recebe as
+correções ionosféricas: a precisão cai, silenciosamente, sem nenhum erro no log.
+
+Disciplina de agenda (downloads agendados desligados ou não), assistência (dados
 prontos ou buscados na hora) e precisão (correção ionosférica presente ou ausente)
-não são três decisões independentes — é a mesma decisão, vista de três ângulos.
+não são três decisões independentes — é a mesma decisão, vista de três ângulos. As
+outras três mensagens da tabela (`GNSS operation blocked by LTE`,
+`Insufficient GNSS time windows`, `Sleep period(s) between PVT notifications`)
+continuam possíveis nesta variante: elas vêm da disputa comum do rádio entre LTE e
+GNSS a cada janela periódica, não do download agendado — e é a assistência mínima
+usando o LTE (para hora de rede e MCC) que dá ao rádio um motivo concreto para
+disputar espaço com o GNSS.
 
 ## `verifica_variantes.sh`
 
@@ -230,22 +249,24 @@ evita repetir o caminho completo do `.config` em cada chamada.
 
 ## Pegadinhas
 
-- **A receita da variante periódica não liga `CONFIG_GNSS_SAMPLE_LTE_ON_DEMAND`,
-  mesmo passando `=y` na linha de build.** Sintoma:
-  `sh verifica_variantes.sh gnss/01_gnss_basic/build_02_per periodico` imprime
-  `FALTA: CONFIG_GNSS_SAMPLE_LTE_ON_DEMAND=y` e sai com código 1, embora o build em
-  si tenha compilado limpo. Causa: no `Kconfig` do lab 1,
-  `GNSS_SAMPLE_LTE_ON_DEMAND` só existe dentro de `if !GNSS_SAMPLE_ASSISTANCE_NONE`
-  — e esta receita não liga nenhuma assistência, então a *choice* de assistência
-  fica no padrão do SDK (`GNSS_SAMPLE_ASSISTANCE_NONE`), a dependência não é
-  satisfeita, e o CMake avisa (`warning: ... was assigned the value 'y' but got the
-  value 'n'`) e descarta o `=y`. **Isso não quebra a demonstração da Parte B**: o
-  objetivo desta variante é justamente mostrar o rádio disputado **sem**
-  assistência, e é exatamente essa combinação (periódico + `ASSISTANCE_NONE`) que
-  mantém os downloads agendados ligados e as quatro mensagens visíveis. Se algum dia
-  esta receita precisar mesmo de LTE-on-demand funcionando, é preciso também ligar
-  um grau de assistência (por exemplo `..._ASSISTANCE_MINIMAL=y`) — o que muda o
-  experimento, então não foi feito aqui.
+- **`CONFIG_GNSS_SAMPLE_LTE_ON_DEMAND` só existe quando há assistência ligada —
+  ligar essa opção sem escolher um grau de assistência não faz nada.** Sintoma: se
+  a receita da variante periódica passar `-D..._CONFIG_GNSS_SAMPLE_LTE_ON_DEMAND=y`
+  sem também escolher um grau de assistência, o build compila normalmente mas o
+  CMake avisa `warning: GNSS_SAMPLE_LTE_ON_DEMAND ... was assigned the value 'y'
+  but got the value 'n'. Check these unsatisfied dependencies:
+  (!GNSS_SAMPLE_ASSISTANCE_NONE) (=n)`, o `.config` sai sem a linha, e
+  `verifica_variantes.sh` reporta `FALTA: CONFIG_GNSS_SAMPLE_LTE_ON_DEMAND=y`.
+  Causa: no `Kconfig` do lab 1, `GNSS_SAMPLE_LTE_ON_DEMAND` vive dentro de
+  `if !GNSS_SAMPLE_ASSISTANCE_NONE` — a opção **nem existe** para ser ligada
+  enquanto a *choice* de assistência estiver no padrão do SDK
+  (`GNSS_SAMPLE_ASSISTANCE_NONE`). Não é capricho do Kconfig: o próprio texto da
+  opção diz "ativa o LTE só quando é preciso buscar dados de A-GNSS" — sem
+  nenhuma assistência configurada, não há o que buscar, e "LTE sob demanda" não
+  significa nada. Correção: a receita deste lab (acima) já liga
+  `CONFIG_GNSS_SAMPLE_ASSISTANCE_MINIMAL=y` junto com `LTE_ON_DEMAND=y`, e
+  `verifica_variantes.sh gnss/01_gnss_basic/build_02_per periodico` confere limpo,
+  sem aviso do CMake e com `.config` trazendo as três linhas esperadas.
 - **`CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=y`, na variante "sem", já é o padrão do
   Kconfig do SDK — a asserção não está testando essa linha da linha de comando,
   porque a linha de comando nem precisa dela.** O que de fato discrimina a
