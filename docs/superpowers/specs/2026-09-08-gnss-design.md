@@ -50,19 +50,69 @@ Onde não deu para confirmar, está dito.
 
 ### 2.1 O nRF9151 é receptor de banda única
 
-`nrfxlib/nrf_modem/include/nrf_modem_gnss.h` declara exatamente três sinais:
+O nRF9151 recebe **dois sinais, os dois em 1575,42 MHz**:
 
-| Constante | Sinal |
+| Sinal | |
 |---|---|
-| `NRF_MODEM_GNSS_SIGNAL_GPS_L1_CA` | GPS L1 C/A |
-| `NRF_MODEM_GNSS_SIGNAL_QZSS_L1_CA` | QZSS L1 C/A |
-| (Galileo) | Galileo E1 OS |
+| GPS L1 C/A | |
+| QZSS L1 C/A | |
 
-Não há GLONASS, não há BeiDou, e não há L2, L5 ou L6. Tudo em 1575,42 MHz. GPS L1 C/A
-não pode ser desabilitado.
+Não há Galileo, não há GLONASS, não há BeiDou, e não há L2, L5 ou L6. GPS L1 C/A não pode ser
+desabilitado.
+
+Fonte: nRF9151 Product Specification, capítulo do receptor de GPS, que lista como recursos
+"GPS L1 C/A reception" e "QZSS L1 C/A reception" e nada mais; e o guia de recursos da série
+nRF91, que diz que "an nRF91 Series device supports both GPS L1 C/A and QZSS L1C/A at
+1575.42 MHz". A lista de firmware do SiP repete: "GPS L1 C/A and QZSS L1C/A positioning".
+
+**Aviso de variante:** GNSS só existe na variante **SICA**. Não há GNSS nas variantes SIAA e
+SIBA. Conferir a variante do kit antes da aula.
 
 Isso não é limitação a corrigir, é a premissa do módulo: a diferença para o X20P é de
 classe de receptor, não de qualidade.
+
+#### 2.1.1 Afirmação RETIRADA — não ressuscitar
+
+**Retirada em 2026-09-08:** *"o nRF9151 recebe três sinais, GPS L1 C/A, QZSS L1 C/A e
+Galileo E1 OS."*
+
+Estava errada. Eu li as constantes de `nrf_modem_gnss.h` como se fossem a lista de sinais **deste
+SiP**, quando elas são a lista da **interface**, que serve a vários dispositivos e firmwares de
+modem. O próprio cabeçalho avisa, nos campos de assistência de Galileo, que aquilo "is only
+supported by devices with Galileo support". O nRF9151 não é um deles.
+
+Consequência para o material: **o contraste com o X20P fica ainda mais forte**, porque são dois
+sinais de uma banda contra dezenas de sinais em quatro bandas. E some do deck qualquer menção a
+Galileo do lado Nordic.
+
+### 2.1.2 Os números do pé da escada, com fonte
+
+nRF9151 Product Specification, tabela de especificação elétrica do receptor de GPS. Condições
+declaradas: **céu aberto, 25 °C, relógio TCXO, e com LNA externo com filtro SAW**. O intervalo
+de fix do modo periódico é de 2 minutos, e o A-GPS inclui os parâmetros do modelo ionosférico
+NeQuick.
+
+| Grandeza | Valor |
+|---|---|
+| TTFF a frio | 30,5 s |
+| TTFF a quente | 1,3 s |
+| TTFF com A-GPS | 1,3 s |
+| Precisão 2D (CEP50), rastreio contínuo | 2,0 m |
+| Precisão 2D (CEP50), contínuo com A-GPS | 1,8 m |
+| Precisão 2D (CEP50), periódico | 3,4 m |
+| Precisão 2D (CEP50), periódico com A-GPS | 3,1 m |
+| Sensibilidade a frio / a quente / em rastreio | −146,5 / −152,5 / −156,5 dBm |
+
+**O par que justifica o lab 2 inteiro:** 30,5 s a frio contra 1,3 s com assistência. É a razão de
+A-GNSS existir, e agora é número do fabricante, não retórica.
+
+A especificação também diz, com todas as letras, que **"GPS receiver operation is time
+multiplexed with the LTE modem"**, e que GNSS opera enquanto o modem está em RRC idle, em PSM ou
+desativado. É a tese de §7.3 na fonte primária.
+
+**Atenção ao comparar com o X20P:** os números da Nordic são **CEP50** e os do X20P são **CEP**
+em medição estática de 24 h. O material precisa dizer isso ao pôr os dois lado a lado, senão
+compara grandezas diferentes.
 
 ### 2.2 O sample da Nordic já entrega os observáveis
 
