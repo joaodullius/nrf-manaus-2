@@ -710,46 +710,163 @@ Entram três linhas novas: u-center clássico para a dispersão do NMEA do nRF91
 opcional, e a integração das três DKs à nRF Cloud com certificado, que é tarefa do instrutor
 antes da aula e sem a qual o degrau de A-GNSS por nuvem não roda (§2.3).
 
-### 7.7 Os diagramas de correção
+### 7.7 Os sete diagramas — especificação em texto
 
 **Por que esta seção existe.** A única correção que o módulo mede é o RTK da base local. SBAS,
 DGNSS, RTK em rede, PPP e PPP-RTK serão ensinados sem bancada. Num repositório cujo hábito é
-medir antes de afirmar, isso é uma exceção, e a compensação não é falar mais: é **mostrar o
+medir antes de afirmar, isso é exceção, e a compensação não é falar mais: é **mostrar o
 mecanismo**. Estes diagramas não ilustram o texto, eles carregam o argumento.
 
-Regra que vale para todos: **cada figura mostra um mecanismo, não uma taxonomia**. Uma tabela
-com cinco siglas e cinco precisões não ensina nada que o aluno não esqueça até o café.
+**Decisão do instrutor em 2026-09-08:** as figuras **não são geradas por script**. Ficam
+especificadas em texto aqui, e serão desenhadas depois, na montagem das apresentações finais.
+Esta seção é o que sobrevive, e tem de bastar para desenhar sem reabrir a discussão.
 
-**Convenções.** Os primitivos de forma nativa do `doc/_template/curso_diagrams.py`
-(`flow_boxes`, `bloco`, `arrow`, `rotulo`, `two_column`) para os diagramas conceituais; script
-matplotlib próprio, no padrão `fig_m2_XX_*.py` com opção `--deck`, para os que têm eixo
-numérico. PNGs em `doc/gnss/img/`. **Nenhum `.pptx` é gerado sem ok explícito do instrutor.**
+Regra que vale para as sete: **cada figura mostra um mecanismo, não uma taxonomia**. Se a figura
+puder ser trocada por uma lista de bullets sem perda, ela falhou.
 
-| # | Figura | O que precisa mostrar | Como |
-|---|---|---|---|
-| D1 | Orçamento de erro | As parcelas de erro (relógio do satélite, órbita, ionosfera, troposfera, multicaminho, ruído) e **quais cada técnica remove e quais sobram**. É a figura que explica por que existe mais de uma técnica | matplotlib, barras empilhadas |
-| D2 | OSR contra SSR | O eixo conceitual do bloco. De um lado a base manda **as próprias observações** e o rover diferencia, com validade limitada ao entorno. Do outro o serviço manda **as causas**, órbita, relógio, vieses e modelo atmosférico, difundidas para muitos e válidas numa área ampla | formas nativas |
-| D3 | Precisão contra convergência | Os seis regimes do datasheet do X20P posicionados nos dois eixos. **O subtítulo carrega as condições**: estático de 24 h, RTK com baseline de 1 km, valores observados e não limites garantidos | matplotlib, dispersão |
-| D4 | A baseline e o termo de 1 ppm | O erro crescendo com a distância à base, com marcas na base local, em 10 km e em 30 km, que é onde a solução fixa deixa de se sustentar em base única. **Física geral, não diagnóstico de Manaus** (§7.2) | matplotlib |
-| D5 | A ionosfera atravessa o módulo | Três painéis. Banda única não separa o atraso ionosférico. Múltiplas bandas cancelam por combinação. Cintilação quebra a fase da portadora **independentemente da banda**. Amarra nRF9151, X20P e Manaus numa figura só | matplotlib ou formas nativas |
-| D6 | O rádio é um só | Linha do tempo da cadeia de RF compartilhada: LTE ativo, GNSS rastreando, rastreio em ciclo de trabalho a 20%, janela de PSM, e o download programado atropelando o intervalo configurado. É o §7.3 visível | matplotlib, linha do tempo |
-| D7 | A montagem | Base, ponto de medida, as duas antenas, o caster no notebook e a troca de cabo. Serve ao deck e ao README | formas nativas |
+Os números com fonte vivem em `doc/gnss/data/x20p_datasheet.json` e
+`doc/gnss/data/nrf9151_gnss_spec.json`, que **permanecem**, porque são dados e não imagem.
 
-**D2 é a figura central do módulo.** Ela é o que responde à pergunta de §7.1, porque explica de
-uma vez por que RTK exige base perto e PPP-RTK não, por que um é essencialmente ponto a ponto e
-o outro é difusão, e por que a escolha entre eles é decisão de infraestrutura. Se só uma figura
-sobreviver ao corte de tempo, é esta.
+---
 
-**D5 é a que dá unidade ao módulo.** A ionosfera aparece três vezes em contextos diferentes: no
-receptor de banda única que não consegue removê-la, no receptor multibanda que a cancela por
-combinação, e no céu de Manaus que destrói a fase mesmo com todas as bandas. Sem essa figura as
-três aparições parecem coincidência.
+#### D2 — OSR contra SSR
 
-**Honestidade nas figuras.** D1 e D5 são **esquemáticos de mecanismo**, sem escala numérica
-alegada. D3 e D4 têm eixo numérico e por isso **só podem usar número com fonte**: D3 sai do
-datasheet do X20P com as condições no subtítulo, D4 sai do termo de 1 ppm e das distâncias
-medidas no sourcetable. Nenhuma figura pode sugerir que os regimes não testados foram medidos
-aqui.
+**A figura central do módulo.** Se só uma sobreviver ao corte de tempo, é esta.
+
+Duas colunas. À esquerda, OSR: uma base RTK de posição fixa manda **observações brutas**,
+pseudodistância e fase por época, e o rover **diferencia contra a base**. À direita, SSR: uma
+rede de estações de referência alimenta um serviço que **modela as causas**, e difunde órbita,
+relógio do satélite, vieses e modelo de atmosfera.
+
+O argumento está na **geometria da validade**, não em texto. À esquerda, um círculo pequeno em
+volta da base, com rovers dentro e **pelo menos um rover marcado como fora**, rotulado "fora do
+entorno". À direita, uma região larga com vários rovers, todos válidos, rotulada "muitos rovers,
+mesmo modelo".
+
+**Sem nenhum número.** A diferença de alcance é só o tamanho das duas regiões. É isso que
+responde, de uma vez, por que RTK exige base perto e PPP-RTK não.
+
+#### D5 — A ionosfera atravessa o módulo
+
+**A figura que dá unidade.** Sem ela, as três aparições da ionosfera parecem coincidência.
+
+Três painéis **estruturalmente idênticos**, mesma altura de cabeçalho e mesma posição de
+satélite, meio e receptor, para o olho comparar sem esforço.
+
+1. **nRF9151.** Um observável só, GPS L1 C/A e QZSS L1 C/A na mesma frequência. Não separa o
+   atraso ionosférico de outros efeitos. O motivo é subdeterminação: **faltam equações**, e a
+   figura diz isso sem usar matemática.
+2. **X20P.** Duas bandas cancelam o atraso de primeira ordem por combinação.
+3. **Céu de Manaus.** A cintilação pós-pôr-do-sol quebra a fase da portadora
+   **independentemente de quantas bandas**. É mecanismo diferente do atraso de grupo dos dois
+   painéis anteriores, e o subtítulo precisa dizer isso, senão o painel 3 parece contradizer o 2.
+
+#### D1 — Orçamento de erro e o que cada técnica remove
+
+Grade de seis linhas por quatro colunas. Linhas: relógio do satélite, órbita, ionosfera,
+troposfera, multicaminho, ruído. Colunas: autônomo, SBAS, RTK de base própria, PPP-RTK.
+
+Cada célula tem dois estados apenas, **resta** ou **removida**, e a célula **nunca muda de
+tamanho**, para não sugerir grandeza onde não há número.
+
+A matriz, conferida célula a célula:
+
+| | Autônomo | SBAS | RTK | PPP-RTK |
+|---|---|---|---|---|
+| Relógio do satélite | resta | removida | removida | removida |
+| Órbita | resta | removida | removida | removida |
+| Ionosfera | resta | removida | removida | removida |
+| Troposfera | resta | **resta** | removida | removida |
+| Multicaminho | resta | resta | resta | resta |
+| Ruído | resta | resta | resta | resta |
+
+**Dois pontos que a figura tem de deixar óbvios.** O SBAS **não** corrige troposfera. E
+multicaminho e ruído **sobrevivem a todas** as técnicas, porque são locais da antena e do
+receptor. Esse é o remate, e é o que mais ensina.
+
+**RTK e PPP-RTK terminam no mesmo piso** nesta figura, de propósito. O que os separa é geografia
+(D2) e tempo de convergência (D3), não o orçamento de erro.
+
+**Esquemático de mecanismo, sem escala numérica alegada.** O subtítulo diz isso com todas as
+letras.
+
+#### D3 — Precisão contra convergência
+
+Dispersão com precisão horizontal em escala logarítmica.
+
+Os regimes que **declaram** convergência entram num eixo com tempo: RTK por RTCM3, PPP-RTK
+SPARTN, PPP-RTK CLAS. Os que **não declaram** vão para uma faixa separada, sem eixo de tempo,
+rotulada "sem convergência declarada": autônomo, SBAS, PPP por Galileo HAS, e o nRF9151.
+**Nenhum valor inventado para preencher eixo.**
+
+**O subtítulo carrega as condições, e isto não é opcional.** Os números do X20P são de medição
+estática de 24 h, com RTK em baseline de 1 km, e o datasheet diz que são valores observados e
+não limites de projeto garantidos. O número do nRF9151 é de céu aberto, 25 °C, relógio TCXO e
+LNA externo com filtro SAW.
+
+**Aviso obrigatório de grandeza:** a Nordic mede em **CEP50** e a u-blox em **CEP**. Pôr os dois
+no mesmo eixo sem dizer isso compara grandezas diferentes.
+
+**O contraste de TTFF fica FORA desta figura.** Misturaria duas noções diferentes de tempo no
+mesmo eixo, já que convergência de correção e tempo até o primeiro fix não são a mesma coisa.
+Ele merece figura própria, se houver espaço.
+
+#### D4 — A baseline e o termo de 1 ppm
+
+Reta de erro contra distância à base: termo fixo mais 1 mm por quilômetro. O termo fixo aparece
+como linha horizontal, e a área entre as duas é o que o ppm acrescenta.
+
+Três marcas: base própria em metros, 10 km, e 30 km, esta rotulada como onde a solução fixa
+deixa de se sustentar em base única.
+
+**Honestidade obrigatória no subtítulo: física geral, não diagnóstico de Manaus.** A estação
+pública fica a cerca de 1 km do local do curso, então baseline não é o problema local. Sem essa
+frase a figura mente por omissão.
+
+#### D6 — O rádio é um só
+
+Três painéis esquemáticos, no mesmo padrão visual de D5.
+
+1. **O ciclo do LTE.** Bloco "ativo, 6 s" seguido de "RRC idle ou PSM, rádio livre", sob um
+   colchete de "1 ciclo TAU, 8 h". Só nesse intervalo livre o GNSS usa o rádio.
+2. **O ciclo de trabalho do GNSS.** Dentro da janela livre, o GNSS ainda rastreia só **20% do
+   tempo**. As duas políticas de economia fazem o **mesmo** ciclo; o que muda é a agressividade
+   com que ele entra. Só afeta o modo contínuo.
+3. **O download atropela a agenda.** Quando falta efeméride ou almanaque, o download programado
+   ignora o intervalo e as tentativas configurados, e empurra a tentativa seguinte. Sem ele, o
+   receptor nunca recebe certas correções, entre elas as ionosféricas.
+
+**Por que os blocos NÃO são proporcionais ao tempo.** TAU de 8 horas e tempo ativo de 6 segundos
+diferem por mais de três ordens de grandeza; numa régua proporcional o bloco ativo sumiria. Os
+blocos têm largura fixa, cada número real está escrito dentro do bloco, e **o subtítulo avisa
+que é impossível desenhar na mesma régua**. A alternativa esconderia o tempo ativo, que seria
+mentira por omissão visual.
+
+**Os únicos números com fonte aqui são três:** 20% de rastreio, TAU de 8 h, tempo ativo de 6 s.
+
+Vale a citação textual da especificação do produto: "GPS receiver operation is time multiplexed
+with the LTE modem". É a tese da seção 7.3 na fonte primária.
+
+#### D7 — A montagem
+
+Fluxo horizontal. Antena A, da base, ligada ao EVK que faz Survey-In uma vez e é gravado em modo
+fixo na flash. Dele sai RTCM3 por serial para o notebook que roda o caster. Do caster sai uma
+seta rotulada **rede local, sem internet** até o ponto de medida.
+
+No ponto de medida, a antena B se ramifica para o nRF9151, que é o degrau 1, ou para o EVK rover,
+que são os degraus 2 e 3, com o rótulo **um de cada vez**.
+
+**Aviso obrigatório no rodapé:** 3 V do lado da placa Nordic contra 3,3 V do lado do EVK, e a
+troca de cabo é sempre com o receptor desenergizado.
+
+**Nenhuma distância numérica.** A separação entre as duas antenas é "alguns metros", como em
+§3.1, e é essa frase que vai na figura.
+
+---
+
+**Honestidade nas sete.** D1, D5, D6 e D7 são esquemáticos de mecanismo e **não alegam escala
+numérica**. D3 e D4 têm eixo numérico e **só usam número com fonte**, com as condições no
+subtítulo. Nenhuma pode sugerir que os regimes não testados foram medidos aqui.
 
 ## 8. NTN
 
