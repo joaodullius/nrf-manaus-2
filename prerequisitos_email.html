@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Pré-requisitos de software — treinamento Nordic</title>
+</head>
+<body style="margin:0;padding:24px;background:#ffffff;font-family:Segoe UI,Arial,Helvetica,sans-serif;font-size:14px;line-height:1.45;color:#0B1B2B;">
+
+<h1 style="font-size:22px;margin:0 0 6px 0;color:#00224E;">Pré-requisitos de software — instalar no notebook antes do curso</h1>
+<p style="margin:0 0 18px 0;color:#566577;">Versões conferidas na bancada de preparação em 08/09/2026. Onde não há versão fixa, vale a versão atual.</p>
+
+<!-- ===================== BASE ===================== -->
+<h2 style="font-size:17px;margin:22px 0 8px 0;color:#0093D0;border-bottom:2px solid #D3E0EB;padding-bottom:4px;">Base (todos os módulos)</h2>
+<ol style="margin:0;padding-left:22px;">
+  <li style="margin:0 0 8px 0;"><b>Visual Studio Code</b> (versão atual) com a extensão <b>nRF Connect for VS Code Extension Pack</b> (versão atual, pelo marketplace do VS Code).</li>
+  <li style="margin:0 0 8px 0;"><b>nRF Connect SDK v3.4.0</b> e <b>toolchain v3.4.0</b>, instalados pela própria extensão: painel nRF Connect → <i>Install Toolchain</i> → v3.4.0; depois <i>Manage SDKs</i> → v3.4.0. Caminho sugerido: <code style="background:#EDF3F8;padding:1px 4px;border-radius:3px;">C:\ncs\v3.4.0</code>.</li>
+  <li style="margin:0 0 8px 0;"><b>nRF Util</b> (<code style="background:#EDF3F8;padding:1px 4px;border-radius:3px;">nrfutil</code>) <b>8.2.0</b> ou mais novo, com os comandos <code style="background:#EDF3F8;padding:1px 4px;border-radius:3px;">device</code> e <code style="background:#EDF3F8;padding:1px 4px;border-radius:3px;">sdk-manager</code> instalados (<code style="background:#EDF3F8;padding:1px 4px;border-radius:3px;">nrfutil install device sdk-manager</code>).</li>
+  <li style="margin:0 0 8px 0;"><b>SEGGER J-Link</b> — a versão que o toolchain instala; aceitar a instalação dos drivers quando pedido.</li>
+  <li style="margin:0 0 8px 0;"><b>nRF Connect for Desktop</b> (versão atual) com os apps <b>Programmer</b>, <b>Serial Terminal</b>, <b>Power Profiler</b> e <b>Board Configurator</b>.</li>
+  <li style="margin:0 0 8px 0;"><b>Python 3.12</b> (3.11 também serve), com <code style="background:#EDF3F8;padding:1px 4px;border-radius:3px;">pip</code> no PATH.</li>
+  <li style="margin:0 0 8px 0;"><b>Git</b> (com Git Bash).</li>
+</ol>
+
+<!-- ===================== EDGE AI ===================== -->
+<h2 style="font-size:17px;margin:22px 0 8px 0;color:#0093D0;border-bottom:2px solid #D3E0EB;padding-bottom:4px;">Módulo Edge AI</h2>
+<ol start="8" style="margin:0;padding-left:22px;">
+  <li style="margin:0 0 8px 0;"><b>Edge AI Add-on v2.3.0</b> para o nRF Connect SDK. Ele é um <i>workspace west</i> separado, que baixa uma cópia própria do NCS v3.4.0 (alguns GB — fazer em rede boa, antes do curso). <b>Instalar no mesmo nível do <code style="background:#EDF3F8;padding:1px 4px;border-radius:3px;">v3.4.0</code></b>, em <code style="background:#EDF3F8;padding:1px 4px;border-radius:3px;">C:\ncs\sdk-edge-ai</code>, para ficar assim:
+<pre style="background:#0D2138;color:#E8F1F8;padding:10px 12px;border-radius:6px;font-family:Consolas,Menlo,monospace;font-size:12.5px;margin:8px 0;">C:\ncs\
+├── v3.4.0\          (NCS dos módulos de comunicação)
+├── sdk-edge-ai\     (workspace do Edge AI Add-on)
+└── toolchains\</pre>
+    <p style="margin:6px 0 4px 0;"><b>Pelo VS Code:</b> painel nRF Connect → <i>Create a new application</i> → <i>Browse nRF Connect SDK Add-on Index</i> → <b>Edge AI Add-on v2.3.0</b> → pasta de destino nova <code style="background:#EDF3F8;padding:1px 4px;border-radius:3px;">C:\ncs\sdk-edge-ai</code>. O <code style="background:#EDF3F8;padding:1px 4px;border-radius:3px;">west update</code> continua em segundo plano por vários minutos depois do clone; esperar terminar antes de compilar.</p>
+    <p style="margin:6px 0 4px 0;"><b>Por linha de comando</b> (numa pasta nova e vazia — nunca dentro de <code style="background:#EDF3F8;padding:1px 4px;border-radius:3px;">C:\ncs\v3.4.0</code>):</p>
+<pre style="background:#0D2138;color:#E8F1F8;padding:10px 12px;border-radius:6px;font-family:Consolas,Menlo,monospace;font-size:12.5px;margin:6px 0;">nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 --terminal
+mkdir C:\ncs\sdk-edge-ai &amp;&amp; cd C:\ncs\sdk-edge-ai
+west init -m https://github.com/nrfconnect/sdk-edge-ai --mr v2.3.0
+west update</pre>
+  </li>
+</ol>
+
+<!-- ===================== WI-FI ===================== -->
+<h2 style="font-size:17px;margin:22px 0 8px 0;color:#0093D0;border-bottom:2px solid #D3E0EB;padding-bottom:4px;">Módulo de Comunicação — Wi-Fi 6</h2>
+<ol start="9" style="margin:0;padding-left:22px;">
+  <li style="margin:0 0 8px 0;"><b>Blobs de firmware do nRF70</b>, uma vez por instalação do SDK. No terminal do nRF Connect (<i>nRF Connect: Open Terminal</i> no VS Code):
+<pre style="background:#0D2138;color:#E8F1F8;padding:10px 12px;border-radius:6px;font-family:Consolas,Menlo,monospace;font-size:12.5px;margin:6px 0;">west blobs fetch nrf_wifi</pre>
+    A extensão do VS Code <b>não</b> faz isso sozinha; sem os blobs nenhum build de Wi-Fi compila. Conferir com <code style="background:#EDF3F8;padding:1px 4px;border-radius:3px;">west blobs list nrf_wifi</code>.</li>
+  <li style="margin:0 0 8px 0;"><b><code style="background:#EDF3F8;padding:1px 4px;border-radius:3px;">protoc</code></b> (Protocol Buffers compiler) <b>25.3</b> ou mais novo, no PATH — lab de provisionamento.</li>
+  <li style="margin:0 0 8px 0;"><b>mosquitto 2.x</b> (broker MQTT) — lab de HTTP/MQTT. Depois de instalar, desativar o serviço automático que o instalador cria (PowerShell como administrador):
+<pre style="background:#0D2138;color:#E8F1F8;padding:10px 12px;border-radius:6px;font-family:Consolas,Menlo,monospace;font-size:12.5px;margin:6px 0;">Stop-Service mosquitto
+Set-Service mosquitto -StartupType Manual</pre>
+    O lab sobe o broker próprio.</li>
+  <li style="margin:0 0 8px 0;"><b>Regras de firewall do Windows</b>, em PowerShell como administrador, para os servidores dos labs receberem conexão do kit (a rede tem de estar classificada como <i>Particular</i>):
+<pre style="background:#0D2138;color:#E8F1F8;padding:10px 12px;border-radius:6px;font-family:Consolas,Menlo,monospace;font-size:12.5px;margin:6px 0;">New-NetFirewallRule -DisplayName "nrf-manaus lab9 TCP"   -Direction Inbound -Protocol TCP -LocalPort 9000 -Action Allow -Profile Private
+New-NetFirewallRule -DisplayName "nrf-manaus lab10 HTTP" -Direction Inbound -Protocol TCP -LocalPort 8000 -Action Allow -Profile Private
+New-NetFirewallRule -DisplayName "nrf-manaus lab10 MQTT" -Direction Inbound -Protocol TCP -LocalPort 1883 -Action Allow -Profile Private
+New-NetFirewallRule -DisplayName "nrf-manaus lab12 UDP"  -Direction Inbound -Protocol UDP -LocalPort 5001 -Action Allow -Profile Private</pre>
+    Se em algum momento o Windows perguntou sobre acesso de rede para o Python e alguém clicou em <i>Cancelar</i>, existe uma regra de bloqueio por programa que vence as regras acima; remover antes.</li>
+</ol>
+
+<!-- ===================== GNSS ===================== -->
+<h2 style="font-size:17px;margin:22px 0 8px 0;color:#0093D0;border-bottom:2px solid #D3E0EB;padding-bottom:4px;">Módulo GNSS</h2>
+<ol start="13" style="margin:0;padding-left:22px;">
+  <li style="margin:0 0 8px 0;"><b>u-center 2</b> (u-blox), versão atual.</li>
+</ol>
+
+<!-- ===================== PYTHON ===================== -->
+<h2 style="font-size:17px;margin:22px 0 8px 0;color:#0093D0;border-bottom:2px solid #D3E0EB;padding-bottom:4px;">Bibliotecas Python (todos os módulos)</h2>
+<p style="margin:0 0 6px 0;">Instalar de uma vez, no Python do item 6:</p>
+<pre style="background:#0D2138;color:#E8F1F8;padding:10px 12px;border-radius:6px;font-family:Consolas,Menlo,monospace;font-size:12.5px;margin:6px 0;">pip install numpy pandas matplotlib pyserial pytest paho-mqtt requests protobuf ppk2-api</pre>
+<table style="border-collapse:collapse;margin:10px 0;font-size:13px;">
+  <tr style="background:#00224E;color:#ffffff;">
+    <th style="text-align:left;padding:6px 10px;border:1px solid #D3E0EB;">Pacote</th>
+    <th style="text-align:left;padding:6px 10px;border:1px solid #D3E0EB;">Versão mínima</th>
+    <th style="text-align:left;padding:6px 10px;border:1px solid #D3E0EB;">Na bancada</th>
+    <th style="text-align:left;padding:6px 10px;border:1px solid #D3E0EB;">Serve para</th>
+  </tr>
+  <tr><td style="padding:5px 10px;border:1px solid #D3E0EB;">numpy</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">1.24</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">2.2.4</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">Channel Sounding (IQ/MUSIC), Edge AI</td></tr>
+  <tr style="background:#EDF3F8;"><td style="padding:5px 10px;border:1px solid #D3E0EB;">pandas</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">atual</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">3.0.3</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">Edge AI (segmentação de sinal)</td></tr>
+  <tr><td style="padding:5px 10px;border:1px solid #D3E0EB;">matplotlib</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">3.7</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">3.10.8</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">painel ao vivo do Channel Sounding, Edge AI</td></tr>
+  <tr style="background:#EDF3F8;"><td style="padding:5px 10px;border:1px solid #D3E0EB;">pyserial</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">3.5</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">3.5</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">captura de serial nos utilitários</td></tr>
+  <tr><td style="padding:5px 10px;border:1px solid #D3E0EB;">pytest</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">7</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">8.3.5</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">testes de PC dos labs de Wi-Fi (opcional)</td></tr>
+  <tr style="background:#EDF3F8;"><td style="padding:5px 10px;border:1px solid #D3E0EB;">paho-mqtt</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">2.0</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">2.1.0</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">lab de MQTT</td></tr>
+  <tr><td style="padding:5px 10px;border:1px solid #D3E0EB;">requests</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">2.31</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">2.34.2</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">lab de locationing (nRF Cloud)</td></tr>
+  <tr style="background:#EDF3F8;"><td style="padding:5px 10px;border:1px solid #D3E0EB;">protobuf</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">compatível com o protoc</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">7.35.0</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">lab de provisionamento</td></tr>
+  <tr><td style="padding:5px 10px;border:1px solid #D3E0EB;">ppk2-api</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">atual</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">atual</td><td style="padding:5px 10px;border:1px solid #D3E0EB;">scripts de medição com o PPK2 (lab de energia)</td></tr>
+</table>
+
+<!-- ===================== VERIFICACAO ===================== -->
+<h2 style="font-size:17px;margin:22px 0 8px 0;color:#0093D0;border-bottom:2px solid #D3E0EB;padding-bottom:4px;">Verificação rápida</h2>
+<p style="margin:0 0 6px 0;">No terminal do nRF Connect, com um kit conectado por USB:</p>
+<pre style="background:#0D2138;color:#E8F1F8;padding:10px 12px;border-radius:6px;font-family:Consolas,Menlo,monospace;font-size:12.5px;margin:6px 0;">west --version
+nrfutil device list
+west blobs list nrf_wifi
+protoc --version
+python -c "import numpy, matplotlib, serial, pytest, paho.mqtt, requests, google.protobuf, ppk2_api; print('ok')"</pre>
+
+</body>
+</html>
