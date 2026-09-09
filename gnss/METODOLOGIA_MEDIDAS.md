@@ -144,6 +144,108 @@ nRF9151 — descartar as três primeiras e reportar a mediana do regime.
 | Firmware do X20P | decide se CLAS e Galileo HAS existem |
 | Origem da correção | nenhuma, base própria, ou caster |
 
+## D — Medida com NTRIP (o terceiro degrau)
+
+O RTK acrescenta dependências que as outras medidas não têm: **internet, um caster no ar, e
+uma base**. Por isso ele é o único degrau que pode simplesmente não acontecer numa posição
+nova — e o material tem de prever isso.
+
+### A decisão que muda tudo ao trocar de posição
+
+> **Se o rover se move e a base não, a baseline muda.** E a baseline entra no erro pelo termo
+> de 1 ppm: 10 km de baseline são 1 cm só por esse termo, antes de qualquer outra coisa.
+
+Duas saídas, e a escolha tem de ser anotada:
+
+| arranjo | quando usar | o que anotar |
+|---|---|---|
+| **Base própria junto do rover** | caminho garantido do curso; baseline de metros | coordenada do Survey-In e a incerteza |
+| **Caster público** (IBGE, AMUA0) | bônus; depende de cadastro e da estação estar no ar | distância até a estação de referência |
+
+Com base própria numa posição nova, ou a base vai junto (novo Survey-In) ou fica onde está
+(baseline maior). **As duas são válidas; misturar as duas entre capturas não é.**
+
+### O que medir, que é diferente dos outros degraus
+
+O RTK tem **duas** grandezas de tempo e **duas** de dispersão:
+
+| grandeza | o que é |
+|---|---|
+| **Tempo até fixo** | do início das correções até `GGA` qualidade **4**. É convergência, não TTFF |
+| Tempo até flutuante | até qualidade **5**; costuma ser bem menor |
+| **CEP em fixo** | dispersão contando **só** as épocas de qualidade 4 |
+| Fração de épocas em fixo | quanto da sessão sustentou o fixo — sozinho já qualifica o enlace |
+
+> **A dispersão RTK precisa ser filtrada por qualidade.** Um CEP que mistura fixo e flutuante
+> não descreve nem um nem outro. O `desvio.py` tem `--qualidade` para isso:
+
+```
+cd gnss/tools
+# so as epocas em RTK fixo
+python desvio.py --log "X20P RTK fixo=../capturas/x20p_rtk_<hhmm>.uc2" --qualidade 4   --png ../../doc/gnss/img/desvio_rtk_fixo.png
+# e o mesmo log em flutuante, para comparar
+python desvio.py --log "X20P RTK flutuante=../capturas/x20p_rtk_<hhmm>.uc2" --qualidade 5
+```
+
+Ele imprime que fração dos fixes sobreviveu ao filtro — esse número **é** a fração de épocas
+em fixo, e vale ser anotado.
+
+Para a escada completa numa figura só, os três degraus vêm de logs diferentes:
+
+```
+python desvio.py --log "nRF9151 L1=../capturas/nrf9151_<hhmm>.nmea"                  --log "X20P aberto=../capturas/x20p_aberto_<hhmm>.uc2"                  --log "X20P RTK=../capturas/x20p_rtk_<hhmm>.uc2"                  --png ../../doc/gnss/img/escada_precisao.png
+```
+
+### O que anotar, só para NTRIP
+
+| campo | por quê |
+|---|---|
+| Caster e mountpoint | reprodutibilidade |
+| **Comprimento da baseline** | entra no erro pelo termo de 1 ppm |
+| Mensagens RTCM que a base emite | 1005/1006 e MSM; a ausência de 1005/1006 é falha dura |
+| Idade da correção | o rover descarta correção com mais de ~60 s |
+| Fração de épocas em fixo | qualifica o enlace |
+
+O diagnóstico fica no `UBX-RXM-COR` — `msgUsed` separa "chegou e foi descartada" de "chegou e
+serviu", e o `carrSoln` do `UBX-NAV-PVT` dá 1 para flutuante e 2 para fixo. As cinco falhas
+demonstráveis estão em `gnss/04_demo_rtk/README.md`.
+
+## Estimativa de jornada
+
+Calculada a partir dos tempos medidos em 2026-09-08/09: blocos de 25 min renderam 7 a 9
+amostras de TTFF por variante, das quais 4 a 6 úteis depois de descartar as três primeiras.
+
+| etapa | duração | precisa de gente? |
+|---|---|---|
+| Montagem, ficha da posição, foto | 15 min | sim |
+| Dispersão nRF9151 (900 s) | 15 min | não |
+| TTFF nRF9151, 6 blocos de 20 min, duas rodadas invertidas | 120 min | não |
+| Troca de cabo para o X20P, desenergizado | 5 min | sim |
+| Dispersão X20P (900 s) | 15 min | parcial |
+| TTFF X20P | 40 min | parcial |
+| Alternância entre receptores, para controlar horário | 30 min | sim, nas trocas |
+| **NTRIP: Survey-In da base** (só se a base mudar de lugar) | 15 a 60 min | sim |
+| **NTRIP: cliente e caster no ar** | 10 min | sim |
+| **NTRIP: convergência, ~6 repetições** | 30 min | parcial |
+| **NTRIP: dispersão em fixo (900 s)** | 15 min | não |
+| Análise, figuras e ficha | 20 min | não |
+
+**Completa, com NTRIP e base nova: 5 h30 a 6 h30**, das quais cerca de 1 h30 exigem presença.
+
+Versões mais curtas, e o que cada uma perde:
+
+| versão | tempo | o que perde |
+|---|---|---|
+| Completa com NTRIP | 5 h30 a 6 h30 | — |
+| Completa sem NTRIP | 4 h30 | fica sem o terceiro degrau |
+| Sem a segunda rodada de TTFF | 3 h | perde o controle de deriva do céu |
+| Só nRF9151 | 2 h30 | sem comparativo de receptor |
+| **Mínima defensável** | **1 h15** | dispersão + uma rodada de TTFF das três assistências |
+
+A **mínima defensável** é a indicada para uma janela de oportunidade — um quarto de hotel com
+vista melhor, por exemplo. Ela entrega o CEP e o TTFF nas três assistências, que é o par que
+sustenta a comparação entre posições.
+
 ## Armadilhas já pagas
 
 - **`nrfutil device program` em vez de `west flash`.** O `west flash` recompila, e a

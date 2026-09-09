@@ -468,6 +468,11 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--log", action="append", required=True, type=_log, metavar="ROTULO=CAMINHO",
                    help="um cenario; repita de 1 a 4 vezes, na ordem da escada")
+    p.add_argument("--qualidade", metavar="LISTA",
+                   help="so os fixes destas qualidades do GGA, separadas por virgula: "
+                        "1 autonomo, 2 DGPS, 4 RTK fixo, 5 RTK flutuante. "
+                        "Com RTK e obrigatorio: um CEP que mistura fixo e flutuante "
+                        "nao descreve nem um nem outro")
     p.add_argument("--referencia", type=_referencia, metavar="LAT,LON",
                    help="desvio contra esta coordenada (exatidao) em vez da media (precisao)")
     p.add_argument("--png", type=Path, help="figura de saida")
@@ -485,6 +490,17 @@ def main(argv=None) -> int:
         if not fixes:
             print(f"erro: log '{rotulo}' sem nenhum GGA com fix: {caminho}", file=sys.stderr)
             return 1
+        if a.qualidade:
+            aceitas = {int(x) for x in a.qualidade.split(",") if x.strip()}
+            antes = len(fixes)
+            fixes = [f for f in fixes if f.qualidade in aceitas]
+            nomes = ", ".join(nmea.QUALIDADE.get(q, str(q)) for q in sorted(aceitas))
+            if not fixes:
+                print(f"erro: log '{rotulo}' nao tem nenhum fix de qualidade {nomes} "
+                      f"(tinha {antes} fixes de outras qualidades)", file=sys.stderr)
+                return 1
+            print(f"   filtro de qualidade [{nomes}]: {len(fixes)} de {antes} fixes "
+                  f"({100*len(fixes)/antes:.1f}%)")
         cenarios.append({
             "rotulo": rotulo, "arquivo": caminho.as_posix(), "cor": CORES[i],
             "st": nmea.estatisticas(fixes, a.referencia), "dur": duracao_s(fixes),
