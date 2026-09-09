@@ -195,6 +195,12 @@ def abre(porta: str, baud: int | None, log) -> tuple[serial.Serial, int]:
 class Rig:
     def __init__(self, arg):
         self.arg = arg
+        # RAM (0x01) e o padrao de proposito: o receptor volta ao estado de
+        # fabrica ao ser religado, e o kit chega limpo na mao do aluno. Mas RAM
+        # nao sobrevive a um tranco no cabo USB — perdeu-se um survey-in inteiro
+        # assim. Com --persistir grava tambem em BBR (0x02), que sobrevive a
+        # religar e nao a um reset de fabrica.
+        self.camadas = 0x03 if arg.persistir else 0x01
         self.parar = threading.Event()
         self.bytes_rtcm = 0
         self.qualidade = None
@@ -217,7 +223,7 @@ class Rig:
         chaves = RTCM_POR_UART[uart]
         self.log(f"base em {self.arg.base} (UART{uart}) — publicando "
                  + ", ".join(f"RTCM {k}" for k in chaves))
-        if not valset(s, [(v, 1) for v in chaves.values()]):
+        if not valset(s, [(v, 1) for v in chaves.values()], self.camadas):
             raise SystemExit("a base recusou a configuracao de RTCM")
 
         if self.arg.fixa:
@@ -231,14 +237,14 @@ class Rig:
                             (FIXED_LAT, gi), (FIXED_LAT_HP, gf),
                             (FIXED_LON, oi), (FIXED_LON_HP, of),
                             (FIXED_ALT, ai), (FIXED_ALT_HP, af),
-                            (FIXED_POS_ACC, 100)])
+                            (FIXED_POS_ACC, 100)], self.camadas)
             self.log(f"base em coordenada fixa {lat:.7f}, {lon:.7f}, {alt:.2f} m: {ok}")
             s.close()
             return
 
         dur, acc = self.arg.survey_dur, self.arg.survey_acc
         ok = valset(s, [(TMODE_MODE, 1), (SVIN_MIN_DUR, dur),
-                        (SVIN_ACC_LIMIT, int(acc * 10000))])
+                        (SVIN_ACC_LIMIT, int(acc * 10000))], self.camadas)
         self.log(f"survey-in: minimo {dur} s, aceita ate {acc:.1f} m — {ok}")
         try:
             prazo = time.time() + self.arg.survey_max
@@ -366,7 +372,8 @@ class Rig:
         s, self.baud_rover = abre(self.arg.rover_nmea or self.arg.rover,
                                   self.arg.baud_rover, self.log)
         if self.arg.highprec:
-            self.log(f"NMEA de alta precisao no rover: {valset(s, [(NMEA_HIGHPREC, 1)])}"
+            self.log(f"NMEA de alta precisao no rover: "
+                     f"{valset(s, [(NMEA_HIGHPREC, 1)], self.camadas)}"
                      "  (sem isso a GGA quantiza a posicao em ~1,85 cm)")
         s.close()
 
@@ -448,6 +455,10 @@ def main(argv=None) -> int:
     p.add_argument("--fixa", type=coordenada, metavar="LAT,LON,ALT",
                    help="pula o survey-in e usa uma coordenada conhecida; "
                         "e o unico jeito de ter exatidao absoluta boa")
+    p.add_argument("--persistir", action="store_true",
+                   help="grava tambem em BBR, para a config sobreviver a religar "
+                        "o receptor. Sem isso, um tranco no cabo custa o survey-in "
+                        "inteiro; com isso, o receptor nao volta limpo sozinho")
     p.add_argument("--highprec", action="store_true",
                    help="liga a NMEA de alta precisao no rover (recomendado: "
                         "sem ela a GGA quantiza em ~1,85 cm)")
