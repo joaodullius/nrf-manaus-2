@@ -45,6 +45,17 @@ aplicação**, a que importa para este lab:
 | FLASH | 83052 B | 960 KB | 8,45% |
 | RAM | 33044 B | 211608 B | 15,62% |
 
+## `verifica_config.sh`
+
+```
+sh gnss/01_gnss_basic/verifica_config.sh gnss/01_gnss_basic/build_9151
+```
+
+Esperado: `OK: configuracao do lab 1 confere`. O script confere as três opções que definem
+este lab no `.config` da imagem de aplicação: a antena externa, o modo contínuo e a
+ausência de assistência. As três scripts do módulo recebem o **diretório de build**, não o
+`.config` — vale para `verifica_variantes.sh` e `verifica_nmea.sh` também.
+
 ## Passo 2 — abrir o console
 
 Abra a porta serial (VCOM) da DK a 115200 bps. O firmware liga
@@ -62,7 +73,23 @@ dentro de prédio).
 
 Tempo até o primeiro fix nesta bancada:
 
-<!-- BANCADA: preencher -->
+| partida | tempo até o fix |
+|---|---|
+| 1 | 99,9 s |
+| 2 | 25,8 s |
+| 3 | 35,3 s |
+
+Três partidas do mesmo firmware, no mesmo ponto, no mesmo dia, com a mesma antena. **A
+dispersão é o resultado**, não a média: sem assistência o modem tem de decodificar as
+efemérides direto do sinal, e quanto tempo isso leva depende de quais satélites estão
+visíveis na hora em que ele liga. A especificação do nRF9151 dá 30,5 s de partida a frio em
+céu aberto — duas das três partidas caem em volta desse número, e a terceira mostra o que a
+vista de céu parcial cobra.
+
+Um detalhe que surpreende: **resetar a placa não encurta o tempo**. Depois do reset o tempo
+GPS volta a `000000` e a data a `060180` — o modem perdeu hora e posição. Não existe
+"partida quente" por reset aqui: toda partida deste lab é fria. É exatamente esse custo que
+o lab 2 vai atacar com assistência.
 
 ## Passo 4 — ler a saída
 

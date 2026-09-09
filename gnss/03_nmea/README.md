@@ -50,7 +50,15 @@ custo de manter as duas portas no mesmo lugar, medido.
 Mesma porta serial (VCOM) da DK, 115200 bps. A diferença aparece no primeiro segundo: em vez
 do bloco redesenhado a cada PVT, saem linhas soltas, todas começando com `$`.
 
-<!-- BANCADA: confirmar que toda linha comeca com $ -->
+Confirmado na bancada: numa captura de 10 s saíram **63 linhas, todas começando com `$` e
+nenhuma com checksum inválido** — só os cinco tipos de sentença da tabela acima. Nenhuma
+linha de log, nenhum código de terminal.
+
+É isso que torna a porta consumível por outro programa. O u-center 2 abre esta porta direto
+e monta o mapa de desvio a partir dela; a porta do lab 1 ele até aceita, mas descarta toda
+linha que não fecha checksum — e o log do Zephyr, entremeado com as sentenças, faz
+exatamente isso acontecer. Para gravar a sessão e reprocessar depois, use
+`gnss/04_demo_rtk/tools/nmea_captura.py`, que salva o mesmo fluxo em `.nmea` e em `.uc2`.
 
 Com o fluxo limpo, a porta serve para duas coisas que o console do lab 1 não serve:
 
