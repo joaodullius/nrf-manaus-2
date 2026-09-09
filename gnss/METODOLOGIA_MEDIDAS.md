@@ -128,9 +128,17 @@ A qualidade do `GGA` é o que separa os degraus da escada: **1** autônomo, **2*
 
 ### Tempo até o fix do X20P
 
-O X20P parte a frio por comando do u-center 2 (reset com apagamento de efemérides). **O
-caminho exato do menu ainda não foi confirmado na bancada** — confirmar e anotar aqui na
-primeira sessão com o EVK.
+O X20P parte a frio com `UBX-CFG-RST`, mandando `navBbrMask = 0xFFFF` (apaga tudo) e
+`resetMode = 0x02` (reset controlado, só do GNSS). A mensagem pronta, com checksum:
+
+```
+B5 62 06 04 04 00 FF FF 02 00 0E 61
+```
+
+**Não espere `ACK`:** a própria u-blox avisa que firmware novo não confirma essa mensagem.
+
+Antes de medir, confirme constelações e bandas com o VALGET exploratório — mensagem pronta e
+a tabela das 29 chaves em [`REFERENCIA_X20P.md`](REFERENCIA_X20P.md).
 
 Válido de qualquer forma: **mesma quantidade de partidas, mesmo critério de descarte** que o
 nRF9151 — descartar as três primeiras e reportar a mediana do regime.
