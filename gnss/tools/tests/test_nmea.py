@@ -107,3 +107,41 @@ def test_qualidades_nomeadas():
 def test_log_sem_fix_e_erro():
     with pytest.raises(ValueError, match="nenhum fix"):
         nmea.estatisticas([])
+
+
+def _ck2(s):
+    c = 0
+    for ch in s[1:]:
+        c ^= ord(ch)
+    return "%s*%02X" % (s, c)
+
+
+def _gga(hora, qual):
+    return _ck2("$GNGGA,%s,3001.73774,S,05112.74184,W,%d,12,0.60,36.89,M,,M,," % (hora, qual))
+
+
+def test_hora_em_segundos():
+    assert nmea.hora_em_segundos("013030.09") == pytest.approx(1 * 3600 + 30 * 60 + 30.09)
+    assert nmea.hora_em_segundos("") is None
+    assert nmea.hora_em_segundos("abc") is None
+
+
+def test_convergencia_mede_o_tempo_ate_o_fixo():
+    """A sessao comeca autonoma, passa por flutuante e chega a fixo."""
+    fluxo = (chr(10).join([_gga("120000.00", 1), _gga("120010.00", 1),
+                      _gga("120020.00", 5), _gga("120030.00", 4),
+                      _gga("120040.00", 4)])).encode()
+    c = nmea.convergencia(nmea.ler_fluxo(fluxo))
+    assert c["n"] == 5
+    assert c["duracao_s"] == pytest.approx(40.0)
+    assert c["primeira_vez_s"]["RTK flutuante"] == pytest.approx(20.0)
+    assert c["primeira_vez_s"]["RTK fixo"] == pytest.approx(30.0)
+    assert c["epocas"] == {"autonomo": 2, "RTK flutuante": 1, "RTK fixo": 2}
+    assert c["fracao"]["RTK fixo"] == pytest.approx(0.4)
+
+
+def test_convergencia_atravessa_a_meia_noite():
+    fluxo = (chr(10).join([_gga("235950.00", 1), _gga("000010.00", 4)])).encode()
+    c = nmea.convergencia(nmea.ler_fluxo(fluxo))
+    assert c["duracao_s"] == pytest.approx(20.0)
+    assert c["primeira_vez_s"]["RTK fixo"] == pytest.approx(20.0)

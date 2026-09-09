@@ -486,7 +486,7 @@ def main(argv=None) -> int:
         if not caminho.is_file():
             print(f"erro: log '{rotulo}' nao encontrado: {caminho}", file=sys.stderr)
             return 1
-        fixes = nmea.ler_arquivo(caminho)
+        fixes = todos = nmea.ler_arquivo(caminho)
         if not fixes:
             print(f"erro: log '{rotulo}' sem nenhum GGA com fix: {caminho}", file=sys.stderr)
             return 1
@@ -504,10 +504,25 @@ def main(argv=None) -> int:
         cenarios.append({
             "rotulo": rotulo, "arquivo": caminho.as_posix(), "cor": CORES[i],
             "st": nmea.estatisticas(fixes, a.referencia), "dur": duracao_s(fixes),
+            "todos": todos,
         })
 
     for c in cenarios:
         print(painel_texto(c))
+        # com mais de uma qualidade a sessao e RTK: convergencia e fracao importam
+        # tanto quanto o CEP, e sao calculadas sobre TODOS os fixes, nao sobre o
+        # subconjunto filtrado
+        if len(c["st"]["qualidades"]) > 1 or any(
+                q in c["st"]["qualidades"] for q in ("RTK fixo", "RTK flutuante")):
+            try:
+                cv = nmea.convergencia(c["todos"])
+            except ValueError:
+                continue
+            print("   convergencia (sobre os %d fixes do log, sem filtro):" % cv["n"])
+            for nome, seg in sorted(cv["primeira_vez_s"].items(), key=lambda x: x[1]):
+                print("     primeira vez em %-14s %7.1f s" % (nome, seg))
+            for nome, fr in sorted(cv["fracao"].items(), key=lambda x: -x[1]):
+                print("     epocas em %-19s %5.1f%%  (%d)" % (nome, 100 * fr, cv["epocas"][nome]))
     if a.json:
         a.json.parent.mkdir(parents=True, exist_ok=True)
         a.json.write_text(json.dumps(para_json(cenarios, a.referencia),

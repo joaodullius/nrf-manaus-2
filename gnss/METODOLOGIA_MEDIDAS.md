@@ -165,6 +165,33 @@ Duas saídas, e a escolha tem de ser anotada:
 Com base própria numa posição nova, ou a base vai junto (novo Survey-In) ou fica onde está
 (baseline maior). **As duas são válidas; misturar as duas entre capturas não é.**
 
+### A captura tem de ser do u-center, não por script
+
+> **Com NTRIP não existe captura por script.** O u-center 2 **é** o cliente NTRIP: ele recebe
+> o RTCM do caster e o injeta no receptor **pela mesma porta serial**. Como a porta é
+> exclusiva, ele tem de ser o dono dela do começo ao fim da sessão.
+
+Isso não é limitação nossa, é como a cadeia funciona. O fluxo fica:
+
+1. u-center 2 conecta no receptor, conecta no caster e **grava a sessão**
+2. Ele escreve `.ubx` e `.uc2` na pasta `.ucenter` do perfil
+3. Copie os dois para `gnss/capturas/` e analise **offline**, no `.uc2`
+
+As ferramentas leem `.uc2` direto, e a **convergência sai da hora UTC do próprio `GGA`** —
+não depende do carimbo de tempo do u-center nem de ter capturado ao vivo. O `desvio.py`
+reporta convergência sozinho sempre que o log tem mais de uma qualidade de fix:
+
+```
+   convergencia (sobre os 5 fixes do log, sem filtro):
+     primeira vez em autonomo           0.0 s
+     primeira vez em RTK flutuante     20.0 s
+     primeira vez em RTK fixo          30.0 s
+     epocas em RTK fixo             40.0%  (2)
+```
+
+A convergência é calculada sobre **todos** os fixes, mesmo quando `--qualidade` filtra o CEP
+— senão o filtro esconderia justamente o caminho até o fixo.
+
 ### O que medir, que é diferente dos outros degraus
 
 O RTK tem **duas** grandezas de tempo e **duas** de dispersão:

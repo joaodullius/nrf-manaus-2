@@ -283,3 +283,48 @@ def resumo_ceu(ceu: dict) -> dict:
             "fracao_usado": usos / epocas if epocas else 0.0,
         }
     return saida
+
+
+def hora_em_segundos(hora: str) -> float | None:
+    """hhmmss.ss do GGA -> segundos desde a meia-noite UTC."""
+    if not hora or len(hora) < 6:
+        return None
+    try:
+        return int(hora[0:2]) * 3600 + int(hora[2:4]) * 60 + float(hora[4:])
+    except ValueError:
+        return None
+
+
+def convergencia(fixes: list[Fix]) -> dict:
+    """Quanto tempo a solucao levou para chegar a cada qualidade, e quanto ficou nela.
+
+    E a medida do terceiro degrau: com RTK interessa o tempo ate a qualidade 4
+    (fixo) contado do inicio da sessao, e a fracao de epocas que sustentaram cada
+    qualidade. Um CEP de sessao RTK sem essa fracao ao lado nao diz se o enlace
+    aguentou ou se ficou oscilando.
+
+    Usa a hora UTC do proprio GGA, entao funciona igual em .nmea cru e em .uc2.
+    """
+    if not fixes:
+        raise ValueError("nenhum fix no log")
+    t = [hora_em_segundos(f.hora) for f in fixes]
+    if any(x is None for x in t):
+        raise ValueError("ha GGA sem hora; nao da para medir convergencia")
+    # a sessao pode cruzar a meia-noite
+    base = t[0]
+    rel = [(x - base) % 86400.0 for x in t]
+
+    primeira, epocas = {}, {}
+    for f, dt in zip(fixes, rel):
+        nome = QUALIDADE.get(f.qualidade, str(f.qualidade))
+        epocas[nome] = epocas.get(nome, 0) + 1
+        if nome not in primeira:
+            primeira[nome] = dt
+    n = len(fixes)
+    return {
+        "duracao_s": rel[-1],
+        "n": n,
+        "primeira_vez_s": primeira,
+        "epocas": epocas,
+        "fracao": {k: v / n for k, v in epocas.items()},
+    }
