@@ -219,7 +219,7 @@ Complementos, por satélite e por sinal:
   aplicada**.
 - **`UBX-NAV-PVT`** — o campo `carrSoln`: **1 para float, 2 para fixo**.
 - **No NMEA**, a qualidade do `GGA` é **4 para fixo e 5 para float** — o que aparece também no
-  u-center clássico, e é o que permite diagnosticar o degrau 3 sem sair do NMEA.
+  u-center 2, e é o que permite diagnosticar o degrau 3 sem sair do NMEA.
 
 A sequência **3D → 3D/DGNSS → Float → Fixed** é a espinha do diagnóstico: saber em qual dos
 quatro estados o rover parou já diz qual das cinco falhas está acontecendo.

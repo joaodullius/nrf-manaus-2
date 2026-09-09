@@ -54,8 +54,8 @@ A estação **AMUA0**, na Universidade do Estado do Amazonas, é publicada no ca
 
 | Ferramenta | Papel | Observação |
 |---|---|---|
-| **u-center 2** | Configurar o X20P, Survey-In, caster, cliente NTRIP, dispersão nativa | Conta u-blox com dois fatores no primeiro uso — **fazer antes do curso** |
-| **u-center clássico** | Dispersão do NMEA do nRF9151 (lab 3) | A dispersão do u-center 2 depende de `UBX-NAV-PVT` e fica vazia com NMEA |
+| **u-center 2** | Configurar o X20P, Survey-In, caster, cliente NTRIP, e o mapa de desvio com CEP50/CEP95 | Serve **também para o NMEA do nRF9151** — medido na bancada. Conta u-blox com dois fatores no primeiro uso, **fazer antes do curso** |
+| **`gnss/tools/`** | Captura e análise próprias: grava `.nmea` + `.uc2`, desenha o mapa de desvio e o mapa do céu | O CEP bate com o do u-center dentro de 1 % |
 | **RTKPLOT** (RTKLIB) | Opcional: as duas trilhas sobrepostas e a diferença | Exige `$GPRMC` e `$GPGGA` — que os dois receptores já emitem de fábrica |
 
 ## Tópicos teóricos

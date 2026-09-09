@@ -454,8 +454,7 @@ prometer ao aluno um lab que depende de cadastro externo e de internet**.
 
 | Ferramenta | Papel | Observação |
 |---|---|---|
-| u-center 2 | Configurar o X20P, Survey-In, caster, cliente NTRIP, dispersão nativa | Exige conta u-blox com dois fatores no primeiro uso |
-| u-center clássico | Dispersão do NMEA do nRF9151 | A view de dispersão do u-center 2 depende de `UBX-NAV-PVT` e fica vazia com NMEA |
+| u-center 2 | Configurar o X20P, Survey-In, caster, cliente NTRIP, mapa de desvio com CEP50/CEP95 | Exige conta u-blox com dois fatores no primeiro uso. **Serve para NMEA puro** — medido em 2026-09-08, o que dispensa o u-center clássico |
 | RTKPLOT (RTKLIB) | Opcional: as duas trilhas sobrepostas e a diferença | Exige `GPRMC` e `GPGGA`, que os dois receptores já emitem |
 | PPK2 | Geração de material, não lab de aluno | §7.4 |
 

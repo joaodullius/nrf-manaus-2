@@ -5,7 +5,7 @@ molde de `comms/10_wifi_http_mqtt/`: mesmo código-fonte, outra configuração. 
 não é o que o firmware faz, é **quem tem direito de escrever no console**.
 
 O objetivo é uma porta serial que carrega **só sentença NMEA**, sem nada mais no meio: um
-fluxo que o u-center clássico consegue abrir e plotar, e que dá para gravar em arquivo e
+fluxo que o u-center 2 abre e plota direto, e que dá para gravar em arquivo e
 reproduzir depois — o seguro contra o dia em que a janela de céu não colaborar.
 
 ## Três coisas disputam o mesmo UART
@@ -58,12 +58,12 @@ linha de log, nenhum código de terminal.
 e monta o mapa de desvio a partir dela; a porta do lab 1 ele até aceita, mas descarta toda
 linha que não fecha checksum — e o log do Zephyr, entremeado com as sentenças, faz
 exatamente isso acontecer. Para gravar a sessão e reprocessar depois, use
-`gnss/04_demo_rtk/tools/nmea_captura.py`, que salva o mesmo fluxo em `.nmea` e em `.uc2`.
+`gnss/tools/nmea_captura.py`, que salva o mesmo fluxo em `.nmea` e em `.uc2`.
 
 Com o fluxo limpo, a porta serve para duas coisas que o console do lab 1 não serve:
 
-- **u-center clássico** — abre a porta direto e plota a dispersão do nRF9151, que é o primeiro
-  degrau da demo da escada de precisão.
+- **u-center 2** — abre a porta direto e monta o mapa de desvio do nRF9151, com CEP50 e CEP95,
+  que é o primeiro degrau da demo da escada de precisão.
 - **Gravar log NMEA** — o arquivo gravado pode ser reproduzido depois, sem antena e sem céu.
   É o plano B do dia da aula.
 

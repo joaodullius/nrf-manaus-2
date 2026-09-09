@@ -388,15 +388,13 @@ Documentado pela Nordic em *nRF7002 EB II → Requirements → Prerequisites*.
 ## Módulo GNSS (`gnss/`)
 
 - **u-center 2** ([u-blox](https://www.u-blox.com/en/product/u-center)) — configuração do EVK-X20P,
-  Survey-In da base, caster e cliente NTRIP, e a dispersão nativa.
+  Survey-In da base, caster e cliente NTRIP, e o **mapa de desvio** com CEP50 e CEP95 —
+  inclusive a partir de **NMEA puro**, direto da porta do lab 3 ou de um log gravado.
 
   > **A conta u-blox tem dois fatores e precisa existir antes do curso**, criada **na máquina que
   > vai projetar** — não dá para resolver isso na hora da aula. Depois do primeiro login o programa
   > roda offline, mas mapa de fundo, NTRIP e serviço de correção continuam exigindo internet.
 
-- **u-center clássico** — é quem plota a dispersão do **NMEA do nRF9151** (lab 3). A view de
-  dispersão do u-center 2 depende de `UBX-NAV-PVT` e fica **vazia** com NMEA; por isso os dois
-  programas convivem na mesma máquina.
 - **RTKLIB / RTKPLOT** — **opcional**: sobrepõe as trilhas dos dois receptores e mostra a
   diferença. Consome `$GPRMC` e `$GPGGA`, que tanto o nRF9151 quanto o X20P já emitem de fábrica.
 - **Antenas GNSS ativas com visada de céu** (outdoor ou janela desobstruída) — o módulo usa
