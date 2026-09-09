@@ -1,21 +1,31 @@
 # -*- coding: utf-8 -*-
-"""Regera as figuras e os dados do deck de GNSS, todos na mesma janela de 5 min.
+"""Regera as figuras e os dados do deck de GNSS, todos na mesma janela de 100 s.
 
-Por que refazer: as figuras anteriores foram medidas em janelas de 15 min e as
-novas em 5 min. Os dois conjuntos estao certos para a sua propria janela, mas o
-CEP cresce com a duracao (1,129 m em 15 min contra 0,338 m em 5 min, do MESMO
-arquivo) — entao 5,57 m e 2,49 m para o mesmo receptor no mesmo lugar, lado a
-lado num deck, seria indefensavel. Uma janela so, para tudo.
+Duas regras mandam no numero que sai daqui, e as duas custaram medidas erradas
+nesta bancada antes de virarem regra.
+
+**Uma janela so, para tudo.** O CEP cresce com a duracao da captura: o mesmo
+arquivo da 1,129 m inteiro (15 min) e 0,338 m em janelas de 5 min. Comparar
+condicoes medidas em duracoes diferentes mede a duracao, nao a condicao. A
+janela e 100 s porque essa e a MAIOR que as quatro condicoes conseguem
+fornecer — o teto vem das epocas em RTK fixo do NTRIP, que so apareceram em
+corridas de 113 e 193 epocas.
+
+**Nos degraus de RTK, so epocas de qualidade 4.** Um bloco que mistura fixo com
+flutuante nao mede o ruido de nenhum dos dois: mede o DEGRAU entre as duas
+solucoes, que chega a ser 7x maior. As duas linhas de RTK recortam qualidade 4;
+as epocas fixas do NTRIP sao contiguas, entao o recorte nao costura pedacos
+separados no tempo.
 
 O X20P entra sempre com TODAS as constelacoes, GLONASS incluido. As condicoes
-sem GLONASS ficam so como registro de bancada: elas serviram para medir o efeito
-do GLONASS, nao para representar o receptor.
+sem GLONASS ficam so como registro de bancada: serviram para medir o efeito do
+GLONASS, nao para representar o receptor.
 
-Fontes, todas de blocos de 300 s:
-  nRF9151            gnss/capturas/matriz/9151_r*_[BD].nmea   (6 blocos)
-  X20P autonomo      gnss/capturas/matriz/r*_B.nmea           (3 blocos)
-  X20P + NTRIP VRS   gnss/capturas/matriz/r*_D.nmea           (3 blocos)
-  X20P base propria  gnss/capturas/deslocamento/rover.tsv     (6 sub-blocos)
+Fontes:
+  nRF9151            gnss/capturas/matriz/9151_r*_[BD].nmea
+  X20P autonomo      gnss/capturas/matriz/r*_B.nmea
+  X20P + NTRIP       gnss/capturas/matriz/r*_D.nmea        (so qualidade 4)
+  X20P base propria  gnss/capturas/deslocamento/rover.tsv  (so qualidade 4)
 
 A escada e a mediana dos blocos de cada degrau, com a faixa min-max ao lado.
 Nunca o CEP de tudo concatenado: entre blocos o ambiente deriva, e a deriva
@@ -37,7 +47,7 @@ import nmea  # noqa: E402
 
 IMG = REPO / "doc" / "gnss" / "img"
 DATA = REPO / "doc" / "gnss" / "data"
-BLOCO = 300
+BLOCO = 100
 
 INK, SLATE, NAVY, BLUE = "#0B1B2B", "#566577", "#00224E", "#0093D0"
 PANEL, GRADE, VERDE = "#EDF3F8", "#B9C9D6", "#12A36E"
@@ -67,18 +77,27 @@ def sats_gsa(caminho):
     return round(usados / epocas, 1) if epocas else None
 
 
+def fatia(fx, nome, sats=None):
+    """Corta em blocos de BLOCO epocas. Cada bloco rende um CEP proprio."""
+    saida = []
+    for i in range(0, len(fx) - BLOCO + 1, BLOCO):
+        p = painel(fx[i:i + BLOCO])
+        p["arquivo"] = "%s[%d:%d]" % (nome, i, i + BLOCO)
+        p["sats"] = sats
+        saida.append(p)
+    return saida
+
+
 def blocos_matriz(padrao, so_fixos=False):
     saida = []
     for arq in sorted((REPO / "gnss/capturas/matriz").glob(padrao)):
         fx = nmea.ler_arquivo(arq)
+        sats = sats_gsa(arq)
         if so_fixos:
+            # As epocas fixas destes blocos sao contiguas (113 e 193 numa corrida
+            # unica), entao recortar nao costura pedacos separados no tempo.
             fx = [f for f in fx if f.qualidade == 4]
-            if len(fx) < 60:
-                continue
-        p = painel(fx)
-        p["arquivo"] = arq.name
-        p["sats"] = sats_gsa(arq)
-        saida.append(p)
+        saida += fatia(fx, arq.stem, sats)
     return saida
 
 
@@ -119,7 +138,8 @@ def resume(ps, chave):
 DEGRAUS = [
     ("nRF9151\nGPS L1", SLATE, lambda: blocos_matriz("9151_r?_[BD].nmea")),
     ("X20P autônomo\ntodas as constelações", BLUE, lambda: blocos_matriz("r?_B.nmea")),
-    ("X20P + NTRIP\nVRS a dezenas de km", VERDE, lambda: blocos_matriz("r?_D.nmea")),
+    ("X20P + NTRIP\nVRS, só RTK fixo", VERDE,
+     lambda: blocos_matriz("r?_D.nmea", so_fixos=True)),
     ("X20P + base própria\nRTK fixo, 1,5 m", NAVY, blocos_base_propria),
 ]
 
@@ -161,8 +181,9 @@ def figura(dados, png, titulo):
             ax.spines[lado].set_visible(False)
     fig.suptitle(titulo, fontsize=13, color=INK, x=0.012, ha="left", y=0.985)
     fig.text(0.012, 0.015,
-             "Todos os blocos têm 300 s — o CEP cresce com a janela, então "
-             "durações diferentes mediriam a duração, não a condição.\n"
+             "Todos os blocos têm 100 s — a maior janela que as quatro condições "
+             "fornecem, limitada pelas épocas em RTK fixo do NTRIP.  As duas linhas "
+             "de RTK usam só épocas de qualidade 4.\n"
              "Ponto cheio = mediana dos blocos; círculos = cada bloco; linha = "
              "faixa min–max. Faixas que se sobrepõem não sustentam diferença.",
              fontsize=8.5, color=SLATE, linespacing=1.5)
@@ -191,7 +212,8 @@ def main():
                  "base propria, blocos de 300 s",
         "condicoes": "desvio horizontal de cada fix contra a media do proprio "
                      "bloco (precisao, como o Deviation Map do u-center 2). "
-                     "Todos os blocos com 300 s: o CEP cresce com a janela. "
+                     "Todos os blocos com 100 s, a maior janela que as quatro condicoes "
+                     "fornecem. As linhas de RTK usam so epocas de qualidade 4. "
                      "X20P sempre com todas as constelacoes (GPS, GLONASS, "
                      "Galileo, BeiDou); SBAS desligado durante a matriz. "
                      "Cada bloco rende um CEP proprio; o valor de referencia e "
