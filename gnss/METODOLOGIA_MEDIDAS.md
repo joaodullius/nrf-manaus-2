@@ -18,6 +18,23 @@ e o mapa do céu deixa de explicar o mapa de desvio.
 não desloca nenhum instante nem nenhuma coordenada. Para dispersão ele é **obrigatório**,
 porque a análise consome NMEA.
 
+## O plano de terra faz parte da antena
+
+> **A ANN-MB2 só cumpre o datasheet sobre um plano de terra circular de ø12 cm.** A própria
+> u-blox mede assim: as especificações de RF trazem a nota "measured on a ø12 cm ground
+> plane", e o centro de fase vem com o aviso de que *"any change in ground plane size or
+> shape may affect the phase center offset"*.
+
+Sem plano, a antena não está na configuração em que foi caracterizada: o diagrama de
+radiação muda, a rejeição de multicaminho piora — e multicaminho é justamente o que domina
+num cânion urbano — e nenhum número do datasheet se aplica.
+
+**O plano de terra é parte da configuração da antena, e a configuração da antena é parte da
+posição.** Trocar de plano entre capturas invalida a comparação tanto quanto mover a antena.
+
+Para RTK isso vale em dobro: o deslocamento do centro de fase entra direto no resultado
+centimétrico.
+
 ## O que anotar antes de começar
 
 | campo | por quê |
@@ -25,6 +42,8 @@ porque a análise consome NMEA.
 | Local e descrição física | "janela entre dois prédios", "sacada", "telhado" |
 | **Hora local de início** | a cintilação ionosférica tem pico entre o pôr do sol e a meia-noite |
 | Antena usada | tem de ser a mesma entre posições |
+| **Plano de terra: sim/não, material e diâmetro** | ø12 cm é a referência do datasheet; sem ele, nada do datasheet vale |
+| Separação entre antenas, se forem duas | 30 cm já mudam o que cada uma enxerga num cânion |
 | Firmware do modem | `AT+CGMR` — muda o que é possível |
 
 ## A — Dispersão (15 min)
@@ -299,6 +318,7 @@ Preencher uma por posição e guardar junto das capturas:
 Local:
 Data e hora local de inicio:
 Antena:
+Plano de terra (material e diametro):
 Descricao da vista de ceu:
 Arquivos gerados:
   dispersao:  gnss/capturas/____.nmea + .uc2
