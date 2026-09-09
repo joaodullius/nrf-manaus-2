@@ -185,9 +185,14 @@ def estatisticas(fixes: list[Fix], referencia: tuple[float, float] | None = None
     }
 
 
+# systemId da NMEA 4.10 -> prefixo do talker, para nomear o satelite
+SISTEMA = {1: "GP", 2: "GL", 3: "GA", 4: "GB", 5: "GQ"}
+
+
 @dataclass
 class Visada:
     """Uma linha de visada para um satelite, como a GSV reporta."""
+    sistema: str         # GP, GL, GA, GB, GQ — de qual constelacao
     prn: int
     elev: float | None   # graus acima do horizonte; 90 = no zenite
     azim: float | None   # graus a partir do norte, sentido horario
@@ -209,12 +214,15 @@ def _campos_gsv(c):
 def ler_ceu(dados: bytes, *, exigir_checksum: bool = True) -> dict:
     """Extrai as visadas das GSV e os satelites usados no calculo, das GSA.
 
-    Separa as visadas COM posicao das SEM: o receptor as vezes ouve um satelite
-    antes de saber onde ele esta, e as duas situacoes contam coisas diferentes
-    sobre o ceu. Um satelite alto e fraco e obstrucao; um satelite ouvido sem
-    orbita conhecida e so falta de tempo.
+    Tres baldes:
+
+    - com_posicao: elevacao entre 0 e 90 — o que de fato esta no ceu visivel
+    - sem_posicao: ouvido, mas sem orbita conhecida ainda
+    - abaixo_horizonte: elevacao negativa. O modem preve pelo almanaque e reporta
+      satelites que ainda nao nasceram; eles nao cabem num mapa do ceu e nao
+      contam como vista. Medido: 64 visadas assim numa captura de 15 min.
     """
-    com_pos, sem_pos, usados = [], [], {}
+    com_pos, sem_pos, abaixo, usados = [], [], [], {}
     for linha in dados.splitlines():
         s = linha.strip().decode("ascii", "ignore")
         if len(s) < 7 or not s.startswith("$"):
@@ -222,28 +230,42 @@ def ler_ceu(dados: bytes, *, exigir_checksum: bool = True) -> dict:
         if exigir_checksum and not checksum_ok(s):
             continue
         tipo, c = s[3:6], s.split("*")[0].split(",")
+        talker = s[1:3]
         if tipo == "GSV" and len(c) > 4:
             for b in _campos_gsv(c):
                 if len(b) < 4 or not b[0]:
                     continue
-                v = Visada(int(b[0]),
+                v = Visada(talker, int(b[0]),
                            float(b[1]) if b[1] else None,
                            float(b[2]) if b[2] else None,
                            float(b[3]) if b[3] else 0.0)
-                alvo = com_pos if v.elev is not None and v.azim is not None else sem_pos
-                alvo.append(v)
+                if v.elev is None or v.azim is None:
+                    sem_pos.append(v)
+                elif v.elev < 0:
+                    abaixo.append(v)
+                else:
+                    com_pos.append(v)
         elif tipo == "GSA" and len(c) > 14:
+            # com talker GN a sentenca mistura constelacoes; o systemId do fim
+            # (NMEA 4.10) e quem diz de qual e cada bloco
+            sis = talker
+            if talker == "GN" and len(c) > 18 and c[18].isdigit():
+                sis = SISTEMA.get(int(c[18]), "GN")
             for prn in c[3:15]:
                 if prn:
-                    usados[int(prn)] = usados.get(int(prn), 0) + 1
-    return {"com_posicao": com_pos, "sem_posicao": sem_pos, "usados": usados}
+                    ch = "%s%02d" % (sis, int(prn))
+                    usados[ch] = usados.get(ch, 0) + 1
+    return {"com_posicao": com_pos, "sem_posicao": sem_pos,
+            "abaixo_horizonte": abaixo, "usados": usados}
 
 
 def resumo_ceu(ceu: dict) -> dict:
     """Agrega por satelite: onde ficou no ceu, com que forca, e quanto foi usado."""
     por_prn = {}
     for v in ceu["com_posicao"]:
-        d = por_prn.setdefault(v.prn, {"elev": [], "azim": [], "cn0": []})
+        # a chave inclui a constelacao: GPS 7 e Galileo 7 sao satelites diferentes
+        d = por_prn.setdefault("%s%02d" % (v.sistema, v.prn),
+                               {"elev": [], "azim": [], "cn0": []})
         d["elev"].append(v.elev)
         d["azim"].append(v.azim)
         d["cn0"].append(v.cn0)

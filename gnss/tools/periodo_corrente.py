@@ -39,8 +39,14 @@ def le(caminho: Path):
     return np.array(t), np.array(med)
 
 
-def uniformiza(t, y, dt=0.1):
-    """Reamostra num passo fixo — a autocorrelacao exige grade uniforme."""
+def uniformiza(t, y, dt=None):
+    """Reamostra num passo fixo — a autocorrelacao exige grade uniforme.
+
+    Sem dt, usa o passo mediano do proprio arquivo: reamostrar a 100 ms um
+    registro gravado a 20 ms joga fora resolucao de graca.
+    """
+    if dt is None:
+        dt = float(np.median(np.diff(t))) or 0.1
     grade = np.arange(t[0], t[-1], dt)
     return grade, np.interp(grade, t, y)
 

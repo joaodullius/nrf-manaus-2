@@ -84,6 +84,66 @@ aparece a partir da quarta. Reportar a **mediana do regime**, e a faixa completa
 **Colete pelo menos 6 amostras em regime.** A 120 s de intervalo entre ciclos, isso são ~25
 min por variante.
 
+## C — O X20P na mesma posição
+
+O X20P não roda firmware nosso: quem o dirige é o **u-center 2**. Mas as regras de
+comparabilidade são as mesmas, e há uma restrição física que muda o desenho do experimento.
+
+### A antena não pode ser compartilhada ao mesmo tempo
+
+> **Nunca ligar a mesma antena nos dois receptores simultaneamente.** O SMA J2 da SMA-DK
+> entrega 3 V à antena ativa e o EVK da u-blox entrega 3,3 V; ligados juntos, um regulador
+> empurra corrente no outro. **Troca sempre com o receptor desenergizado.**
+
+Consequência para o método: **os dois receptores não podem ser medidos ao mesmo tempo**. Não
+existe captura simultânea. Então:
+
+> **Alterne em blocos curtos e anote a hora de cada bloco.** Um bloco longo de nRF9151
+> seguido de um bloco longo de X20P mistura a diferença entre receptores com a mudança do
+> céu — e já medimos que só o horário muda o CEP95 pela metade.
+
+Sugestão: blocos de 15 min, alternando `nRF9151 → X20P → nRF9151 → X20P`, com a troca de
+cabo feita com os dois desligados. Duas rodadas de cada dão base para separar receptor de
+horário.
+
+### Dispersão do X20P
+
+Grave a sessão no u-center 2. Ele escreve **dois arquivos** na pasta `.ucenter` do perfil:
+um `.ubx` (fluxo cru) e um `.uc2` (o mesmo fluxo com carimbo de tempo). Copie os dois para
+`gnss/capturas/` e rode as ferramentas **direto no `.uc2`** — elas leem esse formato:
+
+```
+cd gnss/tools
+python desvio.py --log "X20P aberto=../capturas/x20p_<local>_<hhmm>.uc2"   --png ../../doc/gnss/img/desvio_x20p_<local>.png
+python ceu.py --log ../capturas/x20p_<local>_<hhmm>.uc2 --titulo "X20P, <local> <hhmm>"   --png ../../doc/gnss/img/ceu_x20p_<local>.png
+```
+
+**As ferramentas já entendem multiconstelação.** O `nmea.py` identifica o satélite por
+constelação mais PRN (`GP07` e `GA07` são satélites diferentes), lê `$GNGGA`, resolve o
+`systemId` das `$GNGSA` e descarta satélites abaixo do horizonte. Sem isso, GPS e Galileo com
+o mesmo número virariam um satélite só no mapa do céu.
+
+A qualidade do `GGA` é o que separa os degraus da escada: **1** autônomo, **2** DGPS,
+**5** RTK flutuante, **4** RTK fixo. O `desvio.py` já reporta a contagem por qualidade.
+
+### Tempo até o fix do X20P
+
+O X20P parte a frio por comando do u-center 2 (reset com apagamento de efemérides). **O
+caminho exato do menu ainda não foi confirmado na bancada** — confirmar e anotar aqui na
+primeira sessão com o EVK.
+
+Válido de qualquer forma: **mesma quantidade de partidas, mesmo critério de descarte** que o
+nRF9151 — descartar as três primeiras e reportar a mediana do regime.
+
+### O que anotar a mais, só para o X20P
+
+| campo | por quê |
+|---|---|
+| Constelações habilitadas | GPS, Galileo, GLONASS, BeiDou — muda tudo |
+| Bandas habilitadas | L1 sozinha ou multibanda; é a diferença central para o nRF9151 |
+| Firmware do X20P | decide se CLAS e Galileo HAS existem |
+| Origem da correção | nenhuma, base própria, ou caster |
+
 ## Armadilhas já pagas
 
 - **`nrfutil device program` em vez de `west flash`.** O `west flash` recompila, e a
