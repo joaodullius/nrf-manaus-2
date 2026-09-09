@@ -15,7 +15,10 @@ Labs de geolocalização outdoor, separados do módulo de comunicação por usar
 | [`03_nmea/`](03_nmea/) | **Lab 3** — Receita, sem código. A porta que carrega **só NMEA**: log e AT host desligados, para alimentar o u-center e para gravar log reproduzível. Não ocupa bloco próprio de tempo — é o firmware do primeiro degrau da demo | nRF9151-SMA-DK | ✅ compila e passa a asserção |
 | [`04_demo_rtk/`](04_demo_rtk/) | **Demo do instrutor**, sem código: os três degraus no **mesmo ponto físico**, com os dois EVK-X20P, mais as **cinco falhas de RTK** que dá para provocar mexendo só na base — e como diagnosticar cada uma. É onde a teoria de correção encontra número medido | 2 × EVK-X20P + antenas | ✅ roteiro escrito |
 
-Os números de bancada dos três labs (tempo até o primeiro fix, tabelas de assistência) ainda estão marcados como `<!-- BANCADA: preencher -->` nos READMEs — eles fecham juntos, na sessão de validação com o instrutor.
+Os números de bancada dos três labs estão **medidos e nos READMEs**, colhidos na bancada de
+Porto Alegre em 2026-09-08/09: antena numa janela entre dois prédios, com vista de céu
+parcial. São números de um sítio obstruído — é isso que os torna úteis em aula, porque é a
+condição em que o aluno vai trabalhar, e não a de céu aberto do datasheet.
 
 ### Ordem de ensino
 
