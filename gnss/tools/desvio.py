@@ -129,13 +129,26 @@ def elipse_sigma(leste: list[float], norte: list[float]) -> tuple[float, float, 
     return math.sqrt(max(val[0], 0)), math.sqrt(max(val[1], 0)), ang
 
 
+RODAPE_PROPRIA = ("Cada mapa tem a própria escala (anéis rotulados); a régua abaixo põe todos "
+                  "no mesmo eixo. Um degrau de 10× tem o mesmo tamanho em qualquer ponto da régua.")
+RODAPE_COMUM = ("Todos os mapas na MESMA escala: o cenário melhor vira um ponto, e é essa a "
+                "leitura — a diferença deixa de ser um número e passa a ser uma área. "
+                "A régua abaixo dá a razão exata.")
+
+
 # --------------------------------------------------------------------- mapa
 
-def desenhar_mapa(ax, st: dict, cor: str) -> None:
-    """O Deviation Map de um cenario: aneis, nuvem, CEP50, CEP95 e elipse 1 sigma."""
+def desenhar_mapa(ax, st: dict, cor: str, maximo: float | None = None) -> None:
+    """O Deviation Map de um cenario: aneis, nuvem, CEP50, CEP95 e elipse 1 sigma.
+
+    Com `maximo`, todos os mapas usam a MESMA escala. Ai o cenario melhor vira um
+    ponto — e essa e a leitura: a diferenca deixa de ser um numero na legenda e
+    passa a ser uma area. Sem `maximo`, cada mapa tem a sua, e a razao entre eles
+    fica por conta da regua logaritmica de baixo.
+    """
     leste, norte = st["_leste_m"], st["_norte_m"]
     hpe = st["hpe_m"]
-    passo, raio = escala_mapa(hpe["max"])
+    passo, raio = escala_mapa(maximo if maximo is not None else hpe["max"])
 
     ax.set_aspect("equal")
     ax.set_xlim(-raio * 1.18, raio * 1.18)
@@ -305,7 +318,8 @@ def desenhar_regua(ax, cenarios: list[dict]) -> None:
 
 # -------------------------------------------------------------------- figura
 
-def figura(cenarios: list[dict], referencia: tuple[float, float] | None):
+def figura(cenarios: list[dict], referencia: tuple[float, float] | None,
+           escala: str = "propria"):
     n = len(cenarios)
     lateral = n == 1
 
@@ -360,6 +374,8 @@ def figura(cenarios: list[dict], referencia: tuple[float, float] | None):
             fontsize=8.5, color=SLATE, va="center")
 
     # paineis: um por cenario
+    # na escala comum, todos os mapas usam o pior espalhamento do conjunto
+    comum = max(c["st"]["hpe_m"]["max"] for c in cenarios) if escala == "comum" else None
     y_painel = h_pe + h_regua + gap
     for i, c in enumerate(cenarios):
         x = marg + i * (col_w + gap)
@@ -368,7 +384,7 @@ def figura(cenarios: list[dict], referencia: tuple[float, float] | None):
                                        boxstyle="round,pad=0,rounding_size=0.18",
                                        facecolor=PANEL, edgecolor=LINE, lw=1.0))
         ax_m = eixo(x + 0.12, y_painel + h_stats + 0.12, col_w - 0.24, h_mapa - 0.24)
-        desenhar_mapa(ax_m, c["st"], c["cor"])
+        desenhar_mapa(ax_m, c["st"], c["cor"], comum)
         if lateral:
             ax_s = eixo(x + col_w + gap * 0.5, y_painel + 0.15, 4.6, h_mapa - 0.3)
         else:
@@ -382,9 +398,7 @@ def figura(cenarios: list[dict], referencia: tuple[float, float] | None):
              "Na mesma régua, em escala logarítmica: ● CEP50  até  ○ CEP95",
              fontsize=10, color=INK, fontweight="bold", va="top")
     fig.text(marg / W, 0.12 / H,
-             "Cada mapa tem a própria escala (aneis rotulados); a régua abaixo põe "
-             "todos no mesmo eixo. Um degrau de 10× tem o mesmo tamanho em qualquer "
-             "ponto da régua.",
+             (RODAPE_COMUM if escala == "comum" else RODAPE_PROPRIA),
              fontsize=8, color=SLATE, va="bottom")
     return fig
 
@@ -475,6 +489,10 @@ def main(argv=None) -> int:
                         "nao descreve nem um nem outro")
     p.add_argument("--referencia", type=_referencia, metavar="LAT,LON",
                    help="desvio contra esta coordenada (exatidao) em vez da media (precisao)")
+    p.add_argument("--escala", choices=("propria", "comum"), default="propria",
+                   help="'propria' da a cada mapa a sua escala (padrao); 'comum' poe todos "
+                        "na mesma, e ai o cenario melhor vira um ponto — que e a leitura "
+                        "mais direta da diferenca")
     p.add_argument("--png", type=Path, help="figura de saida")
     p.add_argument("--json", type=Path, help="estatisticas de saida, no formato de doc/*/data")
     a = p.parse_args(argv)
@@ -530,7 +548,7 @@ def main(argv=None) -> int:
         print(f"json: {a.json}")
     if a.png:
         a.png.parent.mkdir(parents=True, exist_ok=True)
-        fig = figura(cenarios, a.referencia)
+        fig = figura(cenarios, a.referencia, a.escala)
         fig.savefig(a.png, dpi=200, facecolor="white")
         print(f"png: {a.png}")
     return 0

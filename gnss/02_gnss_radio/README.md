@@ -127,11 +127,26 @@ mesmo caminho de RF, sem configuração extra.
 
 ### Tempo até o primeiro fix, medido
 
-| Grau | TTFF a frio |
-|---|---|
-| sem | <!-- BANCADA: preencher --> |
-| mínima | <!-- BANCADA: preencher --> |
-| nuvem | <!-- BANCADA: preencher --> |
+| Grau | TTFF a frio, mediana | faixa | amostras |
+|---|---|---|---|
+| sem | **54,0 s** | 30 a 115 s | 11 |
+| mínima | 104,8 s ⚠ | 27 a 576 s | 5 |
+| nuvem | **60,6 s** | 35 a 269 s | 10 |
+
+Duas rodadas em blocos de 20 min, com a ordem invertida na segunda — assim uma mudança lenta
+do céu não vira diferença entre os graus.
+
+**O resultado surpreende: a assistência não ajudou.** A nuvem ficou *pior* que não ter
+assistência nenhuma. Antes de concluir que a assistência não serve, olhe a Parte B — o
+próprio firmware reporta quanto tempo o LTE tomou o rádio, e descontando isso a conta se
+inverte.
+
+⚠ **A linha "mínima" tem poucas amostras porque o firmware trava.** Ela é a única das três
+que desliga o LTE (`CONFIG_GNSS_SAMPLE_LTE_ON_DEMAND`) e precisa religá-lo a cada ciclo;
+depois do primeiro `Sleeping for 120 s` o ciclo seguinte às vezes nunca começa — nem a linha
+`Deleting GNSS data` aparece. Medido: 1 amostra num bloco de 20 min, 4 em outro. Não é a
+instrumentação: os outros dois graus, no mesmo script e na mesma porta, produzem
+normalmente.
 
 ## Parte B — o rádio compartilhado
 
@@ -181,10 +196,45 @@ uma que estiver setada:
 | `NRF_MODEM_GNSS_PVT_FLAG_SLEEP_BETWEEN_PVT` | `Sleep period(s) between PVT notifications` | o GNSS dormiu entre uma notificação e outra, dentro do próprio intervalo periódico |
 | `NRF_MODEM_GNSS_PVT_FLAG_SCHED_DOWNLOAD` | `Scheduled navigation data download` | o GNSS está rodando fora do ciclo normal, baixando dado de navegação da transmissão dos satélites |
 
-Contagem de `GNSS operation blocked by LTE` (prazos perdidos) numa sessão de
-bancada:
+Tempo em que o LTE tomou o rádio, por partida a frio, na variante de nuvem:
 
-<!-- BANCADA: preencher -->
+| TTFF bruto | bloqueado pelo LTE | TTFF líquido |
+|---|---|---|
+| 34,6 s | 6 s | 28,6 s |
+| 50,5 s | 9 s | 41,5 s |
+| 57,4 s | 15 s | 42,4 s |
+| 57,5 s | 29 s | 28,5 s |
+| 59,1 s | 29 s | 30,1 s |
+| 62,1 s | 31 s | 31,1 s |
+| 63,2 s | 29 s | 34,2 s |
+| 158,4 s | 30 s | 128,4 s |
+| 232,0 s | 31 s | 201,0 s |
+| 269,2 s | 29 s | 240,2 s |
+| **mediana 60,6 s** | **mediana 29 s** | **mediana 37,9 s** |
+
+**Aqui a conta se inverte.** A assistência de nuvem tira ~16 s do TTFF — 37,9 s líquidos
+contra 54,0 s sem assistência. Mas o rádio compartilhado devolve 29 s, e o saldo fica
+negativo.
+
+E o bloqueio não é aleatório: **29 s aparece repetidamente**, quase sempre o mesmo valor.
+Ele é o **timer de liberação RRC** da rede — o tempo que a UE fica presa em `RRC_CONNECTED`
+depois de terminar a transferência. A própria documentação da Nordic diz que esse timer
+"dura de 5 a 60 segundos, é definido pela rede e não é negociável pela UE".
+
+Cruzando o `+CSCON` do log com a corrente medida no PPK2, o tempo bloqueado é **exatamente**
+a janela entre `+CSCON: 1` e `+CSCON: 0`, um para um. Os dados de A-GNSS chegam em menos de
+um segundo; o resto da janela a UE fica presa sem transferir nada.
+
+**Uma observação de método, para quem for reproduzir:** no modo de teste de TTFF o sample
+**não imprime** a mensagem `GNSS operation blocked by LTE` a cada PVT — ele acumula e
+reporta uma linha `Time GNSS was blocked by LTE: <n> s` junto do fix. Contar as mensagens
+numa build de TTFF dá sempre zero. A grandeza que interessa é o tempo, não a contagem.
+
+**Como encurtar esse tempo.** Desativar o LTE na mão funciona (a variante mínima derruba a
+janela de 30 s para 1,6 s e zera o bloqueio), mas **não é prática recomendável**: expõe o
+dispositivo como mal comportado e pode render sanção da rede. Os caminhos corretos são o
+**AS-RAI**, em que o dispositivo avisa a rede que terminou e pede a liberação antecipada, e o
+**ajuste do timer em APN privada**, negociado com a operadora.
 
 ### A disciplina de agenda, a assistência e a precisão são a mesma decisão
 
