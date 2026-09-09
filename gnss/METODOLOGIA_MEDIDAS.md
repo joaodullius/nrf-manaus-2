@@ -18,6 +18,44 @@ e o mapa do céu deixa de explicar o mapa de desvio.
 não desloca nenhum instante nem nenhuma coordenada. Para dispersão ele é **obrigatório**,
 porque a análise consome NMEA.
 
+### O CEP depende da janela, então a janela é parte da medida
+
+O CEP não é uma propriedade do receptor: é uma propriedade do par (receptor, duração). Ele
+cresce com o tempo de captura, porque a nuvem de posições não só espalha, ela **caminha** — e
+a caminhada entra na conta como se fosse espalhamento.
+
+O mesmo arquivo, medido de dois jeitos:
+
+| janela | CEP50 |
+|---|---|
+| a captura inteira (900 fixes, 15 min) | **1,129 m** |
+| mediana de janelas de 300 fixes (5 min) da mesma captura | **0,338 m** |
+
+Um fator de 3,3× sem que nada tenha mudado no equipamento, na antena ou no céu.
+
+Daí duas regras que não têm exceção:
+
+- **Todos os blocos de um comparativo têm a mesma duração.** Comparar 15 min contra 5 min
+  mede a duração, não a condição.
+- **Nunca concatenar blocos separados no tempo para formar um CEP só.** Entre um bloco e
+  outro o ambiente deriva, e a deriva entra como dispersão. Cada bloco rende um CEP próprio;
+  o que se compara entre condições é a **mediana dos blocos**, com a faixa min–max ao lado.
+
+### Comparar duas condições: alternar, não enfileirar
+
+Rodar A por meia hora e depois B por meia hora não compara A com B — compara a primeira
+meia hora com a segunda. A deriva do ambiente é grande o bastante para engolir os efeitos
+que se quer medir, e já inverteu resultado nesta bancada.
+
+O desenho que funciona é **blocos alternados com a ordem girada**: para 4 condições,
+`ABCD → DCBA → BDAC`. Cada condição cai em posições diferentes da sequência, e a deriva
+deixa de ter para onde vazar.
+
+E **congelar tudo que não é a variável.** O SBAS entrando e saindo sozinho, em proporções
+diferentes a cada bloco, já fabricou um "ganho de 2,6× do GLONASS" que não existia — filtrado
+só para épocas autônomas, o ganho real era 1,17×, com os grupos se sobrepondo. Em comparativo
+de constelação, SBAS desligado (`CFG-SIGNAL-SBAS_ENA` = 0) do começo ao fim.
+
 ## O plano de terra faz parte da antena
 
 > **A ANN-MB2 só cumpre o datasheet sobre um plano de terra circular de ø12 cm.** A própria
