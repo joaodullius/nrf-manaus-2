@@ -301,7 +301,16 @@ def figura(ceu: dict, resumo: dict, ag: dict, titulo: str | None, dur: float | N
         else:
             ax.plot(th, rr, "o", ms=R, mfc="white", mec=CINZA, mew=2.0, zorder=6)
             ax.plot(th, rr, "x", ms=R * 0.55, mec=CINZA, mew=2.4, zorder=7)
-        # rotulo: PRN e C/N0, afastado do marcador; no horizonte, para dentro
+        # Rotulo so em quem entra na solucao e em quem prova obstrucao.
+        #
+        # Com multiconstelacao o ceu passa de 50 satelites, e rotular todos
+        # produz uma parede de texto sobreposto que esconde justamente o mapa.
+        # Quem nao e rotulado continua desenhado: a forma diz se entrou na
+        # solucao e a cor diz a forca do sinal, que e o que o mapa precisa
+        # mostrar. O nome do satelite so importa para os que sustentam a
+        # posicao ou para os que denunciam um setor bloqueado.
+        if sit != "solucao" and prn not in ag["alto_e_fraco"]:
+            continue
         dx, dy, ha, va = _ancora(th if r["elev_med"] >= 8 else th + math.pi, R * 0.75)
         cn0 = "sem sinal" if r["cn0_med"] <= 0 else f"{fmt_pt(r['cn0_med'])} dB-Hz"
         ax.annotate(f"PRN {prn}\n{cn0}", (th, rr), xytext=(dx, dy), textcoords="offset points",

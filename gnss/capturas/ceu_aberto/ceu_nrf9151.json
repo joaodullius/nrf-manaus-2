@@ -1,0 +1,236 @@
+{
+  "fonte": "medida propria: GSV/GSA do log nrf9151.nmea, lidas por ceu.py",
+  "condicoes": "nRF9151 — mesma janela, mesma altura, mesmos minutos; medida propria desta bancada, antena do kit, sem correcao; captura de 72 min; elevacao/azimute em graus, C/N0 em dB-Hz, medias das visadas com posicao; 0 dB-Hz e rastreado sem sinal utilizavel; 'na solucao' = presente nas GSA em >= 50% das epocas; setor obstruido = satelite acima de 15 graus com menos de 30 dB-Hz",
+  "arquivo": "C:/b/ceu2/nrf9151.nmea",
+  "duracao_s": 4331.0,
+  "satelites": [
+    {
+      "prn": "GP01",
+      "elev_med": 13.162,
+      "azim_med": 234.865,
+      "cn0_med": 12.966,
+      "cn0_max": 42.0,
+      "visadas": 4333,
+      "usado_em": 206,
+      "fracao_usado": 0.049,
+      "situacao": "fora",
+      "alto_e_fraco": false
+    },
+    {
+      "prn": "GP02",
+      "elev_med": 29.74,
+      "azim_med": 223.609,
+      "cn0_med": 23.614,
+      "cn0_max": 36.0,
+      "visadas": 4333,
+      "usado_em": 3164,
+      "fracao_usado": 0.745,
+      "situacao": "solucao",
+      "alto_e_fraco": false
+    },
+    {
+      "prn": "GP03",
+      "elev_med": 6.021,
+      "azim_med": 284.123,
+      "cn0_med": 22.057,
+      "cn0_max": 47.0,
+      "visadas": 3489,
+      "usado_em": 2040,
+      "fracao_usado": 0.481,
+      "situacao": "fora",
+      "alto_e_fraco": false
+    },
+    {
+      "prn": "GP08",
+      "elev_med": 48.696,
+      "azim_med": 254.782,
+      "cn0_med": 37.006,
+      "cn0_max": 50.0,
+      "visadas": 4333,
+      "usado_em": 3964,
+      "fracao_usado": 0.934,
+      "situacao": "solucao",
+      "alto_e_fraco": false
+    },
+    {
+      "prn": "GP10",
+      "elev_med": 38.424,
+      "azim_med": 142.783,
+      "cn0_med": 26.925,
+      "cn0_max": 45.0,
+      "visadas": 4333,
+      "usado_em": 3709,
+      "fracao_usado": 0.874,
+      "situacao": "solucao",
+      "alto_e_fraco": false
+    },
+    {
+      "prn": "GP16",
+      "elev_med": 6.901,
+      "azim_med": 331.433,
+      "cn0_med": 11.41,
+      "cn0_max": 42.0,
+      "visadas": 3940,
+      "usado_em": 1826,
+      "fracao_usado": 0.43,
+      "situacao": "fora",
+      "alto_e_fraco": false
+    },
+    {
+      "prn": "GP18",
+      "elev_med": 4.611,
+      "azim_med": 72.041,
+      "cn0_med": 8.41,
+      "cn0_max": 33.0,
+      "visadas": 2710,
+      "usado_em": 622,
+      "fracao_usado": 0.147,
+      "situacao": "fora",
+      "alto_e_fraco": false
+    },
+    {
+      "prn": "GP23",
+      "elev_med": 12.079,
+      "azim_med": 124.099,
+      "cn0_med": 18.435,
+      "cn0_max": 44.0,
+      "visadas": 4333,
+      "usado_em": 2670,
+      "fracao_usado": 0.629,
+      "situacao": "solucao",
+      "alto_e_fraco": false
+    },
+    {
+      "prn": "GP24",
+      "elev_med": 0.0,
+      "azim_med": 131.818,
+      "cn0_med": 0.0,
+      "cn0_max": 0.0,
+      "visadas": 220,
+      "usado_em": 0,
+      "fracao_usado": 0.0,
+      "situacao": "mudo",
+      "alto_e_fraco": false
+    },
+    {
+      "prn": "GP26",
+      "elev_med": 0.221,
+      "azim_med": 349.558,
+      "cn0_med": 0.0,
+      "cn0_max": 0.0,
+      "visadas": 724,
+      "usado_em": 0,
+      "fracao_usado": 0.0,
+      "situacao": "mudo",
+      "alto_e_fraco": false
+    },
+    {
+      "prn": "GP27",
+      "elev_med": 59.272,
+      "azim_med": 322.172,
+      "cn0_med": 49.753,
+      "cn0_max": 54.0,
+      "visadas": 4333,
+      "usado_em": 4245,
+      "fracao_usado": 1.0,
+      "situacao": "solucao",
+      "alto_e_fraco": false
+    },
+    {
+      "prn": "GP28",
+      "elev_med": 12.138,
+      "azim_med": 39.871,
+      "cn0_med": 26.437,
+      "cn0_max": 44.0,
+      "visadas": 4333,
+      "usado_em": 3640,
+      "fracao_usado": 0.857,
+      "situacao": "solucao",
+      "alto_e_fraco": false
+    },
+    {
+      "prn": "GP31",
+      "elev_med": 5.205,
+      "azim_med": 18.541,
+      "cn0_med": 22.406,
+      "cn0_max": 46.0,
+      "visadas": 3129,
+      "usado_em": 1615,
+      "fracao_usado": 0.38,
+      "situacao": "fora",
+      "alto_e_fraco": false
+    },
+    {
+      "prn": "GP32",
+      "elev_med": 66.981,
+      "azim_med": 83.334,
+      "cn0_med": 31.66,
+      "cn0_max": 49.0,
+      "visadas": 4333,
+      "usado_em": 3462,
+      "fracao_usado": 0.816,
+      "situacao": "solucao",
+      "alto_e_fraco": false
+    }
+  ],
+  "agregados": {
+    "epocas": 4245,
+    "satelites_com_posicao": 14,
+    "satelites_na_solucao": 7,
+    "satelites_sem_sinal": 2,
+    "cn0_med_na_solucao": 30.547,
+    "visadas_com_posicao": 48876,
+    "visadas_sem_orbita": 6905,
+    "alto_e_fraco": []
+  },
+  "setores": [
+    {
+      "setor": "N",
+      "satelites": 2,
+      "cn0_max": 22.406,
+      "obstruido": false
+    },
+    {
+      "setor": "NE",
+      "satelites": 1,
+      "cn0_max": 26.437,
+      "obstruido": false
+    },
+    {
+      "setor": "L",
+      "satelites": 2,
+      "cn0_max": 31.66,
+      "obstruido": false
+    },
+    {
+      "setor": "SE",
+      "satelites": 3,
+      "cn0_max": 26.925,
+      "obstruido": true
+    },
+    {
+      "setor": "S",
+      "satelites": 0,
+      "cn0_max": null,
+      "obstruido": false
+    },
+    {
+      "setor": "SO",
+      "satelites": 2,
+      "cn0_max": 23.614,
+      "obstruido": true
+    },
+    {
+      "setor": "O",
+      "satelites": 2,
+      "cn0_max": 37.006,
+      "obstruido": false
+    },
+    {
+      "setor": "NO",
+      "satelites": 2,
+      "cn0_max": 49.753,
+      "obstruido": false
+    }
+  ]
+}
