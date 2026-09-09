@@ -387,9 +387,33 @@ Documentado pela Nordic em *nRF7002 EB II → Requirements → Prerequisites*.
 
 ## Módulo GNSS (`gnss/`)
 
-- **u-center 2** ([u-blox](https://www.u-blox.com/en/product/u-center)) — configuração e visualização do EVK-X20P.
-- Credenciais de um **caster NTRIP** para correção RTK (definidas pelo instrutor antes do curso).
-- Antenas GNSS posicionadas com visada de céu (labs outdoor ou janela).
+- **u-center 2** ([u-blox](https://www.u-blox.com/en/product/u-center)) — configuração do EVK-X20P,
+  Survey-In da base, caster e cliente NTRIP, e a dispersão nativa.
+
+  > **A conta u-blox tem dois fatores e precisa existir antes do curso**, criada **na máquina que
+  > vai projetar** — não dá para resolver isso na hora da aula. Depois do primeiro login o programa
+  > roda offline, mas mapa de fundo, NTRIP e serviço de correção continuam exigindo internet.
+
+- **u-center clássico** — é quem plota a dispersão do **NMEA do nRF9151** (lab 3). A view de
+  dispersão do u-center 2 depende de `UBX-NAV-PVT` e fica **vazia** com NMEA; por isso os dois
+  programas convivem na mesma máquina.
+- **RTKLIB / RTKPLOT** — **opcional**: sobrepõe as trilhas dos dois receptores e mostra a
+  diferença. Consome `$GPRMC` e `$GPGGA`, que tanto o nRF9151 quanto o X20P já emitem de fábrica.
+- **Antenas GNSS ativas com visada de céu** (outdoor ou janela desobstruída) — o módulo usa
+  **duas**: uma marca o **ponto de medida**, onde os receptores se revezam, e outra, alguns metros
+  ao lado, é a **base**. A nRF9151-SMA-DK não tem antena de bordo nem LNA de GNSS: sem antena
+  externa no J2 ela não recebe nada.
+
+  > **Nunca plugue a mesma antena em dois receptores ao mesmo tempo.** O J2 da SMA-DK entrega 3 V
+  > e o EVK entrega 3,3 V para a antena ativa; com os dois ligados juntos, um regulador empurra
+  > corrente para dentro do outro. Troca de cabo **sempre com o receptor desenergizado**.
+
+- **Cadastro no caster NTRIP do IBGE** — **opcional, não essencial**. Serve só ao bônus de RTK
+  contra a estação pública **AMUA0** (UEA), que exige internet na sala. O módulo roda inteiro sem
+  ele, com a base própria e o caster local.
+- **As três nRF9151-SMA-DK integradas à nRF Cloud, com certificado** — **tarefa do instrutor,
+  antes da aula**. Sem isso o terceiro degrau de assistência do lab 2 (A-GNSS por nuvem) não roda;
+  os dois primeiros degraus (nenhuma e mínima) não dependem de nuvem.
 
 ---
 
