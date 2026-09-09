@@ -5,6 +5,34 @@ Tudo aqui foi **extraído dos PDFs oficiais da u-blox** e conferido no texto, n�
 - *ZED-X20P Integration Manual*, UBXDOC-963802114-12901 R05
 - *u-blox X20 HPG 2.10 Interface description*, UBXDOC-304424225-21263 R02
 
+## A versão de firmware muda o que o módulo É, não só o que ele faz
+
+Medido na bancada em 2026-09-09, no **mesmo módulo**, antes e depois de atualizar:
+
+| | HPG 2.02 | HPG 2.11 |
+|---|---|---|
+| GNSS suportadas (`MON-VER`) | `GPS;GAL;BDS` | **`GPS;GLO;GAL;BDS`** |
+| augmentação | `SBAS;QZSS` / `NAVIC` | `SBAS;QZSS` / **`NAVIC;LBAND`** |
+| chaves `CFG-SIGNAL` | 28 | **31** |
+| `GLO_ENA` | **0, e `VALSET` recusado com `ACK-NAK`** | **1 de fábrica** |
+| `QZSS_L1CB` | não existe | existe |
+| PROTVER | 50.10 | 50.11 |
+
+**Na 2.02 o GLONASS não era desabilitado: ele não existia.** A tentativa de habilitar voltava
+`ACK-NAK`, e a lista do `MON-VER` não o trazia. Atualizar para a 2.11 fez a constelação
+aparecer, já ligada.
+
+**Isso é conteúdo de aula, e é uma armadilha real:** ao diagnosticar "o receptor não recebe a
+constelação X", a primeira pergunta é a **versão de firmware**, não a configuração. Um
+`ACK-NAK` num `VALSET` pode significar "chave desconhecida nesta versão", não "proibido".
+
+O `LBAND` aparecendo na 2.11 também resolve, por observação direta, um ponto que a
+documentação deixava ambíguo entre o product summary e o integration manual.
+
+**Consequência de método:** rodar `UBX-MON-VER` **antes** de qualquer VALGET ou VALSET. A lista
+de chaves válidas depende da versão, e um único ID desconhecido faz o `VALGET` recusar o lote
+inteiro com `ACK-NAK` — foi assim que perdi a primeira tentativa de leitura exploratória.
+
 ## O plano de sinal é o que decide, não chave por chave
 
 `CFG-SIGNAL-PLAN` (`0x2031003a`, tipo U1) escolhe o conjunto inteiro:
