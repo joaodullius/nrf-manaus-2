@@ -870,7 +870,10 @@ subtítulo. Nenhuma pode sugerir que os regimes não testados foram medidos aqui
 
 ## 8. NTN
 
-Fica em `comms/ntn_nbiot/`, **fora do bloco de 2 horas**, como roteiro entregue.
+**Saiu deste módulo em 2026-09-08: NTN ganha módulo próprio.** O que segue fica aqui como o
+levantamento já feito, para o desenho do módulo novo aproveitar — **não é mais entrega desta
+frente.** O único resíduo de NTN no módulo de GNSS é conteúdo teórico: o GNSS interno e o NTN
+NB-IoT são mutuamente exclusivos.
 
 Verificado no NCS v3.4.0:
 
