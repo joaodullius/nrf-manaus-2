@@ -250,6 +250,34 @@ Para a escada completa numa figura só, os três degraus vêm de logs diferentes
 python desvio.py --log "nRF9151 L1=../capturas/nrf9151_<hhmm>.nmea"                  --log "X20P aberto=../capturas/x20p_aberto_<hhmm>.uc2"                  --log "X20P RTK=../capturas/x20p_rtk_<hhmm>.uc2"                  --png ../../doc/gnss/img/escada_precisao.png
 ```
 
+### Céu aberto é obrigatório para o degrau de RTK
+
+> **O RTK medido em céu obstruído não mostra do que o RTK é capaz.** Medido nesta bancada, no
+> cânion: CEP50 de **12 cm** contra os **0,006 m + 1 ppm** do datasheet — vinte vezes pior. A
+> baseline era praticamente zero (estação virtual na própria posição), então não é o termo de
+> 1 ppm: **é multicaminho degradando a fase da portadora**.
+
+Nem o degrau mais alto escapa da vista de céu. Por isso a sessão de RTK precisa ser refeita em
+**céu aberto**, e as duas medidas juntas — cânion e céu aberto, mesmo equipamento e mesma
+correção — valem mais que a boa sozinha:
+
+| onde | o que a medida mostra |
+|---|---|
+| Cânion | que o ambiente limita **todos** os degraus, inclusive o RTK |
+| Céu aberto | do que o equipamento é capaz quando o ambiente deixa |
+
+**Duas fontes de correção possíveis**, e elas não são intercambiáveis:
+
+| fonte | estado | exige GGA do cliente | observação |
+|---|---|---|---|
+| **Nordian PPP-RTK** | funcionando | **sim** (`nmea=1`) | teste limitado a 10 h — planejar antes de conectar |
+| **IBGE RBMC-IP** | credenciais expiradas | não (`nmea=0`) | gratuito; estação POAL0 em Porto Alegre, AMUA0 em Manaus |
+
+A Nordian usa estação **virtual** na posição do rover, o que zera a baseline. O IBGE entrega a
+estação **física**, e aí a baseline entra no erro pelo termo de 1 ppm — 10 km dão 1 cm.
+**Comparar CEP entre as duas fontes mede as duas coisas ao mesmo tempo**; para separar, use a
+mesma fonte nos dois lugares.
+
 ### O que anotar, só para NTRIP
 
 | campo | por quê |
