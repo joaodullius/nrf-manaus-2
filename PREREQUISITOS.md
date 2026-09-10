@@ -398,13 +398,14 @@ Documentado pela Nordic em *nRF7002 EB II → Requirements → Prerequisites*.
 - **RTKLIB / RTKPLOT** — **opcional**: sobrepõe as trilhas dos dois receptores e mostra a
   diferença. Consome `$GPRMC` e `$GPGGA`, que tanto o nRF9151 quanto o X20P já emitem de fábrica.
 - **Antenas GNSS ativas com visada de céu** (outdoor ou janela desobstruída) — o módulo usa
-  **duas**: uma marca o **ponto de medida**, onde os receptores se revezam, e outra, alguns metros
-  ao lado, é a **base**. A nRF9151-SMA-DK não tem antena de bordo nem LNA de GNSS: sem antena
-  externa no J2 ela não recebe nada.
+  **três** ANN-MB2, uma por receptor: **base**, **rover** e **nRF9151**, cada uma sobre um plano
+  de terra de ø12 cm (um CD serve), na mesma altura. A nRF9151-SMA-DK não tem antena de bordo
+  nem LNA de GNSS: sem antena externa no J2 ela não recebe nada.
 
   > **Nunca plugue a mesma antena em dois receptores ao mesmo tempo.** O J2 da SMA-DK entrega 3 V
   > e o EVK entrega 3,3 V para a antena ativa; com os dois ligados juntos, um regulador empurra
-  > corrente para dentro do outro. Troca de cabo **sempre com o receptor desenergizado**.
+  > corrente para dentro do outro. Uma antena por receptor; se for preciso trocar um cabo, **sempre
+  > com o receptor desenergizado**.
 
 - **Cadastro no caster NTRIP do IBGE** — **opcional, não essencial**. Serve só ao bônus de RTK
   contra a estação pública **AMUA0** (UEA), que exige internet na sala. O módulo roda inteiro sem

@@ -15,21 +15,27 @@ nRF9151-SMA-DK.
 
 ## 1. Antes da aula — a montagem e a base
 
-### As duas antenas
+### As três antenas
 
-Duas antenas com visada de céu, separadas por alguns metros:
+Uma antena por receptor, todas ANN-MB2 (multibanda, do kit da u-blox), cada uma sobre um
+plano de terra de ø12 cm, na mesma altura e com visada de céu:
 
-| Antena | Papel |
-|---|---|
-| **Ponto de medida** | Onde os três receptores se revezam. **Tem de ser a multibanda** (ANN-MB2, do kit da u-blox), porque ela serve ao nRF9151 **e** ao X20P — a que vem com a SMA-DK provavelmente cobre só L1 |
-| **Base** | Alguns metros ao lado, ligada ao EVK que faz de base |
+| Antena | Receptor | Onde |
+|---|---|---|
+| **A** | EVK que faz de **base** | alguns metros ao lado das outras duas |
+| **B** | EVK **rover** | lado a lado com a C, ~1,5 m entre elas |
+| **C** | **nRF9151** SMA-DK | lado a lado com a B |
 
-A baseline curta é escolha, não limitação: ela elimina o termo de 1 ppm e faz as duas antenas
-verem rigorosamente a mesma atmosfera — o que neutraliza a cintilação ionosférica que seria
-fatal numa baseline longa. Em Manaus isso não é detalhe.
+Com uma antena por receptor, o nRF9151 e o rover **gravam ao mesmo tempo**: a comparação
+entre os degraus controla o instante, e não depende de troca de cabo. A antena que vem com a
+SMA-DK provavelmente cobre só L1; a ANN-MB2 serve aos dois receptores.
 
-⚠️ **Troca de cabo sempre com o receptor desenergizado**, e nunca dois receptores no mesmo
-cabo: o J2 da SMA-DK entrega 3 V e o EVK entrega 3,3 V para a antena ativa.
+A baseline curta é escolha, não limitação: ela elimina o termo de 1 ppm e faz as antenas
+verem rigorosamente a mesma atmosfera, o que neutraliza a cintilação ionosférica que seria
+fatal numa baseline longa.
+
+⚠️ **Nunca dois receptores no mesmo cabo**: o J2 da SMA-DK entrega 3 V e o EVK entrega 3,3 V
+para a antena ativa; ligados juntos, um regulador empurra corrente no outro.
 
 ### O Survey-In, uma vez só
 
@@ -96,10 +102,10 @@ e MSM7 das quatro constelações, 1230 e 4072.0); não há MSM5 na saída, nem n
 
 ---
 
-## 3. A escada — os três degraus, no mesmo ponto
+## 3. A escada — os três degraus, ao mesmo tempo
 
-Os três receptores se revezam na **mesma antena do ponto de medida**, com troca de cabo sempre
-desenergizada.
+Cada receptor na própria antena: o nRF9151 (degrau 1) e o rover (degraus 2 e 3) gravam
+simultaneamente.
 
 | Degrau | Receptor | Correção | O que se vê |
 |---|---|---|---|
@@ -108,8 +114,9 @@ desenergizada.
 | 3 | EVK-X20P, multibanda | **RTK da base local** | dispersão **centimétrica**, e `carrSoln` = 2 |
 
 - **Degrau 1** — a SMA-DK com o firmware de [`../03_nmea/`](../03_nmea/), aberta no **u-center
-  clássico**. A dispersão do u-center 2 depende de `UBX-NAV-PVT` e fica vazia com NMEA; por isso
-  o degrau 1 usa o clássico e os degraus 2 e 3 usam o 2.
+  2**, que monta o Deviation Map com CEP50/CEP95 a partir do NMEA puro (verificado na bancada).
+  Alternativa sem u-center: `gnss/tools/nmea_captura.py` grava o fluxo e `desvio.py` calcula o
+  mesmo painel.
 - **Degrau 2** — o rover sozinho, sem correção. É o degrau que mostra o que a **multibanda** faz
   sozinha, antes de qualquer correção entrar na conta.
 - **Degrau 3** — o mesmo rover, agora com a correção da base. A sequência de estados
@@ -127,11 +134,11 @@ meio do fluxo de NMEA e o sujaria.
 
 ### A ressalva metodológica, que é obrigatória
 
-Os três degraus acontecem **com minutos de diferença, não no mesmo instante**. A u-blox recomenda
-comparação em paralelo, por divisor, e testes de 24 h. A comparação se sustenta porque a
-diferença entre metros e centímetros é enorme perto da deriva de geometria em poucos minutos —
-**mas o material não pode afirmar simultaneidade.** Dizer isso em voz alta na demo é parte do
-roteiro.
+As antenas B e C ficam **a ~1,5 m uma da outra, não no mesmo ponto**. Os degraus comparam a
+**dispersão** de cada receptor (CEP contra a própria média), não a posição absoluta de um contra
+o outro. A u-blox recomenda comparação em paralelo por divisor de antena e testes de 24 h; a
+montagem do curso usa antenas separadas, e é isso que o material afirma. Dizer isso em voz alta
+na demo é parte do roteiro.
 
 ---
 

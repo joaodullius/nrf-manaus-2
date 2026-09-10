@@ -35,7 +35,7 @@ Um único código-fonte, quatro configurações. `02_gnss_radio/` e `03_nmea/` s
 
 > O roteiro completo do instrutor — montagem, Survey-In, mensagens RTCM, as cinco falhas e os diagnósticos — está em [`04_demo_rtk/`](04_demo_rtk/). O que segue é o resumo.
 
-Uma antena fixa marca o ponto de medida. Os receptores se **revezam nela**, com troca de cabo e sempre desenergizados:
+Cada receptor tem a **própria antena** ANN-MB2, sobre plano de terra de ø12 cm, todas na mesma altura e separadas por ~1,5 m. O nRF9151 e o rover gravam **ao mesmo tempo**:
 
 | Degrau | Receptor | Correção | Ordem de grandeza |
 |---|---|---|---|
@@ -43,15 +43,22 @@ Uma antena fixa marca o ponto de medida. Os receptores se **revezam nela**, com 
 | 2 | EVK-X20P, multibanda | nenhuma | decimétrica |
 | 3 | EVK-X20P, multibanda | RTK da **base local** | centimétrica |
 
-Uma segunda antena, alguns metros ao lado, é a **base**. A baseline curta elimina o termo de 1 ppm e faz as duas antenas verem rigorosamente a mesma atmosfera — o que também neutraliza a cintilação ionosférica que seria fatal numa baseline longa. **Manaus fica sob a anomalia equatorial**, então isso não é detalhe: é a razão de a montagem ser essa.
+A terceira antena, alguns metros ao lado, é a **base**. A baseline curta elimina o termo de 1 ppm e faz as antenas verem rigorosamente a mesma atmosfera, o que também neutraliza a cintilação ionosférica que seria fatal numa baseline longa.
 
 **O laço que fecha o módulo:** a coordenada verdadeira do ponto de medida sai do próprio fix RTK e volta como `CONFIG_GNSS_SAMPLE_REFERENCE_LATITUDE/LONGITUDE` no firmware do nRF9151. A partir daí a placa do aluno não reporta uma posição — reporta **o próprio erro contra uma verdade medida em sala**. O laço fecha no build do lab 1, o do console legível; no build do lab 3 essa linha sujaria o fluxo de NMEA.
 
-**Ressalva que o material carrega:** os três degraus acontecem com minutos de diferença, não no mesmo instante. A comparação se sustenta porque a diferença entre metros e centímetros é enorme perto da deriva de geometria em poucos minutos — mas **não se afirma simultaneidade**.
+**Ressalva que o material carrega:** as antenas do nRF9151 e do rover não estão no mesmo ponto. Os degraus comparam **dispersão** (CEP de cada receptor contra a própria média), não a posição absoluta de um contra o outro.
 
 ### Bônus: a estação pública da UEA
 
 A estação **AMUA0**, na Universidade do Estado do Amazonas, é publicada no caster do IBGE e está a distância útil. Testar RTK contra ela é **bônus, não lab**: depende de cadastro gratuito no IBGE e de internet na sala, e nenhuma das duas coisas é pré-requisito do módulo. O caminho garantido é a base própria, que roda offline.
+
+## Hex de referência
+
+[`hex/`](hex/) tem um binário pronto de cada uma das cinco configurações do módulo (lab 1, as
+três variantes de TTFF do lab 2 e o NMEA limpo do lab 3), para gravar sem compilar com
+`nrfutil device program`. Todos são públicos: nenhum carrega credencial nem coordenada.
+`hex/build_all.py` regenera os cinco e confere o `.config` de cada um antes de copiar.
 
 ## Ferramentas
 

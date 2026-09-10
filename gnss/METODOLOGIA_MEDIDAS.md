@@ -143,25 +143,25 @@ min por variante.
 
 ## C — O X20P na mesma posição
 
-O X20P não roda firmware nosso: quem o dirige é o **u-center 2**. Mas as regras de
-comparabilidade são as mesmas, e há uma restrição física que muda o desenho do experimento.
+O X20P não roda firmware nosso: quem o dirige é o **u-center 2**. As regras de
+comparabilidade são as mesmas, e a montagem decide se os dois receptores gravam juntos.
 
-### A antena não pode ser compartilhada ao mesmo tempo
+### Cada receptor com a própria antena
 
-> **Nunca ligar a mesma antena nos dois receptores simultaneamente.** O SMA J2 da SMA-DK
-> entrega 3 V à antena ativa e o EVK da u-blox entrega 3,3 V; ligados juntos, um regulador
-> empurra corrente no outro. **Troca sempre com o receptor desenergizado.**
+> **Nunca ligar a mesma antena nos dois receptores.** O SMA J2 da SMA-DK entrega 3 V à
+> antena ativa e o EVK da u-blox entrega 3,3 V; ligados juntos, um regulador empurra corrente
+> no outro.
 
-Consequência para o método: **os dois receptores não podem ser medidos ao mesmo tempo**. Não
-existe captura simultânea. Então:
+Com **uma ANN-MB2 por receptor**, lado a lado, na mesma altura e cada uma sobre o próprio
+plano de terra de ø12 cm, os dois receptores gravam **ao mesmo tempo** e cada bloco do X20P
+tem um bloco do nRF9151 na mesma janela. Foi assim que a campanha da matriz e a de céu aberto
+foram feitas, e é o que elimina o horário como variável entre os receptores. As antenas não
+estão no mesmo ponto (~1,5 m entre elas): o que se compara é a **dispersão** de cada um, não
+a posição absoluta.
 
-> **Alterne em blocos curtos e anote a hora de cada bloco.** Um bloco longo de nRF9151
-> seguido de um bloco longo de X20P mistura a diferença entre receptores com a mudança do
-> céu — e já medimos que só o horário muda o CEP95 pela metade.
-
-Sugestão: blocos de 15 min, alternando `nRF9151 → X20P → nRF9151 → X20P`, com a troca de
-cabo feita com os dois desligados. Duas rodadas de cada dão base para separar receptor de
-horário.
+Se só houver uma antena multibanda, a alternativa é **alternar em blocos curtos** (15 min,
+`nRF9151 → X20P → nRF9151 → X20P`), com a troca de cabo feita com os dois desligados, e
+anotar a hora de cada bloco: só o horário já mudou o CEP95 pela metade nesta bancada.
 
 ### Dispersão do X20P
 
@@ -338,28 +338,27 @@ amostras de TTFF por variante, das quais 4 a 6 úteis depois de descartar as tr�
 | etapa | duração | precisa de gente? |
 |---|---|---|
 | Montagem, ficha da posição, foto | 15 min | sim |
-| Dispersão nRF9151 (900 s) | 15 min | não |
+| Dispersão nRF9151 e X20P, simultâneas (900 s) | 15 min | não |
 | TTFF nRF9151, 6 blocos de 20 min, duas rodadas invertidas | 120 min | não |
-| Troca de cabo para o X20P, desenergizado | 5 min | sim |
-| Dispersão X20P (900 s) | 15 min | parcial |
 | TTFF X20P | 40 min | parcial |
-| Alternância entre receptores, para controlar horário | 30 min | sim, nas trocas |
 | **NTRIP: Survey-In da base** (só se a base mudar de lugar) | 15 a 60 min | sim |
 | **NTRIP: cliente e caster no ar** | 10 min | sim |
 | **NTRIP: convergência, ~6 repetições** | 30 min | parcial |
 | **NTRIP: dispersão em fixo (900 s)** | 15 min | não |
 | Análise, figuras e ficha | 20 min | não |
 
-**Completa, com NTRIP e base nova: 5 h30 a 6 h30**, das quais cerca de 1 h30 exigem presença.
+**Completa, com NTRIP e base nova: 4 h40 a 5 h30**, das quais cerca de 1 h exige presença.
+Com uma antena por receptor, a dispersão dos dois sai da mesma janela de 15 min; o X20P só
+acrescenta o próprio TTFF.
 
 Versões mais curtas, e o que cada uma perde:
 
 | versão | tempo | o que perde |
 |---|---|---|
-| Completa com NTRIP | 5 h30 a 6 h30 | — |
-| Completa sem NTRIP | 4 h30 | fica sem o terceiro degrau |
-| Sem a segunda rodada de TTFF | 3 h | perde o controle de deriva do céu |
-| Só nRF9151 | 2 h30 | sem comparativo de receptor |
+| Completa com NTRIP | 4 h40 a 5 h30 | — |
+| Completa sem NTRIP | 3 h30 | fica sem o terceiro degrau |
+| Sem a segunda rodada de TTFF | 2 h30 | perde o controle de deriva do céu |
+| Só nRF9151 | 2 h50 | sem comparativo de receptor (o X20P custa só os 40 min de TTFF) |
 | **Mínima defensável** | **1 h15** | dispersão + uma rodada de TTFF das três assistências |
 
 A **mínima defensável** é a indicada para uma janela de oportunidade — um quarto de hotel com
