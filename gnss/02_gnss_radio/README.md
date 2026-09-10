@@ -80,13 +80,13 @@ gera a imagem segura `tfm`, que não muda entre as três: TF-M não sabe nada de
 | Grau | FLASH | % FLASH (960 KB) | RAM | % RAM (211608 B) |
 |---|---|---|---|---|
 | sem | 83528 B | 8,50% | 35708 B | 16,87% |
-| mínima | 107092 B | 10,89% | 36180 B | 17,10% |
+| mínima | 107092 B | 10,89% | 36188 B | 17,10% |
 | nuvem | 128108 B | 13,03% | 48764 B | 23,04% |
 
 Cada degrau custa FLASH: **+23564 B** entre sem e mínima (a lógica de assistência
 mínima, mais o *backend* de `SETTINGS`/`FCB`/flash que ela liga para gravar o
 almanaque), e mais **+21016 B** entre mínima e nuvem (o cliente CoAP da nRF Cloud,
-`MODEM_JWT`, `MODEM_INFO`, `DATE_TIME`). RAM sobe pouco entre sem e mínima (+472 B)
+`MODEM_JWT`, `MODEM_INFO`, `DATE_TIME`). RAM sobe pouco entre sem e mínima (+480 B)
 e mais entre mínima e nuvem (+12584 B) — o custo de manter o cliente de nuvem vivo é
 majoritariamente RAM, não FLASH adicional relevante. **Nenhuma das três muda o
 `CMakeLists.txt` nem o `src/`** — a diferença inteira nasce do Kconfig.
@@ -179,7 +179,7 @@ downloads agendados de dado de navegação — ver "A disciplina de agenda" a se
 
 FLASH e RAM desta variante ficam próximos da variante **mínima** da Parte A
 (106544 B / 10,84% de FLASH, 36060 B / 17,04% de RAM contra 107092 B / 10,89% e
-36180 B / 17,10%) — a diferença é só o modo (periódico em vez de TTFF) e o
+36188 B / 17,10%) — a diferença é só o modo (periódico em vez de TTFF) e o
 `GNSS_SAMPLE_LTE_ON_DEMAND`, que não puxa biblioteca nova, só muda a lógica de
 `gnss/01_gnss_basic/src/main.c` que liga e desliga o LTE.
 
