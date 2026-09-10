@@ -1,0 +1,25 @@
+[     0.5] *** Booting nRF Connect SDK v3.4.0-99553055607b ***
+[     0.5] *** Using Zephyr OS v4.4.0-bf801e4e3d19 ***
+[     0.5] [00:00:00.368,804] <inf> gnss_sample: Starting GNSS sample
+[     1.1] [00:00:00.712,982] <inf> gnss_sample: Deleting GNSS data
+[     1.1] [00:00:00.725,463] <inf> gnss_sample: Starting GNSS
+[    33.5] [00:00:33.050,567] <inf> gnss_sample: Time to fix: 32.1 s
+[    33.5] [00:00:33.056,335] <inf> gnss_sample: Sleeping for 120 s
+[   153.5] [00:02:32.959,594] <inf> gnss_sample: Deleting GNSS data
+[   153.5] [00:02:32.972,045] <inf> gnss_sample: Starting GNSS
+[   184.3] [00:03:04.051,361] <inf> gnss_sample: Time to fix: 31.0 s
+[   184.3] [00:03:04.057,159] <inf> gnss_sample: Sleeping for 120 s
+[   304.4] [00:05:03.960,388] <inf> gnss_sample: Deleting GNSS data
+[   304.4] [00:05:03.972,839] <inf> gnss_sample: Starting GNSS
+[   334.3] [00:05:34.047,821] <inf> gnss_sample: Time to fix: 30.0 s
+[   334.3] [00:05:34.053,619] <inf> gnss_sample: Sleeping for 120 s
+[   454.1] [00:07:33.956,817] <inf> gnss_sample: Deleting GNSS data
+[   454.1] [00:07:33.969,268] <inf> gnss_sample: Starting GNSS
+[   484.5] [00:08:04.049,835] <inf> gnss_sample: Time to fix: 30.0 s
+[   484.5] [00:08:04.055,603] <inf> gnss_sample: Sleeping for 120 s
+[   604.1] [00:10:03.958,831] <inf> gnss_sample: Deleting GNSS data
+[   604.1] [00:10:03.971,282] <inf> gnss_sample: Starting GNSS
+[   658.6] [00:10:58.050,109] <inf> gnss_sample: Time to fix: 54.0 s
+[   658.6] [00:10:58.055,877] <inf> gnss_sample: Sleeping for 120 s
+[   778.5] [00:12:57.959,106] <inf> gnss_sample: Deleting GNSS data
+[   778.5] [00:12:57.971,557] <inf> gnss_sample: Starting GNSS
