@@ -1,0 +1,5 @@
+/* Liga o no da NPU no devicetree (inofensivo na variante Neuton: sem
+ * CONFIG_NRF_AXON o driver nem e compilado) */
+&axon {
+	status = "okay";
+};

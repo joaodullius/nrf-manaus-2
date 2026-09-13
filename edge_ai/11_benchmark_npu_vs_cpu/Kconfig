@@ -1,0 +1,29 @@
+#
+# 11_benchmark_npu_vs_cpu — escolha do backend do modelo (curso nrf-manaus-2).
+# Mesmos nomes de simbolo do sample nrf_edgeai/classification da Nordic.
+#
+
+menu "Benchmark NPU vs CPU"
+
+choice NRF_EDGEAI_CLASSIFICATION_MODEL
+	prompt "Backend do modelo de classificacao"
+	default NRF_EDGEAI_CLASSIFICATION_MODEL_AXON if SOC_NRF54LM20B
+	default NRF_EDGEAI_CLASSIFICATION_MODEL_NEUTON
+
+config NRF_EDGEAI_CLASSIFICATION_MODEL_NEUTON
+	bool "Neuton (CPU)"
+	help
+	  A mesma solution gerada para rodar na CPU (rede em float).
+
+config NRF_EDGEAI_CLASSIFICATION_MODEL_AXON
+	bool "Axon (NPU)"
+	depends on SOC_NRF54LM20B
+	select NRF_AXON
+	help
+	  A mesma solution compilada para a NPU (rede int8 + command buffer).
+
+endchoice
+
+endmenu
+
+source "Kconfig.zephyr"

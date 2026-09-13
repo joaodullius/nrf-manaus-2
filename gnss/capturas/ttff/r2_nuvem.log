@@ -1,0 +1,95 @@
+[     0.5] *** Booting nRF Connect SDK v3.4.0-99553055607b ***
+[     0.5] *** Using Zephyr OS v4.4.0-bf801e4e3d19 ***
+[     0.5] [00:00:00.370,208] <inf> gnss_sample: Starting GNSS sample
+[     1.1] [00:00:00.630,371] <inf> gnss_sample: Connecting to LTE network
+[    28.3] +CEREG: 2,"C577","0AAEEA15",7
+[    44.5] +CSCON: 1
+[    51.3] +CSCON: 0
+[    61.2] +CSCON: 1
+[    61.7] +CEREG: 1,"C577","0AAEEA15",7,,,"00000011","00101000"
+[    61.7] [00:01:01.335,601] <inf> gnss_sample: %XTIME: "29","62909011633529","00"
+[    61.7] Connected to LTE network
+[    61.7] [00:01:01.345,184] <inf> gnss_sample: Waiting for current time
+[    61.7] [00:01:01.389,068] <inf> nrf_cloud_info: Device ID: 50423451-3737-4c3b-8065-1d21c0fe162b
+[    61.8] [00:01:01.398,071] <inf> nrf_cloud_info: IMEI:      359404235002384
+[    61.8] [00:01:01.520,965] <inf> nrf_cloud_info: UUID:      50423451-3737-4c3b-8065-1d21c0fe162b
+[    61.8] [00:01:01.536,285] <inf> nrf_cloud_info: Modem FW:  mfw_nrf91x1_2.0.4
+[    61.8] [00:01:01.543,121] <inf> nrf_cloud_info: Protocol:          CoAP
+[    61.8] [00:01:01.549,560] <inf> nrf_cloud_info: Download protocol: HTTPS
+[    61.8] [00:01:01.556,060] <inf> nrf_cloud_info: Sec tag:           16842753
+[    61.8] [00:01:01.562,835] <inf> nrf_cloud_info: CoAP JWT Sec tag:  16842753
+[    61.8] [00:01:01.569,641] <inf> nrf_cloud_info: Host name:         coap.nrfcloud.com
+[    61.8] [00:01:01.590,850] <inf> gnss_sample: Deleting GNSS data
+[    61.8] [00:01:01.609,252] <inf> gnss_sample: Assistance data needed: data_flags: 0x3f
+[    61.8] [00:01:01.616,882] <inf> gnss_sample: Assistance data needed: QZSS ephe: 0xffffffff, alm: 0xffffffff
+[    61.8] [00:01:01.626,464] <inf> gnss_sample: Assistance data needed: invalid ephe: 0x3ff, alm: 0x3ff
+[    64.4] [00:01:04.057,861] <inf> nrf_cloud_coap_transport: Request authorization with JWT
+[    64.9] [00:01:04.605,621] <inf> nrf_cloud_coap_transport: Authorization result_code: 2.01
+[    64.9] [00:01:04.613,800] <inf> nrf_cloud_coap_transport: Authorized
+[    64.9] [00:01:04.620,147] <inf> nrf_cloud_coap_transport: DTLS CID is active
+[    65.4] [00:01:05.247,650] <inf> gnss_sample: Requesting A-GNSS data: data_flags: 0x3f
+[    65.4] [00:01:05.255,279] <inf> gnss_sample: Requesting A-GNSS data: QZSS ephe: 0xffffffff, alm: 0xffffffff
+[    65.4] [00:01:05.264,862] <inf> gnss_sample: Requesting A-GNSS data: invalid ephe: 0x3ff, alm: 0x3ff
+[    66.0] [00:01:05.588,592] <inf> gnss_sample: Processing A-GNSS data
+[    66.0] [00:01:05.606,536] <inf> gnss_sample: A-GNSS data processed
+[    66.0] [00:01:05.612,487] <inf> gnss_sample: Starting GNSS
+[    97.5] +CSCON: 0
+[   128.4] [00:02:07.784,088] <inf> gnss_sample: Time to fix: 62.1 s
+[   128.4] [00:02:07.789,886] <inf> gnss_sample: Time GNSS was blocked by LTE: 31 s
+[   128.4] [00:02:07.797,027] <inf> gnss_sample: Sleeping for 120 s
+[   247.8] [00:04:07.693,115] <inf> gnss_sample: Deleting GNSS data
+[   247.8] [00:04:07.711,517] <inf> gnss_sample: Assistance data needed: data_flags: 0x3f
+[   248.4] [00:04:07.719,146] <inf> gnss_sample: Assistance data needed: QZSS ephe: 0xffffffff, alm: 0xffffffff
+[   248.4] [00:04:07.728,729] <inf> gnss_sample: Assistance data needed: invalid ephe: 0x3ff, alm: 0x3ff
+[   248.4] [00:04:07.746,002] <inf> gnss_sample: Requesting A-GNSS data: data_flags: 0x3f
+[   248.4] [00:04:07.753,631] <inf> gnss_sample: Requesting A-GNSS data: QZSS ephe: 0xffffffff, alm: 0xffffffff
+[   248.4] [00:04:07.763,214] <inf> gnss_sample: Requesting A-GNSS data: invalid ephe: 0x3ff, alm: 0x3ff
+[   248.9] +CSCON: 1
+[   251.0] [00:04:10.675,415] <inf> gnss_sample: Processing A-GNSS data
+[   251.0] [00:04:10.692,810] <inf> gnss_sample: A-GNSS data processed
+[   251.0] [00:04:10.698,791] <inf> gnss_sample: Starting GNSS
+[   281.9] +CSCON: 0
+[   483.2] [00:08:02.798,553] <inf> gnss_sample: Time to fix: 232.0 s
+[   483.2] [00:08:02.804,443] <inf> gnss_sample: Time GNSS was blocked by LTE: 31 s
+[   483.2] [00:08:02.811,584] <inf> gnss_sample: Sleeping for 120 s
+[   603.1] [00:10:02.707,580] <inf> gnss_sample: Deleting GNSS data
+[   603.1] [00:10:02.726,013] <inf> gnss_sample: Assistance data needed: data_flags: 0x3f
+[   603.1] [00:10:02.733,642] <inf> gnss_sample: Assistance data needed: QZSS ephe: 0xffffffff, alm: 0xffffffff
+[   603.1] [00:10:02.743,225] <inf> gnss_sample: Assistance data needed: invalid ephe: 0x3ff, alm: 0x3ff
+[   603.1] [00:10:02.766,265] <inf> gnss_sample: Requesting A-GNSS data: data_flags: 0x3f
+[   603.1] [00:10:02.773,925] <inf> gnss_sample: Requesting A-GNSS data: QZSS ephe: 0xffffffff, alm: 0xffffffff
+[   603.1] [00:10:02.783,508] <inf> gnss_sample: Requesting A-GNSS data: invalid ephe: 0x3ff, alm: 0x3ff
+[   604.2] +CSCON: 1
+[   604.7] [00:10:04.483,245] <inf> gnss_sample: Processing A-GNSS data
+[   604.7] [00:10:04.500,885] <inf> gnss_sample: A-GNSS data processed
+[   604.7] [00:10:04.506,866] <inf> gnss_sample: Starting GNSS
+[   634.6] +CSCON: 0
+[   668.2] [00:11:07.810,180] <inf> gnss_sample: Time to fix: 63.2 s
+[   668.2] [00:11:07.815,979] <inf> gnss_sample: Time GNSS was blocked by LTE: 29 s
+[   668.2] [00:11:07.823,120] <inf> gnss_sample: Sleeping for 120 s
+[   788.1] [00:13:07.719,177] <inf> gnss_sample: Deleting GNSS data
+[   788.1] [00:13:07.737,609] <inf> gnss_sample: Assistance data needed: data_flags: 0x3f
+[   788.1] [00:13:07.745,239] <inf> gnss_sample: Assistance data needed: QZSS ephe: 0xffffffff, alm: 0xffffffff
+[   788.1] [00:13:07.754,821] <inf> gnss_sample: Assistance data needed: invalid ephe: 0x3ff, alm: 0x3ff
+[   788.1] [00:13:07.777,862] <inf> gnss_sample: Requesting A-GNSS data: data_flags: 0x3f
+[   788.1] [00:13:07.785,491] <inf> gnss_sample: Requesting A-GNSS data: QZSS ephe: 0xffffffff, alm: 0xffffffff
+[   788.1] [00:13:07.795,074] <inf> gnss_sample: Requesting A-GNSS data: invalid ephe: 0x3ff, alm: 0x3ff
+[   789.1] +CSCON: 1
+[   789.7] [00:13:09.503,173] <inf> gnss_sample: Processing A-GNSS data
+[   789.7] [00:13:09.520,965] <inf> gnss_sample: A-GNSS data processed
+[   789.7] [00:13:09.526,916] <inf> gnss_sample: Starting GNSS
+[   819.5] +CSCON: 0
+[  1059.3] [00:17:38.826,995] <inf> gnss_sample: Time to fix: 269.2 s
+[  1059.3] [00:17:38.832,885] <inf> gnss_sample: Time GNSS was blocked by LTE: 29 s
+[  1059.3] [00:17:38.840,026] <inf> gnss_sample: Sleeping for 120 s
+[  1179.0] [00:19:38.736,022] <inf> gnss_sample: Deleting GNSS data
+[  1179.0] [00:19:38.754,455] <inf> gnss_sample: Assistance data needed: data_flags: 0x3f
+[  1179.0] [00:19:38.762,084] <inf> gnss_sample: Assistance data needed: QZSS ephe: 0xffffffff, alm: 0xffffffff
+[  1179.0] [00:19:38.771,667] <inf> gnss_sample: Assistance data needed: invalid ephe: 0x3ff, alm: 0x3ff
+[  1179.0] [00:19:38.788,970] <inf> gnss_sample: Requesting A-GNSS data: data_flags: 0x3f
+[  1179.0] [00:19:38.796,630] <inf> gnss_sample: Requesting A-GNSS data: QZSS ephe: 0xffffffff, alm: 0xffffffff
+[  1179.0] [00:19:38.806,213] <inf> gnss_sample: Requesting A-GNSS data: invalid ephe: 0x3ff, alm: 0x3ff
+[  1180.6] +CSCON: 1
+[  1181.1] [00:19:40.669,403] <inf> gnss_sample: Processing A-GNSS data
+[  1181.1] [00:19:40.687,866] <inf> gnss_sample: A-GNSS data processed
+[  1181.1] [00:19:40.693,847] <inf> gnss_sample: Starting GNSS

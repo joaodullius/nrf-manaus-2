@@ -1,0 +1,68 @@
+[     0.5] *** Booting nRF Connect SDK v3.4.0-99553055607b ***
+[     0.5] *** Using Zephyr OS v4.4.0-bf801e4e3d19 ***
+[     0.5] [00:00:00.384,887] <inf> gnss_sample: Starting GNSS sample
+[     1.0] [00:00:00.691,406] <inf> gnss_sample: Wrote factory almanac
+[     1.0] [00:00:00.744,995] <inf> gnss_sample: Deleting GNSS data
+[     1.0] [00:00:00.757,507] <inf> gnss_sample: Assistance data needed: data_flags: 0x3f
+[     1.0] [00:00:00.765,136] <inf> gnss_sample: Assistance data needed: GPS ephe: 0xffffffff, alm: 0xffffffff
+[     1.0] [00:00:00.774,627] <inf> gnss_sample: Connecting to LTE network
+[     3.1] +CEREG: 2,"C577","0AAEEA15",7
+[     3.7] +CSCON: 1
+[     4.7] +CEREG: 1,"C577","0AAEEA15",7,,,"00000011","00101000"
+[     4.7] [00:00:04.293,365] <inf> gnss_sample: Connected to LTE network
+[     5.8] [00:00:05.303,375] <inf> gnss_sample: Injected time (GPS day 17048, GPS time of day 42977)
+[     5.8] [00:00:05.313,568] <inf> gnss_sample: Injected location for MCC 724
+[     5.8] +CEREG: 0
+[     5.8] +CSCON: 0
+[     6.3] [00:00:05.649,597] <inf> gnss_sample: LTE disconnected
+[     6.3] [00:00:05.655,120] <inf> gnss_sample: Starting GNSS
+[   582.5] [00:09:42.163,177] <inf> gnss_sample: Time to fix: 576.4 s
+[   582.5] [00:09:42.169,036] <inf> gnss_sample: Sleeping for 120 s
+[   702.2] [00:11:42.072,143] <inf> gnss_sample: Deleting GNSS data
+[   702.2] [00:11:42.084,625] <inf> gnss_sample: Assistance data needed: data_flags: 0x3f
+[   702.2] [00:11:42.092,254] <inf> gnss_sample: Assistance data needed: GPS ephe: 0xffffffff, alm: 0xffffffff
+[   702.2] [00:11:42.101,715] <inf> gnss_sample: Connecting to LTE network
+[   703.8] +CEREG: 2,"C577","0AAEEA15",7
+[   703.8] +CSCON: 1
+[   704.3] +CEREG: 1,"C577","0AAEEA15",7,,,"00000011","00101000"
+[   704.3] [00:11:43.917,510] <inf> gnss_sample: Connected to LTE network
+[   705.4] [00:11:44.927,917] <inf> gnss_sample: Injected time (GPS day 17048, GPS time of day 43676)
+[   705.4] [00:11:44.937,835] <inf> gnss_sample: Injected location for MCC 724
+[   705.4] +CEREG: 0
+[   705.4] +CSCON: 0
+[   705.4] [00:11:45.251,464] <inf> gnss_sample: LTE disconnected
+[   705.4] [00:11:45.256,988] <inf> gnss_sample: Starting GNSS
+[   810.6] [00:13:30.211,242] <inf> gnss_sample: Time to fix: 104.8 s
+[   810.6] [00:13:30.217,102] <inf> gnss_sample: Sleeping for 120 s
+[   930.6] [00:15:30.120,239] <inf> gnss_sample: Deleting GNSS data
+[   930.6] [00:15:30.132,751] <inf> gnss_sample: Assistance data needed: data_flags: 0x3f
+[   930.6] [00:15:30.140,380] <inf> gnss_sample: Assistance data needed: GPS ephe: 0xffffffff, alm: 0xffffffff
+[   930.6] [00:15:30.149,871] <inf> gnss_sample: Connecting to LTE network
+[   931.6] +CEREG: 2,"C577","0AAEEA15",7
+[   931.6] +CSCON: 1
+[   932.1] +CEREG: 1,"C577","0AAEEA15",7,,,"00000011","00101000"
+[   932.1] [00:15:32.007,080] <inf> gnss_sample: Connected to LTE network
+[   933.2] [00:15:33.017,425] <inf> gnss_sample: Injected time (GPS day 17048, GPS time of day 43905)
+[   933.2] [00:15:33.027,526] <inf> gnss_sample: Injected location for MCC 724
+[   933.7] +CEREG: 0
+[   933.7] +CSCON: 0
+[   933.7] [00:15:33.340,972] <inf> gnss_sample: LTE disconnected
+[   933.7] [00:15:33.346,496] <inf> gnss_sample: Starting GNSS
+[   965.7] [00:16:05.212,860] <inf> gnss_sample: Time to fix: 31.8 s
+[   965.7] [00:16:05.218,658] <inf> gnss_sample: Sleeping for 120 s
+[  1085.3] [00:18:05.121,887] <inf> gnss_sample: Deleting GNSS data
+[  1085.3] [00:18:05.134,368] <inf> gnss_sample: Assistance data needed: data_flags: 0x3f
+[  1085.3] [00:18:05.141,998] <inf> gnss_sample: Assistance data needed: GPS ephe: 0xffffffff, alm: 0xffffffff
+[  1085.3] [00:18:05.151,428] <inf> gnss_sample: Connecting to LTE network
+[  1086.8] +CEREG: 2,"C577","0AAEEA15",7
+[  1086.8] +CSCON: 1
+[  1087.4] +CEREG: 1,"C577","0AAEEA15",7,,,"00000011","00101000"
+[  1087.4] [00:18:06.998,260] <inf> gnss_sample: Connected to LTE network
+[  1088.4] [00:18:08.007,781] <inf> gnss_sample: Injected time (GPS day 17048, GPS time of day 44061)
+[  1088.4] [00:18:08.018,066] <inf> gnss_sample: Injected location for MCC 724
+[  1088.4] +CEREG: 0
+[  1088.4] +CSCON: 0
+[  1088.4] [00:18:08.330,902] <inf> gnss_sample: LTE disconnected
+[  1088.4] [00:18:08.336,425] <inf> gnss_sample: Starting GNSS
+[  1115.7] [00:18:35.220,397] <inf> gnss_sample: Time to fix: 26.8 s
+[  1115.7] [00:18:35.226,196] <inf> gnss_sample: Sleeping for 120 s

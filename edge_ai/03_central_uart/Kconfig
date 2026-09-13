@@ -1,0 +1,59 @@
+#
+# Copyright (c) 2024 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+menu "Lab: filtro do tag (nrf-manaus-2)"
+
+config LAB_TAG_ADDR_VALUE
+	string "Endereco BLE do tag deste aluno"
+	default ""
+	help
+	  Endereco BLE do nRF54L15-TAG em que este central deve conectar, no
+	  formato "EF:12:34:56:78:9A".
+
+	  Sem isto o central conectaria em qualquer dispositivo anunciando a NUS —
+	  numa sala com varios tags, no do colega. O build falha se ficar vazio.
+
+	  Para descobrir o endereco do seu tag: compile o 01_gesture_recognition
+	  com o fragmento data_collection.conf, abra o RTT e leia a linha
+	  "Identity:" impressa no boot pelo proprio Zephyr.
+
+config LAB_TAG_ADDR_TYPE
+	string "Tipo do endereco BLE do tag"
+	default "random"
+	help
+	  "random" ou "public", conforme aparece entre parenteses na linha
+	  "Identity:" do log do tag. Os tags da Nordic usam endereco random
+	  estatico, entao o default costuma servir.
+
+
+config LAB_BRIDGE_BINARY
+	bool "Ponte binaria (para o 04_data_forwarder)"
+	default n
+	help
+	  Repassa os bytes da NUS para a UART sem tocar em nada.
+
+	  O sample foi escrito para texto: ele acrescenta LF quando o pedaco
+	  recebido termina em CR, o que e o desejado com o CSV do
+	  01_gesture_recognition em modo de coleta.
+
+	  O 04_data_forwarder manda CBOR dentro de COBS. Ali essa injecao corrompe
+	  o frame, o CRC do protocolo detecta, e o frame e descartado — a perda e
+	  silenciosa e dificil de diagnosticar.
+
+	  Ligue junto com o MTU maior: veja binary_bridge.conf.
+
+endmenu
+
+source "Kconfig.zephyr"
+
+config SETTINGS
+	default y
+
+config ZMS
+	default y if (SOC_FLASH_NRF_RRAM || SOC_FLASH_NRF_MRAM)
+
+config NVS
+	default y if !(SOC_FLASH_NRF_RRAM || SOC_FLASH_NRF_MRAM)

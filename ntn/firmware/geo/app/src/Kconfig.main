@@ -1,0 +1,59 @@
+#
+# Copyright (c) 2023 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+menu "App"
+
+config APP_SENSOR_SAMPLING_INTERVAL_SECONDS
+	int "Sensor sampling interval"
+	default 600
+	help
+	  Interval for triggering sensor data sampling and location search.
+	  In passthrough mode, this timer also triggers cloud shadow and FOTA status polling and data sending.
+	  This is the primary sampling interval for the application.
+
+config APP_CLOUD_SYNC_INTERVAL_SECONDS
+	int "Cloud synchronization interval"
+	default 3600
+	help
+	  Interval for cloud synchronization activities including polling and data sending.
+	  This timer triggers cloud shadow and FOTA status polling, and data sending from storage.
+	  The data sending only applies if the storage module is in buffer mode.
+	  This interval is typically longer than the sensor sampling interval.
+
+config APP_REQUEST_NETWORK_QUALITY
+	bool "Request network quality"
+	help
+	  Request network quality on triggers.
+
+config APP_WATCHDOG_TIMEOUT_SECONDS
+	int "Watchdog timeout"
+	default 180
+	help
+	  Timeout in seconds for the main module watchdog.
+	  The timeout given in this option covers both:
+	    * Waiting for an incoming message in zbus_sub_wait_msg().
+	    * Time spent processing the message, defined by
+	      CONFIG_APP_MSG_PROCESSING_TIMEOUT_SECONDS.
+	  Ensure that this value exceeds CONFIG_APP_MSG_PROCESSING_TIMEOUT_SECONDS.
+	  A small difference between the two can mean more frequent watchdog feeds, which increases
+	  power consumption.
+
+config APP_MSG_PROCESSING_TIMEOUT_SECONDS
+	int "Maximum message processing time"
+	default 120
+	help
+	  Maximum time allowed for processing a single message in the module's state machine.
+	  The value must be smaller than CONFIG_APP_WATCHDOG_TIMEOUT_SECONDS.
+
+config APP_NTN_MODE
+	bool "Enable NTN mode"
+	help
+	  Use Non-Terrestrial Network (NTN) for data transmission.
+
+module = APP
+module-str = APP
+source "subsys/logging/Kconfig.template.log_config"
+
+endmenu

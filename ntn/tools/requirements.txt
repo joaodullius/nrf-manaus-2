@@ -1,0 +1,8 @@
+skyfield>=1.49
+numpy
+matplotlib
+folium
+pyserial
+requests
+timezonefinder
+pyyaml

@@ -1,0 +1,60 @@
+/*
+ * Copyright (c) 2024 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+
+#include <thingy91x_wifi.dtsi>
+
+&bme680 {
+	status = "okay";
+};
+
+/ {
+	chosen {
+		nordic,modem-trace-uart = &uart1;
+		zephyr,wifi = &nordic_wlan0;
+	};
+};
+
+&uart1 {
+	status = "okay";
+	current-speed = <1000000>;
+};
+
+/* Switch to nrf7000 emulation so that scan-only mode is used. */
+&nrf70 {
+	compatible = "nordic,nrf7000-spi";
+};
+
+
+/ {
+	fstab {
+		compatible = "zephyr,fstab";
+		lfs1: lfs1 {
+			compatible = "zephyr,fstab,littlefs";
+			mount-point = "/att_storage";
+			partition = <&littlefs_storage>;  /* Reference PM partition */
+			automount;
+			read-size = <16>;
+			prog-size = <16>;
+			cache-size = <64>;
+			lookahead-size = <32>;
+			block-cycles = <512>;
+		};
+	};
+};
+
+&flash_ext {
+	/* Partitions will be overridden by PM but needed for DTS parsing */
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		littlefs_storage: partition@0 {
+			label = "littlefs_storage";
+			reg = <0x00000000 0x00100000>;
+		};
+	};
+};

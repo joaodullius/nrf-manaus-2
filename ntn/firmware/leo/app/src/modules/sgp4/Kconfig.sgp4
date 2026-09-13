@@ -1,0 +1,34 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+config APP_SGP4
+    bool "SGP4 Satellite Prediction Module"
+    default n
+    select DATE_TIME
+    help
+      Enable satellite prediction module using SGP4.
+
+# No "depends on APP_SGP4": NTN builds compile this module unconditionally
+# (see app/CMakeLists.txt) without setting APP_SGP4.
+config APP_SGP4_MIN_ELEVATION_DEG
+    int "Default minimum pass elevation in degrees"
+    default 50
+    range 0 90
+    help
+      Minimum satellite elevation above the horizon for a pass to be
+      considered usable by sat_data_calculate_next_pass(). Can still be
+      overridden at runtime via the att_ntn sgp4_trigger shell command.
+
+config APP_SGP4_PREDICTION_WINDOW_DAYS
+    int "Pass prediction search window in days"
+    default 1
+    range 1 10
+    help
+      How many days ahead sat_data_calculate_next_pass() searches for a
+      satellite pass. With high minimum elevations and few satellites the
+      gap between passes can span several days, so a larger window may be
+      needed. The scan runs in 10 second steps, so each extra day adds
+      8640 SGP4 propagations per satellite to the worst case.

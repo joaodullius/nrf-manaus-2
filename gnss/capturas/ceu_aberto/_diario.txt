@@ -1,0 +1,46 @@
+[18:34:08] ================================================================
+[18:34:08] CEU ABERTO: nRF9151 + X20P em 3 condicoes, alternadas
+[18:34:08] rover falando, qualidade inicial 1
+[18:34:08] === r1_A: autonomo, sem correcao
+[18:34:09]     correcao envelhecida em 1 s, qualidade 1
+[18:39:09]     r1_A concluido (qualidade final 2)
+[18:39:09] === r1_V: VRS Nordian
+[18:39:10]     largou o fixo anterior apos 1 s (qualidade 2)
+[18:39:12]     caster: HTTP/1.1 200 OK
+[18:46:10]     nao fixou em 421 s; grava assim mesmo, qualidade 5
+[18:51:10]     r1_V concluido (qualidade final 5)
+[18:51:10] === r1_L: RTK local, base a 1,42 m
+[18:51:10]     fonte VRS encerrada, 558558 bytes
+[18:51:11]     largou o fixo anterior apos 1 s (qualidade 5)
+[18:51:15]     RTK FIXO em 5 s
+[18:56:15]     r1_L concluido (qualidade final 4)
+[18:56:15] === r2_L: RTK local, base a 1,42 m
+[18:56:16]     fonte local encerrada, 150623 bytes
+[18:56:30]     largou o fixo anterior apos 15 s (qualidade 5)
+[18:56:34]     RTK FIXO em 19 s
+[19:01:34]     r2_L concluido (qualidade final 4)
+[19:01:34] === r2_A: autonomo, sem correcao
+[19:01:34]     fonte local encerrada, 170809 bytes
+[19:02:35]     correcao envelhecida em 61 s, qualidade 1
+[19:07:35]     r2_A concluido (qualidade final 1)
+[19:07:35] === r2_V: VRS Nordian
+[19:07:36]     largou o fixo anterior apos 1 s (qualidade 1)
+[19:07:39]     caster: HTTP/1.1 200 OK
+[19:10:52]     RTK FIXO em 197 s
+[19:15:52]     r2_V concluido (qualidade final 4)
+[19:15:52] === r3_V: VRS Nordian
+[19:15:53]     fonte VRS encerrada, 377975 bytes
+[19:15:57]     caster: HTTP/1.1 200 OK
+[19:16:15]     largou o fixo anterior apos 23 s (qualidade 5)
+[19:23:15]     nao fixou em 443 s; grava assim mesmo, qualidade 5
+[19:24:07]     fonte VRS encerrada, 347106 bytes
+[19:28:15]     r3_V concluido (qualidade final 2)
+[19:28:15] === r3_L: RTK local, base a 1,42 m
+[19:28:16]     largou o fixo anterior apos 1 s (qualidade 2)
+[19:35:17]     nao fixou em 421 s; grava assim mesmo, qualidade 5
+[19:40:17]     r3_L concluido (qualidade final 5)
+[19:40:17] === r3_A: autonomo, sem correcao
+[19:40:17]     fonte local encerrada, 369492 bytes
+[19:41:18]     correcao envelhecida em 61 s, qualidade 2
+[19:46:18]     r3_A concluido (qualidade final 2)
+[19:46:22] FIM

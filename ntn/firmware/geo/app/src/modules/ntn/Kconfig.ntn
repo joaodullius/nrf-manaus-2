@@ -1,0 +1,261 @@
+# Copyright (c) 2025 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+
+menuconfig APP_NTN
+	bool "NTN module"
+	default y if APP_NTN_MODE
+
+if APP_NTN
+
+config APP_NTN_THREAD_STACK_SIZE
+	int "NTN module thread stack size"
+	default 12292
+
+config APP_NTN_NATIVE_SEARCH
+	bool "Let the modem's periodic search do the retrying"
+	default n
+	help
+	  When the modem reports no suitable cell (CEREG 91) it enters limited
+	  service and searches periodically on its own, sleeping in between on
+	  the schedule from %PERIODICSEARCHCONF - every 10 to 40 seconds at
+	  first, every 5 minutes after a quarter of an hour, by default.
+
+	  With this on, the application stops its own connection timer at that
+	  point and stays in the NTN state, leaving the retrying to the modem:
+	  the radio never goes to functional mode 45, and a satellite coming
+	  into view is caught by the next periodic search. Button 1 requests a
+	  search immediately, for when the antenna has just been moved.
+
+	  With this off, the upstream behaviour applies: the connection timer
+	  ends the attempt, the radio is switched off, and the trigger timer
+	  retries later. Less radio time, but nothing is heard between
+	  attempts.
+
+	  The connection timer still guards the phase before the modem has
+	  reported anything at all.
+
+config APP_NTN_STAY_CONNECTED
+	bool "Hold the link open after a send"
+	default n
+	help
+	  After the network acknowledges a payload, keep the link up and wait
+	  for the next send instead of going to sleep.
+
+	  A tracker wants to sleep between reports. An operator with a send
+	  button wants the link to still be there when they press it. The link
+	  is released after APP_NTN_LINGER_SECONDS without a send.
+
+config APP_NTN_LINGER_SECONDS
+	int "Idle time on the link before it is released"
+	depends on APP_NTN_STAY_CONNECTED
+	default 300
+	range 10 3600
+	help
+	  How long the link is held after the last acknowledged send. Each send
+	  restarts the count. Releasing it is not a failure and does not light
+	  the error LED.
+
+config APP_NTN_AUTO_CONNECT
+	bool "Enter NTN mode automatically once a fix is available"
+	default y
+	help
+	  Move from the GNSS state straight into the NTN state as soon as a
+	  location fix is available.
+
+	  That is what an unattended tracker wants. An application where the
+	  operator decides when to connect wants the opposite: the fix should
+	  leave the state machine idle and waiting, so that a button press is
+	  what starts the attach. Disabling this parks the module in its idle
+	  state after the fix, where it touches no modem setting.
+
+config APP_NTN_TIMER_TIMEOUT_MINUTES
+	int "NTN timer timeout in minutes"
+	default 15
+	help
+	  Timer timeout for NTN mode before switching back to GNSS mode.
+
+config APP_NTN_GNSS_FIX_RETRY_SECONDS
+	int "GNSS fix search timeout"
+	default 180
+	range 0 65535
+	help
+	  How long the modem keeps searching for a fix before giving up and
+	  going to sleep, which lands the state machine in idle. Set to 0 to
+	  search until a fix is found.
+
+	  A warm fix takes seconds. A cold one, after the assistance data is
+	  gone, needs to download ephemeris from each satellite over the air
+	  and can take minutes under a poor sky.
+
+config APP_NTN_LOCATION_VALIDITY_TIME_SECONDS
+	int "NTN location validity time"
+	default 1800
+	help
+	  Location validity in seconds for NTN mode. The value depends on the use-case and what NTN constellation is used.
+	  For example, if the device is stationary and using GEO, the value can be longer.
+	  If the device is moving and using LEO, the value should be shorter.
+	  The distance the device is expected to travel must also be considered.
+
+config APP_NTN_BANDLOCK_ENABLE
+	bool "Enable NTN band lock"
+	help
+	  Enable band lock for NTN mode.
+
+if APP_NTN_BANDLOCK_ENABLE
+
+config APP_NTN_BANDLOCK
+	int "NTN band to lock to"
+	default 265
+	help
+	  Band number to lock NTN mode to.
+
+endif # APP_NTN_BANDLOCK_ENABLE
+
+config APP_NTN_CHANNEL_SELECT_ENABLE
+	bool "Enable NTN channel select"
+	help
+	  Enable channel selection for NTN mode.
+
+if APP_NTN_CHANNEL_SELECT_ENABLE
+
+config APP_NTN_CHANNEL_SELECT
+	int "NTN channel to select"
+	default 1
+	help
+	  Channel number to select in NTN mode.
+
+endif # APP_NTN_CHANNEL_SELECT_ENABLE
+
+config APP_NTN_SERVER_ADDR
+	string "NTN server address"
+	default ""
+	help
+	  IP address of the NTN server to connect to.
+
+config APP_NTN_SERVER_PORT
+	int "NTN server port"
+	default 0
+	help
+	  Port number of the NTN server to connect to.
+
+config APP_NTN_SEND_GNSS_DATA
+	bool "Send GNSS data to UDP endpoint"
+	help
+	  Send GNSS data to UDP endpoint.
+
+config APP_NTN_WATCHDOG_TIMEOUT_SECONDS
+	int "NTN module watchdog timeout in seconds"
+	default 300
+	help
+	  If the NTN module thread is stuck for this amount of time,
+	  the device will reset.
+
+config APP_NTN_MSG_PROCESSING_TIMEOUT_SECONDS
+	int "Maximum time in seconds allowed for processing a single message"
+	default 240
+	help
+	  Maximum time allowed for processing a single message in the NTN module.
+	  Must be less than APP_NTN_WATCHDOG_TIMEOUT_SECONDS.
+
+config APP_NTN_THINGY_ROCKS_ENDPOINT
+	bool "Use world.thingy.rocks endpoint"
+	help
+	  Use world.thingy.rocks endpoint.
+
+config APP_NTN_IRIDIUM
+	bool "Iridium network"
+	help
+	  Iridium network.
+
+config APP_NTN_NETWORK_CONNECTION_TIMEOUT_SECONDS
+	int "NTN cell search / connection timeout in seconds"
+	range 1 600
+	default 180
+	help
+	  Maximum time the application waits, after switching the modem to NTN
+	  active mode (CFUN=21), for the modem to acquire a satellite cell and
+	  register on the network. Once this timer expires the NTN attempt is
+	  aborted and the modem is taken to flight mode (CFUN=45).
+
+	  NTN cell search takes significantly longer than terrestrial NB-IoT
+	  because of long propagation delays, fewer search opportunities per
+	  DRX cycle and fewer cells. A value below ~60 seconds is rarely
+	  enough; 90-180 seconds is a reasonable range.
+
+config APP_NTN_REGISTERED_TIMEOUT_SECONDS
+	int "Extended NTN timeout once registered, in seconds"
+	range 1 600
+	default 120
+	help
+	  Once the modem reports CEREG registered (HOME or ROAMING) on the NTN
+	  network, the connection timeout is restarted with this value to give
+	  RRC connection setup and PDN activation time to complete before the
+	  application gives up and issues CFUN=45.
+
+config APP_NTN_SEND_ACK_TIMEOUT_SECONDS
+	int "Network send acknowledgement timeout in seconds"
+	range 1 600
+	default 60
+	help
+	  SO_SNDTIMEO value for payload sends using SO_SENDCB. After a payload
+	  is queued, the modem waits up to this long for network acknowledgement
+	  before the send callback reports failure and NTN_SEND_FAILED is
+	  published. Valid modem values are 1 to 600 seconds.
+
+config APP_NTN_STATUS_LEDS
+	bool "Status LEDs driven from the state machine"
+	help
+	  Report the state machine on the four discrete LEDs of the nRF9151 DK:
+	  progress on LED 1, error on LED 2, packet sent on LED 3, packet
+	  received on LED 4. The LEDs are called from the state entries, so the
+	  same code runs in the TN validation build and the NTN field build.
+
+config APP_NTN_STATUS_LEDS_TRACE
+	bool "Log every LED change"
+	depends on APP_NTN_STATUS_LEDS
+	help
+	  Log a line whenever a LED changes state, for example
+	  LED0: slow-blink -> fast-blink.
+
+	  The LEDs are the whole operator interface. Tracing them is what lets an
+	  unattended run be checked afterwards and what the host-side scenario
+	  driver asserts on. Meant for the validation build.
+
+config APP_NTN_LINK_TN
+	bool "Attach over terrestrial Cat-M1 instead of NTN"
+	help
+	  Validation build. Runs the same state machine, socket, payload and
+	  send acknowledgement path as the NTN build, but attaches over Cat-M1
+	  with an ordinary SIM, so everything but the satellite link can be
+	  exercised indoors.
+
+	  This only changes the link: the system mode, and the band lock the
+	  overlay disables. Which modem commands are available is a separate
+	  question, answered by APP_NTN_MODEM_FW_TN.
+
+config APP_NTN_MODEM_FW_TN
+	bool "Modem runs the terrestrial firmware, not mfw_nrf9151-ntn"
+	help
+	  Skip the modem steps that only exist on the NTN modem firmware:
+	  %CELLULARPRFL, the NTN location, %SIBCONFIG, functional mode 45 and
+	  SO_SENDCB. On the terrestrial firmware they either fail or, worse,
+	  are accepted and never act.
+
+	  Kept apart from APP_NTN_LINK_TN so that a kit carrying the NTN
+	  firmware can validate every one of those steps over a terrestrial
+	  link, with only the radio left for the field.
+
+config APP_NTN_BUTTON_INJECT_SHELL
+	bool "Shell command that injects a button press"
+	depends on SHELL
+	help
+	  Add att_ntn btn <1-4>, which publishes the same message a real press
+	  publishes. The buttons are physical, so without this nothing automated
+	  can operate the application. Meant for the validation build.
+
+module = APP_NTN
+module-str = NTN
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # APP_NTN

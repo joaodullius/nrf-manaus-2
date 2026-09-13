@@ -1,0 +1,141 @@
+# Copyright (c) 2025 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+
+menuconfig APP_STORAGE
+	bool "Storage module"
+	default y
+	select ZBUS
+	select ZBUS_RUNTIME_OBSERVERS
+
+if APP_STORAGE
+
+config APP_STORAGE_THREAD_STACK_SIZE
+	int "Storage module thread stack size"
+	default 2048 if APP_STORAGE_BACKEND_RAM
+	default 4000 if APP_STORAGE_BACKEND_LITTLEFS
+
+choice APP_STORAGE_BACKEND
+	prompt "Storage backend"
+	default APP_STORAGE_BACKEND_RAM
+	help
+	  Select the storage backend to use for storing data samples.
+
+config APP_STORAGE_BACKEND_RAM
+	bool "RAM storage backend"
+	help
+	  Store data in RAM. Data will be lost on power loss or reset.
+
+config APP_STORAGE_BACKEND_LITTLEFS
+	bool "LittleFS storage backend"
+	select FILE_SYSTEM
+	select FILE_SYSTEM_LITTLEFS
+	help
+	  Store data in LittleFS filesystem. Data will persist across power
+	  loss and resets, as long as the underlying flash storage is intact.
+
+endchoice # APP_STORAGE_BACKEND
+
+if APP_STORAGE_BACKEND_LITTLEFS
+
+# Setup PM partition size for LittleFS to 64KB by default
+config PM_PARTITION_SIZE_LITTLEFS
+	default 0x10000
+
+config PM_PARTITION_REGION_LITTLEFS_EXTERNAL
+	default y if PM_EXTERNAL_FLASH_ENABLED
+
+config APP_STORAGE_LITTLEFS_MAX_PATH_LEN
+	int "Maximum length of storage file names"
+	default 64
+	help
+	  Maximum length of file names used by the storage module
+	  in the LittleFS backend.
+
+endif # APP_STORAGE_BACKEND_LITTLEFS
+
+config APP_STORAGE_MAX_TYPES
+	int "Maximum number of data types"
+	default 3
+	help
+	  Maximum number of different data types that can be registered
+	  for storage. Each type requires memory for storing its records,
+	  so this value affects RAM usage. Total RAM usage will be:
+	  MAX_TYPES * MAX_RECORDS_PER_TYPE * RECORD_SIZE bytes.
+
+config APP_STORAGE_MAX_RECORDS_PER_TYPE
+	int "Maximum records per data type"
+	default 8 if APP_STORAGE_BACKEND_RAM
+	default 64 if APP_STORAGE_BACKEND_LITTLEFS
+	help
+	  Maximum number of records that can be stored for each data type.
+	  For example, if set to 32, you can store up to 32 battery samples,
+	  32 environmental samples, etc. This value affects RAM usage.
+	  Total RAM usage will be:
+	  MAX_TYPES * MAX_RECORDS_PER_TYPE * RECORD_SIZE bytes.
+
+config APP_STORAGE_BATCH_BUFFER_SIZE
+	int "Storage batch buffer size in bytes"
+	default 1024
+	help
+	  Size of the internal buffer for batch data access.
+	  This buffer is used to transfer data from the storage backend
+	  to consuming modules via the batch interface.
+
+	  Larger buffers can improve throughput but use more RAM.
+	  Must be large enough to hold at least one complete data item
+	  plus its header.
+
+config APP_STORAGE_SESSION_TIMEOUT_SECONDS
+	int "Storage batch session timeout"
+	default 60
+	help
+	  Timeout for an active storage batch session. If no activity
+	  occurs on the session for this duration, it will be automatically
+	  closed to prevent the storage module from getting stuck in a
+	  busy state.
+
+config APP_STORAGE_WATCHDOG_TIMEOUT_SECONDS
+	int "Storage module watchdog timeout in seconds"
+	default 60
+	help
+	  If the storage module thread is stuck for this amount of time,
+	  the device will reset.
+
+config APP_STORAGE_MSG_PROCESSING_TIMEOUT_SECONDS
+	int "Maximum time in seconds allowed for processing a single message"
+	default 5
+	help
+	  Maximum time allowed for processing a single message in the storage module.
+	  Must be less than APP_STORAGE_WATCHDOG_TIMEOUT_SECONDS.
+
+config APP_STORAGE_INITIAL_THRESHOLD
+	int "Initial trigger limit for buffered mode"
+	default 1
+	help
+	  Initial threshold limit for storage buffer.
+	  0 means that the buffer threshold is disabled, and the STORAGE_THRESHOLD_REACHED message
+	  will not be sent.
+	  Will be overridden by the value set by STORAGE_SET_THRESHOLD msg.
+
+config APP_STORAGE_SHELL
+	bool "Enable storage shell commands"
+	default y if SHELL
+	select FILE_SYSTEM_SHELL if APP_STORAGE_BACKEND_LITTLEFS
+	help
+	  Enable shell commands for interacting with the storage module.
+	  This allows you to manage stored data from the command line.
+
+config APP_STORAGE_SHELL_STATS
+	bool "Enable storage shell stats commands"
+	default y if APP_STORAGE_SHELL
+	help
+	  Enable shell commands for displaying statistics about the storage module.
+	  This includes information about stored records, types, and memory usage.
+	  Enabling this option will increase the code size of the storage module.
+
+module = APP_STORAGE
+module-str = Storage
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # APP_STORAGE

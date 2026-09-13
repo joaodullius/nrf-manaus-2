@@ -1,0 +1,180 @@
+/*
+ * Copyright (c) 2025 Nordic Semiconductor ASA
+ *
+ * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+ */
+#include <errno.h>
+#include <string.h>
+#include <ctype.h>
+#include <zcbor_encode.h>
+
+#include "cbor_helper.h"
+#include "device_shadow_types.h"
+#include "device_shadow_decode.h"
+#include "device_shadow_encode.h"
+
+#include <zephyr/logging/log.h>
+
+LOG_MODULE_REGISTER(cbor_helper, CONFIG_APP_LOG_LEVEL);
+
+int decode_shadow_parameters_from_cbor(const uint8_t *cbor, size_t len,
+				       struct config_params *config, uint32_t *command_type,
+				       uint32_t *command_id)
+{
+	int err;
+	struct shadow_object shadow = {0};
+	size_t decode_len = len;
+
+	if (!cbor || !config || !command_type || len == 0) {
+		LOG_ERR("Invalid input");
+		return -EINVAL;
+	}
+
+	err = cbor_decode_shadow_object(cbor, decode_len, &shadow, &decode_len);
+	if (err) {
+		LOG_ERR("cbor_decode_shadow_object, error: %d", err);
+		LOG_HEXDUMP_ERR(cbor, len, "Unexpected CBOR data");
+		return -EFAULT;
+	}
+
+	if (shadow.config_present) {
+		if (shadow.config.update_interval_present) {
+			config->update_interval = shadow.config.update_interval.update_interval;
+			LOG_DBG("Configuration: Decoded update_interval = %d seconds",
+				config->update_interval);
+		}
+
+		if (shadow.config.sample_interval_present) {
+			config->sample_interval = shadow.config.sample_interval.sample_interval;
+			LOG_DBG("Configuration: Decoded sample_interval = %d seconds",
+				config->sample_interval);
+		}
+
+		if (shadow.config.storage_threshold_present) {
+			config->storage_threshold =
+				shadow.config.storage_threshold.storage_threshold;
+			config->storage_threshold_valid = true;
+			LOG_DBG("Configuration: Decoded storage_threshold = %d",
+				config->storage_threshold);
+		}
+	}
+
+	if (shadow.command_present) {
+		*command_type = shadow.command.type;
+		*command_id = shadow.command.id;
+
+		LOG_DBG("Command parameter present: type=%u, id=%u", *command_type, *command_id);
+	}
+
+	return 0;
+}
+
+int decode_tle_from_shadow(const uint8_t *cbor, size_t len, struct tle_data *tle)
+{
+	int err;
+	struct shadow_object shadow = { 0 };
+	size_t decode_len = len;
+
+	if (!cbor || !tle || len == 0) {
+		LOG_ERR("Invalid input");
+		return -EINVAL;
+	}
+
+	err = cbor_decode_shadow_object(cbor, decode_len, &shadow, &decode_len);
+	if (err) {
+		LOG_ERR("cbor_decode_shadow_object, error: %d", err);
+		LOG_HEXDUMP_ERR(cbor, len, "Unexpected CBOR data");
+		return -EFAULT;
+	}
+
+	if (shadow.tle_present) {
+		/* Clean and copy name - remove any extra markers */
+		char *name_end = strstr((const char *)shadow.tle.name.value, "eline1");
+		if (name_end) {
+			size_t name_len = name_end - (const char *)shadow.tle.name.value;
+			strncpy(tle->name, (const char *)shadow.tle.name.value, name_len);
+			tle->name[name_len] = '\0';
+		} else {
+			strncpy(tle->name, (const char *)shadow.tle.name.value, sizeof(tle->name) - 1);
+			tle->name[sizeof(tle->name) - 1] = '\0';
+		}
+
+		/* Clean and copy line1 - remove any extra markers */
+		char *line1_end = strstr((const char *)shadow.tle.line1.value, "eline2");
+		if (line1_end) {
+			size_t line1_len = line1_end - (const char *)shadow.tle.line1.value;
+			strncpy(tle->line1, (const char *)shadow.tle.line1.value, line1_len);
+			tle->line1[line1_len] = '\0';
+		} else {
+			strncpy(tle->line1, (const char *)shadow.tle.line1.value, sizeof(tle->line1) - 1);
+			tle->line1[sizeof(tle->line1) - 1] = '\0';
+		}
+
+		/* Clean and copy line2 - remove any garbage at the end */
+		size_t line2_len = strlen((const char *)shadow.tle.line2.value);
+		while (line2_len > 0 && !isprint(((const char *)shadow.tle.line2.value)[line2_len - 1])) {
+			line2_len--;
+		}
+		strncpy(tle->line2, (const char *)shadow.tle.line2.value, line2_len);
+		tle->line2[line2_len] = '\0';
+
+		LOG_DBG("Decoded TLE data:");
+		LOG_DBG("Name:  %s", tle->name);
+		LOG_DBG("Line1: %s", tle->line1);
+		LOG_DBG("Line2: %s", tle->line2);
+		return 0;
+	}
+
+	LOG_DBG("No TLE data present in shadow");
+	return -ENODATA;
+}
+
+int encode_shadow_parameters_to_cbor(const struct config_params *config, uint32_t command_type,
+				     uint32_t command_id, uint8_t *buffer, size_t buffer_size,
+				     size_t *encoded_len)
+{
+	int err;
+	struct shadow_object shadow = {0};
+	size_t encode_len;
+
+	if (!config || !buffer || !encoded_len || buffer_size == 0) {
+		return -EINVAL;
+	}
+
+	/* Build shadow object with config section */
+	if (config->update_interval > 0) {
+		shadow.config_present = true;
+		shadow.config.update_interval_present = true;
+		shadow.config.update_interval.update_interval = config->update_interval;
+	}
+
+	if (config->sample_interval > 0) {
+		shadow.config_present = true;
+		shadow.config.sample_interval_present = true;
+		shadow.config.sample_interval.sample_interval = config->sample_interval;
+	}
+
+	if (config->storage_threshold_valid) {
+		shadow.config_present = true;
+		shadow.config.storage_threshold_present = true;
+		shadow.config.storage_threshold.storage_threshold = config->storage_threshold;
+	}
+
+	/* Build shadow object with command section */
+	if (command_type > 0) {
+		shadow.command_present = true;
+		shadow.command.type = command_type;
+		shadow.command.id = command_id;
+	}
+
+	/* Encode the shadow object to CBOR */
+	err = cbor_encode_shadow_object(buffer, buffer_size, &shadow, &encode_len);
+	if (err) {
+		LOG_ERR("cbor_encode_shadow_object, error: %d", err);
+		return (err == ZCBOR_ERR_NO_PAYLOAD) ? -ENOMEM : -EFAULT;
+	}
+
+	*encoded_len = encode_len;
+
+	return 0;
+}

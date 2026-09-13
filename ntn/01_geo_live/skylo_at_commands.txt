@@ -1,0 +1,148 @@
+Sequencia Skylo GEO NTN, sintaxe AT pura, Serial Modem add-on v1.0.0
+(nRF9151-SMA-DK, mfw_nrf9151-ntn_1.0.1). <LAT>, <LON>, <ALT>, <APN>,
+<HOST>, <PORT> e <HANDLE> sao preenchidos em tempo de execucao pelo
+skylo_test.py; aqui ficam como placeholders para leitura.
+
+=== Bloco 1: identificacao e modo ===
+
+AT#XSMVER
+; #XSMVER: 1,0,0
+; OK
+
+AT+CGMM
+; nRF9151
+; OK
+
+AT%HWVERSION
+; %HWVERSION: nRF9151-LACA-AB0
+; OK
+
+AT+CGMR
+; mfw_nrf9151-ntn_1.0.1
+; OK
+
+AT+CFUN=4
+; OK
+; (modo aviao antes de configurar; nada de RF ate a fase 3)
+
+AT%XSYSTEMMODE=0,0,0,0,1
+; OK
+; (LTE-M=0, NB-IoT=0, GNSS=0, mode_preference=0, NTN=1)
+
+AT%XBANDLOCK=2,,"255,256"
+; OK
+; (banda 255 = L-band, 256 = S-band; nunca a sintaxe antiga do guia Skylo)
+
+AT%XBANDLOCK?
+; %XBANDLOCK: 2,,"255,256"
+; OK
+
+=== Bloco 2: posicao ===
+
+AT%LOCATION=2,"<LAT>","<LON>","<ALT>",0,0
+; OK
+; (posicao do kit, validade permanente; sem coordenada padrao no script)
+
+AT%LOCATION=1
+; OK
+; (assina pedidos de posicao do modem)
+
+AT+CGDCONT=0,"ip","<APN>"
+; OK
+; (APN "em" da SIM Skylo eminify; ordem real do build_config_commands:
+;  depois da posicao, nao antes)
+
+=== Bloco 3: URCs e ativacao ===
+
+AT%CESQ=1
+; OK
+
+AT%MDMEV=2
+; OK
+
+AT+CEER
+; +CEER: 0
+; OK
+
+AT+CEREG=5
+; OK
+; (URC de registro estendida, com TAC/Cell ID/AcT)
+
+AT+CGEREP=1
+; OK
+
+AT+CIND=1,1,1
+; OK
+
+AT+CNEC=24
+; OK
+
+AT+CSCON=3
+; OK
+
+AT+CFUN=1
+; OK
+; (liga o RF; a partir daqui chegam as URCs abaixo, nesta ordem)
+;
+; +CEREG: 2                              (buscando/anexando)
+; +CSCON: 1                              (conexao de sinalizacao ativa)
+; +CEREG: 5,"<TAC>","<CI>",14            (registrado, AcT 14 = NTN NB-IoT)
+;
+; Sem satelite a vista, "no suitable cell" (+CEREG: 4 ou 91) aparece em
+; ate ~30 s e o modem tenta de novo a cada 2 s.
+
+AT%SIBREQ=32
+; OK
+; %SIBREQ: 32,"<CELLID>",...      (se o SIB32 for transmitido)
+; %SIBREQ: 0,<status>             (0 = concluido, 1 = celula perdida, 2 = abortado)
+; (pedido avulso do SIB32, so com o modem ativado -- antes do CFUN=1 responde
+;  +CME ERROR: 517. Nunca AT%SIBCONFIG=32,0, que torna o SIB32 obrigatorio
+;  para acampar e pode travar o attach numa celula GEO)
+
+AT+COPS?
+; +COPS: 0,0,"<OPERADORA>",14
+; OK
+; (operadora e AcT; 14 confirma NTN NB-IoT)
+
+AT%XMONITOR
+; %XMONITOR: 1,"<OPERADORA>","<OPERADORA>","<PLMN>","<TAC>",14,<BAND>,"<CELLID>",<PCI>,<EARFCN>,<RSRP>,<SNR>
+; OK
+; (campos na ordem do modem: status,nome_completo,nome_curto,plmn,tac,AcT,
+;  banda,cell_id,phys_cell_id,EARFCN,rsrp,snr -- PCI vem antes do EARFCN)
+
+=== Bloco 4: dado ===
+
+AT#XSOCKET=1,2,0
+; #XSOCKET: <HANDLE>,2,17
+; OK
+; (socket UDP, familia IPv4, protocolo 17)
+
+AT#XCONNECT=<HANDLE>,"<HOST>",<PORT>
+; #XCONNECT: <HANDLE>,1
+; OK
+; (host/porta do udp_server.py do instrutor)
+
+AT#XSEND=<HANDLE>,0,8192,"Hello Skylo NTN #1"
+; #XSEND: <HANDLE>,1,18
+; OK
+;
+; #XSENDNTF: <HANDLE>,0,18               (URC, quando a rede confirma)
+
+AT#XRECVFROM=<HANDLE>,0,0,10
+; #XRECVFROM: <HANDLE>,0,<SIZE>,"<HOST>",<PORT>
+; <payload recebido>
+; OK
+; (timeout de 10 s; ERROR se nao houver dado no intervalo)
+
+=== Bloco 5: encerramento ===
+
+AT#XCLOSE=<HANDLE>
+; OK
+
+AT+CFUN=4
+; OK
+; (desliga o RF; encerramento controlado, nunca AT+CFUN=45)
+
+AT+CFUN=0
+; OK
+; (desliga o modem por completo)

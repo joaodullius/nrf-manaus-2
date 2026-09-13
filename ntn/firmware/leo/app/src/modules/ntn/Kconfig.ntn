@@ -1,0 +1,296 @@
+# Copyright (c) 2025 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+
+menuconfig APP_NTN
+	bool "NTN"
+	default y if APP_NTN_MODE
+
+if APP_NTN
+
+config APP_NTN_THREAD_STACK_SIZE
+	int "NTN module thread stack size"
+	default 16384
+
+
+config APP_NTN_LOCATION_VALIDITY_TIME_SECONDS
+	int "NTN location validity time"
+	default 0
+	help
+	  Location validity in seconds for NTN mode. The value depends on the use-case and what NTN constellation is used.
+	  For example, if the device is stationary and using GEO, the value can be longer.
+	  If the device is moving and using LEO, the value should be shorter.
+	  The distance the device is expected to travel must also be considered.
+	  Default is set to 0 for infinite validity.
+
+config APP_NTN_BANDLOCK_ENABLE
+	bool "Enable NTN band lock"
+	help
+	  Enable band lock for NTN mode.
+
+if APP_NTN_BANDLOCK_ENABLE
+
+config APP_NTN_BANDLOCK
+	int "NTN band to lock to"
+	default 265
+	help
+	  Band number to lock NTN mode to.
+
+endif # APP_NTN_BANDLOCK_ENABLE
+
+config APP_NTN_CHANNEL_SELECT_ENABLE
+	bool "Enable NTN channel select"
+	help
+	  Enable channel selection for NTN mode.
+
+if APP_NTN_CHANNEL_SELECT_ENABLE
+
+config APP_NTN_CHANNEL_SELECT
+	int "NTN channel to select"
+	default 1
+	help
+	  Channel number to select in NTN mode.
+
+endif # APP_NTN_CHANNEL_SELECT_ENABLE
+
+config APP_NTN_SERVER_ADDR
+	string "NTN server address"
+	default ""
+	help
+	  IP address of the NTN server to connect to.
+
+config APP_NTN_SERVER_PORT
+	int "NTN server port"
+	default 0
+	help
+	  Port number of the NTN server to connect to.
+
+config APP_NTN_LOCAL_PORT
+	int "NTN local UDP port"
+	default APP_NTN_SERVER_PORT
+	range 0 65535
+	help
+	  Local UDP port to bind the NTN socket to before connecting.
+
+	  The socket is opened at the start of every NTN pass and closed when the
+	  pass ends. Without an explicit bind, the modem assigns a new ephemeral
+	  port each time, so the mobile-terminated data that the network stores
+	  and forwards to the previous pass port arrives at a port that no longer
+	  exists. The modem then answers with ICMP port unreachable over the
+	  satellite link and the application never sees the downlink.
+
+	  Defaults to APP_NTN_SERVER_PORT, which keeps both ends of the exchange
+	  on the same port number and stays clear of the ephemeral range the
+	  modem allocates from. The server replies to the source port of the
+	  datagram, so any fixed port works; matching the server port is a
+	  convention, not a requirement.
+
+	  Set to 0 to leave the socket unbound and keep the ephemeral port
+	  behaviour.
+
+config APP_NTN_LEO
+	bool "Enable LEO NTN"
+	help
+	  Enable LEO NTN.
+
+if APP_NTN_LEO
+
+config APP_NTN_TLE_FROM_KCONFIG
+	bool "Provide TLE via Kconfig"
+	help
+	  Pre-provision TLE data in Kconfig instead of supplying it at runtime.
+
+if APP_NTN_TLE_FROM_KCONFIG
+
+config APP_NTN_TLE_NAME
+	string "TLE satellite name"
+	default "SIOT1"
+	help
+	  Satellite name used together with the pre-provisioned TLE.
+
+config APP_NTN_TLE_LINE1
+	string "TLE line 1"
+	default "1 12345U 24001A   26077.50000000  .00000000  00000-0  00000-0 0  9991"
+	help
+	  First line of the TLE set.
+
+config APP_NTN_TLE_LINE2
+	string "TLE line 2"
+	default "2 12345  86.4000 180.0000 0001000   0.0000 180.0000 14.20000000    01"
+	help
+	  Second line of the TLE set.
+
+endif # APP_NTN_TLE_FROM_KCONFIG
+
+config APP_NTN_LEO_TIME_OF_PASS
+	string "Time of pass of LEO satellite (UTC)"
+	default "2025-09-29-10:20:00"
+	help
+	  Pre-provision ATT with time of pass in UTC using format: YYYY-MM-DD HH:mm:ss
+	  Example: 2025-09-29 12:00:00 for September 29, 2025 12:00:00 UTC
+
+endif # APP_NTN_LEO
+
+config APP_NTN_THINGY_ROCKS_ENDPOINT
+	bool "Use world.thingy.rocks endpoint"
+	default y
+	help
+	  Use world.thingy.rocks endpoint.
+
+config APP_NTN_TRIGGER_ON_BOOT
+	bool "Run GNSS + SGP4 automatically at boot"
+	default n
+	help
+	  Schedule a GNSS fix shortly after boot. Since run_sgp4_after_gnss
+	  defaults to true, the fix chains into SGP4, which predicts the next
+	  pass from the provisioned TLE/SIB32 and arms the pass timers.
+
+	  Also re-arms the GNSS timer whenever the module enters IDLE with no
+	  pass scheduled, so a failed attempt (GNSS timeout, no valid clock,
+	  no pass found) retries instead of leaving the device stuck.
+
+	  Without this, GNSS only runs from a timer armed by a previous
+	  successful prediction, or manually via `att_ntn gnss_trigger`.
+
+if APP_NTN_TRIGGER_ON_BOOT
+
+config APP_NTN_TRIGGER_ON_BOOT_DELAY_SECONDS
+	int "Delay before the boot GNSS fix"
+	range 0 3600
+	default 10
+	help
+	  Grace period after module init before the first GNSS fix starts.
+
+config APP_NTN_RETRY_INTERVAL_SECONDS
+	int "Retry interval when no pass is scheduled"
+	range 60 86400
+	default 900
+	help
+	  When the module enters IDLE and no pass is scheduled, retry the
+	  GNSS + SGP4 cycle after this many seconds.
+
+endif # APP_NTN_TRIGGER_ON_BOOT
+
+config APP_NTN_TIMER_NTN_VALUE_SECONDS
+	int "Default peak-time offset for NTN activation"
+	default 20
+	help
+	  Default offset in seconds between the predicted pass peak time and when
+	  the NTN activation timer should fire. A runtime override can replace this
+	  value through the `att_ntn set_peak_offset` shell command.
+
+config APP_NTN_NETWORK_CONNECTION_TIMEOUT_SECONDS
+	int "NTN cell search / connection timeout in seconds"
+	range 1 600
+	default 180
+	help
+	  Maximum time the application waits, after switching the modem to NTN
+	  active mode (CFUN=21), for the modem to acquire a satellite cell and
+	  register on the network. Once this timer expires the NTN attempt is
+	  aborted and the modem is taken to flight mode (CFUN=45).
+
+	  NTN cell search takes significantly longer than terrestrial NB-IoT
+	  because of long propagation delays, fewer search opportunities per
+	  DRX cycle and fewer cells. A value below ~60 seconds is rarely
+	  enough; 90-180 seconds is a reasonable range.
+
+config APP_NTN_REGISTERED_TIMEOUT_SECONDS
+	int "Extended NTN timeout once registered, in seconds"
+	range 1 600
+	default 120
+	help
+	  Once the modem reports CEREG registered (HOME or ROAMING) on the NTN
+	  network, the connection timeout is restarted with this value to give
+	  RRC connection setup and PDN activation time to complete before the
+	  application gives up and issues CFUN=45.
+
+config APP_NTN_SEND_ACK_TIMEOUT_SECONDS
+	int "Network send acknowledgement timeout in seconds"
+	range 1 600
+	default 60
+	help
+	  SO_SNDTIMEO value for payload sends using SO_SENDCB. After a payload
+	  is queued, the modem waits up to this long for network acknowledgement
+	  before the send callback reports failure and NTN_SEND_FAILED is
+	  published. Valid modem values are 1 to 600 seconds.
+
+config APP_NTN_ABORT_ON_NOT_REGISTERED
+	bool "Abort NTN attempt immediately on CEREG=0"
+	default n
+	help
+	  When enabled, a CEREG=0 (NOT_REGISTERED) notification while in the
+	  NTN state immediately aborts the connection attempt and switches the
+	  modem to flight mode (CFUN=45).
+
+	  By default this is disabled because the modem may transiently report
+	  NOT_REGISTERED during normal NTN cell acquisition. Relying on the
+	  connection timeout (APP_NTN_NETWORK_CONNECTION_TIMEOUT_SECONDS) gives
+	  the search the time it actually needs.
+
+config APP_NTN_WATCHDOG_TIMEOUT_SECONDS
+	int "NTN module watchdog timeout in seconds"
+	default 300
+	help
+	  If the NTN module thread is stuck for this amount of time,
+	  the device will reset.
+
+config APP_NTN_MSG_PROCESSING_TIMEOUT_SECONDS
+	int "Maximum time in seconds allowed for processing a single message"
+	default 240
+	help
+	  Maximum time allowed for processing a single message in the NTN module.
+	  Must be less than APP_NTN_WATCHDOG_TIMEOUT_SECONDS.
+
+config APP_NTN_SEND_1200_BYTES
+	bool "Send 1200 bytes"
+	default n
+	help
+	  Send big amount of data.
+
+config APP_NTN_DEFAULT_LATITUDE_1000000
+	int "Default latitude for fallback location (multiplied by 1000000)"
+	default 63421007
+	help
+	  Default latitude value used when GNSS fix is not available.
+	  The value is multiplied by 1000000 to handle decimal places.
+	  For example, 63.421007 is represented as 63421007.
+
+config APP_NTN_DEFAULT_LONGITUDE_1000000
+	int "Default longitude for fallback location (multiplied by 1000000)"
+	default 10436379
+	help
+	  Default longitude value used when GNSS fix is not available.
+	  The value is multiplied by 1000000 to handle decimal places.
+	  For example, 10.436379 is represented as 10436379.
+
+config APP_NTN_DEFAULT_ALTITUDE_1000
+	int "Default altitude for fallback location (multiplied by 1000)"
+	default 130798
+	help
+	  Default altitude value (in meters) used when GNSS fix is not available.
+	  The value is multiplied by 1000 to handle decimal places.
+	  For example, 130.798 is represented as 130798.
+
+config APP_NTN_STATUS_LEDS
+	bool "Drive board LEDs from the NTN state machine"
+	select GPIO
+	help
+	  Show the NTN cycle on the DK LEDs (devicetree aliases led0..led3):
+	  led0 blinks while GNSS is searching and goes solid on fix; led1
+	  blinks during the pass window, blinks fast once registered/RRC
+	  connected and latches solid after the UDP payload was sent; led2
+	  is solid while a pass is scheduled and blinks slowly when the
+	  prediction found no pass; led3 goes solid on fatal error.
+
+config APP_NTN_USB_KEEPALIVE_ENABLE
+	bool "Enable USB keepalive"
+	help
+	  Enable USB keepalive feature. This is needed for Windows 11 setup to keep
+	  the USB connection alive. Not needed for other operating systems.
+
+
+module = APP_NTN
+module-str = NTN
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # APP_NTN

@@ -1,0 +1,85 @@
+#
+# Copyright (c) 2026 Nordic Semiconductor ASA
+#
+# SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
+#
+
+# ALTERADO PELO CURSO (nrf-manaus-2): menu abaixo acrescentado. Mesmos simbolos do
+# edge_ai/03_central_uart, para o aluno reaproveitar o meu_tag.conf de la.
+menu "Lab: filtro do tag (nrf-manaus-2)"
+
+config LAB_TAG_ADDR_VALUE
+	string "Endereco BLE do tag deste aluno"
+	default ""
+	help
+	  Endereco BLE do nRF54L15-TAG em que este initiator deve conectar, no
+	  formato "EF:12:34:56:78:9A".
+
+	  Sem isto o initiator conectaria em qualquer dispositivo anunciando o
+	  Ranging Service — numa sala com varios tags, no do colega. O build
+	  falha se ficar vazio.
+
+	  E o mesmo endereco usado no edge_ai/03_central_uart: o endereco estatico
+	  vem do proprio chip e nao muda com o firmware. Copie o meu_tag.conf de la.
+
+config LAB_TAG_ADDR_TYPE
+	string "Tipo do endereco BLE do tag"
+	default "random"
+	help
+	  "random" ou "public", conforme aparece entre parenteses na linha
+	  "Identity:" do log do tag. Os tags da Nordic usam endereco random
+	  estatico, entao o default costuma servir.
+
+config LAB_PROCEDURE_INTERVAL
+	int "Intervalo entre procedures de CS (em intervalos de conexao; 0 = valor do sample)"
+	default 0
+	range 0 255
+	help
+	  Quantos intervalos de conexao ACL (20 ms neste sample) separam dois
+	  procedures de Channel Sounding. 0 mantem a escolha do sample da Nordic:
+	  5 com ranging data em tempo real, 10 caso contrario (100 ou 200 ms).
+
+	  Seis estacoes medindo ao mesmo tempo na mesma sala nao e uma condicao
+	  que a Nordic documenta. Se as medidas degradarem, escalone: estacao n
+	  (0 a 5) usa 50 + n*12 (1000 a 2200 ms), passado por fragmento ou
+	  -DCONFIG_LAB_PROCEDURE_INTERVAL=<n>.
+
+endmenu
+
+menu "Channel Sounding RAS Initiator sample"
+
+choice SAMPLE_RAS_INITIATOR_STEP_MODE
+	prompt "Channel Sounding Step Modes selection"
+	default SAMPLE_RAS_INITIATOR_STEP_MODE_2_SUB_MODE_1
+
+config SAMPLE_RAS_INITIATOR_STEP_MODE_2_SUB_MODE_1
+	bool "Main: 2, Sub: 1."
+	help
+	  This option enables CS with main mode 2 and submode 1.
+	  Mode 2 steps are used for PBR and mode 1 steps are used for RTT.
+
+config SAMPLE_RAS_INITIATOR_STEP_MODE_1
+	bool "Main: 1, Sub: unused."
+	help
+	  This option enables CS with main mode 1 and submode unused.
+	  Mode 1 steps are used for RTT.
+
+config SAMPLE_RAS_INITIATOR_STEP_MODE_2
+	bool "Main: 2, Sub: unused."
+	help
+	  This option enables CS with main mode 2 and submode unused.
+	  Mode 2 steps are used for PBR.
+
+config SAMPLE_RAS_INITIATOR_STEP_MODE_3
+	bool "Main: 3, Sub: unused."
+	select BT_RAS_MODE_3_SUPPORTED
+	select BT_CTLR_SDC_CS_STEP_MODE3
+	help
+	  This option enables CS with main mode 3 and submode unused.
+	  Mode 3 steps are used for PBR and RTT.
+
+endchoice
+
+endmenu
+
+source "Kconfig.zephyr"
