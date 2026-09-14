@@ -1,0 +1,1 @@
+-DEXTRA_ZEPHYR_MODULES=C:/ncs/sdk-edge-ai/edge-ai
