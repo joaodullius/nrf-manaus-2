@@ -1,0 +1,35 @@
+[Recording]
+label       : idle
+session_tag : loop1-uart
+data_rows   : 4104
+
+[Host]
+written_utc : 2026-09-14T15:15:33.272437Z
+os          : Windows-11-10.0.26200-SP0
+hostname    : JD-Note
+python      : 3.12.10
+tool        : tools/loop1_para_host.py
+
+[Transport]
+transport   : UART / serial (03_central_uart na nRF54L15-DK, ponte BLE NUS -> serial)
+protocol    : texto '<id> ax,ay,az,gx,gy,gz'
+
+[Origem]
+arquivo        : ../03_central_uart/dataset_referencia/bruto/idle_2026-09-01_10-28-46.csv
+firmware       : 01_gesture_recognition + data_collection.conf (CONFIG_DATA_COLLECTION_MODE)
+unidades       : int16 mili -> float micro (x1000)
+fundo_escala   : +-4 g / +-1000 dps (igual ao 05)
+device_time_ms : sintetico, 10 ms por linha (nao gravado no 03)
+
+[Device session_info]
+device_reported_name : nRF54L15 TAG (01_gesture_recognition)
+sampling_rate_hz     : 100
+channel_count        : 6
+channels             : ax, ay, az, gx, gy, gz
+
+[Channels]
+count : 6
+names : ax, ay, az, gx, gy, gz
+
+[Timing]
+duration_s : 41.03
