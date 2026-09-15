@@ -46,24 +46,10 @@ TAG = "nrf54l15tag/nrf54l15/cpuapp"
 LM20 = "nrf54lm20dk/nrf54lm20b/cpuapp"
 EB2 = "nrf7002eb2"
 
-# Endereco do TAG da bancada de referencia — o MESMO do edge_ai/hex. Vem do chip,
-# nao do firmware, e nao e segredo: quem tiver outro TAG recompila com o seu.
-TAG_ADDR_VALUE = "EC:EF:40:2D:5E:46"
-TAG_ADDR_TYPE = "random"
-
 SERVIDOR_IP = os.environ.get("COMMS_SERVIDOR_IP", "192.168.15.15")
 
 
 # ------------------------------------------------------------- fragmentos .conf
-def conf_tag():
-    """Endereco do TAG de referencia, gerado fora do repo."""
-    p = BUILD / "meu_tag_referencia.conf"
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(f'CONFIG_LAB_TAG_ADDR_VALUE="{TAG_ADDR_VALUE}"\n'
-                 f'CONFIG_LAB_TAG_ADDR_TYPE="{TAG_ADDR_TYPE}"\n', encoding="utf-8")
-    return str(p).replace("\\", "/")
-
-
 def conf_rede():
     """A credencial da rede, vinda de fora do repo. None se nao houver."""
     env = os.environ.get("COMMS_REDE_CONF")
@@ -93,16 +79,16 @@ VARIANTES = [
     ("01_cs_reflector_demo_tag", "01_cs_reflector", TAG,
      ["--", "-DEXTRA_CONF_FILE=android_ranging.conf;demo.conf;s26.conf"], False),
     ("02_cs_initiator_lm20", "02_cs_initiator", LM20,
-     ["--", lambda: f"-DEXTRA_CONF_FILE={conf_tag()}"], False),
+     [], False),
     ("02_cs_initiator_pbr_lm20", "02_cs_initiator", LM20,
-     ["--", lambda: f"-DEXTRA_CONF_FILE={conf_tag()};pbr_only.conf"], False),
+     ["--", "-DEXTRA_CONF_FILE=pbr_only.conf"], False),
     ("03_cs_ipt_reflector_tag", "03_cs_ipt/reflector", TAG, [], False),
     ("03_cs_ipt_initiator_lm20", "03_cs_ipt/initiator", LM20,
-     ["--", lambda: f"-DEXTRA_CONF_FILE={conf_tag()}"], False),
+     [], False),
     ("05_cs_iq_music_lm20", "05_cs_iq_music", LM20,
-     ["--", lambda: f"-DEXTRA_CONF_FILE={conf_tag()}"], False),
+     [], False),
     ("05_cs_iq_music_demo_lm20", "05_cs_iq_music", LM20,
-     ["--", lambda: f"-DEXTRA_CONF_FILE={conf_tag()};demo.conf"], False),
+     ["--", "-DEXTRA_CONF_FILE=demo.conf"], False),
 
     # ------------------------------------------- Wi-Fi sem credencial (publicos)
     ("06_wifi_shell_lm20", "06_wifi_shell", LM20, wifi("06_wifi_shell"), False),
@@ -152,8 +138,11 @@ def west(args):
 
 
 def acha_hex(build_dir, app):
-    for cand in (build_dir / "merged.hex",
-                 build_dir / Path(app).name / "zephyr" / "zephyr.hex",
+    # sysbuild: merged.hex (NCS <= 3.1) ou merged_<board>.hex (NCS 3.4)
+    merged = sorted(build_dir.glob("merged*.hex"))
+    if merged:
+        return merged[0]
+    for cand in (build_dir / Path(app).name / "zephyr" / "zephyr.hex",
                  build_dir / "zephyr" / "zephyr.hex"):
         if cand.exists():
             return cand

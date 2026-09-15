@@ -33,15 +33,10 @@ Latest distance estimates on antenna path 0: ifft: 2.31, phase_slope: 2.44, rtt:
 
 ## Passo 1 — o endereço do seu TAG
 
-É o **mesmo do Edge AI**. O endereço BLE estático vem do próprio chip e não muda com
-o firmware, então o `meu_tag.conf` que você preencheu no `edge_ai/03_central_uart`
-serve aqui sem alteração:
-
-```
-copy ..\..\edge_ai\03_central_uart\meu_tag.conf meu_tag.conf
-```
-
-Se precisar reler: é a linha `Identity:` do boot do TAG, no RTT (lab 1).
+É o **mesmo do Edge AI**: o endereço BLE estático vem do próprio chip e não muda com
+o firmware. Como no `edge_ai/03_central_uart`, o initiator **pede o endereço no
+terminal serial a cada boot** — não é config de build, e o mesmo binário serve para
+qualquer aluno. Se precisar reler: é a linha `Identity:` do boot do TAG, no RTT (lab 1).
 
 ## Passo 2 — compilar e gravar a DK
 
@@ -50,20 +45,27 @@ TAG **fora** do `DEBUG OUT` (senão o debugger grava o TAG). Confira com
 
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/02_cs_initiator/build_lm20 C:/work/nrf-manaus-2/comms/02_cs_initiator -- -DEXTRA_CONF_FILE=meu_tag.conf
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/02_cs_initiator/build_lm20 C:/work/nrf-manaus-2/comms/02_cs_initiator
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/02_cs_initiator/build_lm20
 ```
 
-No VS Code: board target `nrf54lm20dk/nrf54lm20b/cpuapp` com `meu_tag.conf` em
-*Kconfig fragments*.
+No VS Code: board target `nrf54lm20dk/nrf54lm20b/cpuapp`, sem fragmento.
 
-Deixar o endereço vazio **falha o build de propósito** (`CMakeLists.txt`). Um initiator
-sem filtro conectaria no TAG do colega: os seis TAGs da sala anunciam o mesmo UUID.
-
-## Passo 3 — ler
+## Passo 3 — responder o prompt e ler
 
 Serial USB da DK, **115200 8N1**. A DK enumera duas portas COM; o log sai numa delas
-(na bancada, a segunda). Sequência esperada:
+(na bancada, a segunda). No boot o initiator pergunta o endereço e repete a pergunta a
+cada 5 s até receber um válido — tanto faz abrir o terminal antes ou depois do reset:
+
+```
+Endereco BLE do tag (ex.: EC:EF:40:2D:5E:46 random): EC:EF:40:2D:5E:46
+Procurando o tag EC:EF:40:2D:5E:46 (random)...
+```
+
+Aceita `EC:EF:40:2D:5E:46`, `... random` ou `... (random)`; sem o tipo, assume
+`random`. Inválido é recusado e o prompt volta. Não existe valor padrão: um initiator sem
+filtro conectaria no TAG do colega, e os seis TAGs da sala anunciam o mesmo UUID. Só
+depois do `Procurando` o scan começa. Sequência esperada:
 
 ```
 I: Filtrando pelo tag EC:EF:40:2D:5E:46 (random)
@@ -103,8 +105,8 @@ O sample tem um `choice` de Kconfig para o step mode. Dois fragmentos deixam iso
 um princípio de cada vez — rebuild **só da DK**, o TAG não muda:
 
 ```
--- -DEXTRA_CONF_FILE="meu_tag.conf;pbr_only.conf"   # so mode 2: ifft e phase_slope
--- -DEXTRA_CONF_FILE="meu_tag.conf;rtt_only.conf"   # so mode 1: rtt
+-- -DEXTRA_CONF_FILE=pbr_only.conf   # so mode 2: ifft e phase_slope
+-- -DEXTRA_CONF_FILE=rtt_only.conf   # so mode 1: rtt
 ```
 
 ## Várias bancadas na mesma sala
@@ -113,7 +115,7 @@ Seis pares medindo ao mesmo tempo não é condição documentada pela Nordic. Se
 degradarem, escalone o intervalo de procedure por estação:
 
 ```
--- -DEXTRA_CONF_FILE=meu_tag.conf -DCONFIG_LAB_PROCEDURE_INTERVAL=<50 + n*12>
+-- -DCONFIG_LAB_PROCEDURE_INTERVAL=<50 + n*12>
 ```
 
 com `n` = número da estação (0 a 5). O valor está em intervalos de conexão de 20 ms:
@@ -121,10 +123,11 @@ com `n` = número da estação (0 a 5). O valor está em intervalos de conexão 
 
 ## As duas divergências do curso
 
-1. **`src/main.c` — filtro por endereço.** O upstream filtra só pelo UUID do Ranging
-   Service em modo OR. Aqui `add_tag_address_filter()` acrescenta o endereço de
-   `CONFIG_LAB_TAG_ADDR_VALUE` e `bt_scan_filter_enable()` passa a `match_all = true`.
-   Mesmo código do `edge_ai/03_central_uart`.
+1. **`src/main.c` + `src/lab_tag_addr.c` — filtro por endereço.** O upstream filtra só
+   pelo UUID do Ranging Service em modo OR. Aqui `lab_tag_addr_read()` lê o endereço
+   digitado na serial (`uart_poll_in` na console, sem shell), `add_tag_address_filter()`
+   o acrescenta ao scan e `bt_scan_filter_enable()` passa a `match_all = true`. Mesmo
+   mecanismo do `edge_ai/03_central_uart`; o `lab_tag_addr.c` é copiado igual nos labs 3 e 5.
 2. **`src/main.c` — intervalo de procedure.** `CONFIG_LAB_PROCEDURE_INTERVAL`, quando
    diferente de 0, sobrescreve o intervalo escolhido pelo sample.
 
@@ -134,8 +137,9 @@ E `prj.conf` ganha `CONFIG_BT_SCAN_ADDRESS_CNT=1`, o slot do filtro.
 
 - **Gravou o TAG achando que era a DK.** Com o TAG no `DEBUG OUT`, o `west flash` vai
   para o TAG. Tire-o antes.
-- **Não conecta.** O endereço em `meu_tag.conf` é o do **seu** TAG? A linha
-  `Filtrando pelo tag ...` mostra o que o firmware está usando. Se o TAG estava
+- **Não conecta.** O endereço que você digitou é o do **seu** TAG? A linha
+  `Filtrando pelo tag ...` mostra o que o firmware está usando; um reset na DK
+  pergunta de novo. Se o TAG estava
   conectado quando você regravou a DK, ele pode ter parado de anunciar: reset no
   TAG (ver pegadinhas do lab 1).
 - **Conectou e não mede.** Um segundo initiator (outra DK, um telefone) já pegou o

@@ -1,0 +1,45 @@
+[Recording]
+label       : idle
+session_tag : uart-d9cfb1
+data_rows   : 5398
+
+[Host]
+written_utc : 2026-09-14T15:01:33.852827Z
+os          : Windows-11-10.0.26200-SP0
+os_system   : Windows
+os_release  : 11
+os_version  : 10.0.26200
+machine     : AMD64
+hostname    : JD-Note
+python      : 3.12.10
+
+[Transport]
+transport   : UART / serial
+serial_port : COM22
+baudrate    : 115200
+source      : uart:COM22@115200
+protocol    : cobs-cbor v1 (expect_crc=true)
+
+[Timing]
+started_utc : 2026-09-14T15:00:37.293223Z
+stopped_utc : 2026-09-14T15:01:33.814442Z
+
+[Device session_info]
+device_reported_name : nRF DataFwd
+session_id           : 557978361
+sampling_rate_hz     : 100
+device_start_time    : 1
+channel_count        : 9
+producer_drop_count  : 0
+channels             : ax, ay, az, gx, gy, gz, temp, hum, pres
+
+[Channels]
+count : 9
+names : ax, ay, az, gx, gy, gz, temp, hum, pres
+
+[Errors]
+total_messages : 5409
+incomplete     : no
+cobs           : 93
+crc            : 2
+transport      : 243

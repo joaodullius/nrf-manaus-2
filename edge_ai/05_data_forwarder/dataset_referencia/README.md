@@ -1,7 +1,7 @@
 # Dataset de referência do loop 2 — velocidade de um ventilador por vibração
 
 Coleta feita no preparo do curso, em 2026-09-03, com o `05_data_forwarder` **deste
-repo** (9 canais, LED de estado, fundo de escala editado para ±4 g / ±1000 dps) e o
+repo** (9 canais, LED de estado, fundo de escala ±4 g / ±1000 dps) e o
 **Data Forwarder Host** por BLE direto no PC. Serve para quem não tiver tempo de coletar,
 e como gabarito do que o Passo 4 e o Passo 5 do [README](../README.md) produzem.
 

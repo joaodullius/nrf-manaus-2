@@ -32,16 +32,27 @@ de antena que o PC escolheu. As tabelas no fim mostram cada passo disso.
 
 ## Passo 1 — o firmware
 
-O mesmo `meu_tag.conf` dos labs 2 e 3. TAG fora do `DEBUG OUT`.
+TAG fora do `DEBUG OUT`.
 
 ```
-copy ..\02_cs_initiator\meu_tag.conf meu_tag.conf
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/05_cs_iq_music/build_lm20 C:/work/nrf-manaus-2/comms/05_cs_iq_music -- -DEXTRA_CONF_FILE=meu_tag.conf
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/05_cs_iq_music/build_lm20 C:/work/nrf-manaus-2/comms/05_cs_iq_music
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/05_cs_iq_music/build_lm20
 ```
 
-O que sai na serial (115200 8N1), por procedure — 75 linhas `IQ` e uma `CS`:
+Como nos labs 2 e 3, o initiator **pede o endereço do TAG na serial a cada boot**
+(115200 8N1) e só começa a varrer depois de um válido. Aqui quem costuma abrir a porta é
+um script, então há dois jeitos de responder:
+
+- `cs_capture.py` e `cs_dash.py` aceitam `--tag EC:EF:40:2D:5E:46` e mandam a linha
+  ao abrir a porta (se a DK já passou do prompt, a linha é ignorada);
+- ou responda num terminal e feche-o antes de rodar o script — a DK não reseta quando
+  a porta é aberta.
+
+Sem `--tag`, o autodetect reconhece o prompt e diz que falta responder, em vez de
+"porta não encontrada".
+
+O que sai na serial depois do `Procurando`, por procedure — 75 linhas `IQ` e uma `CS`:
 
 ```
 IQ,42,0,2,-812.0,455.0,301.0,-903.0
@@ -422,10 +433,10 @@ trocarem de posição; sentar entre a DK e o TAG e ver `phase_slope` e MUSIC sal
 3 m enquanto o `ifft` fica; depois andar com o TAG e ver o `ifft_min` acompanhar o
 melhor caminho.
 
-Para a demo, grave a DK com o fragmento `demo.conf` junto do `meu_tag.conf`:
+Para a demo, grave a DK com o fragmento `demo.conf`:
 
 ```
-west build ... -- -DEXTRA_CONF_FILE="meu_tag.conf;demo.conf"
+west build ... -- -DEXTRA_CONF_FILE=demo.conf
 ```
 
 Ele sobe a taxa de 1 para ~2 procedures/s, que é o **teto real**: com 2 caminhos

@@ -8,10 +8,12 @@
  * Para conferir se divergiu do SDK:
  *   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/bluetooth/central_uart/src/main.c
  *
- * DIVERGENCIA DO CURSO (unica): scan_start() e add_tag_address_filter().
+ * DIVERGENCIA DO CURSO: read_tag_address_from_uart(), scan_start() e
+ *   add_tag_address_filter().
  *   O upstream filtra por UUID da NUS em modo OR e alimenta o filtro de endereco
- *   pelos bonds. Aqui o endereco vem de CONFIG_LAB_TAG_ADDR_VALUE e o filtro e
- *   so por endereco, em modo AND — cada aluno conecta no seu proprio tag.
+ *   pelos bonds. Aqui o endereco e digitado pelo aluno no terminal serial no boot
+ *   e o filtro e so por endereco, em modo AND — cada aluno conecta no seu
+ *   proprio tag.
  */
 
 /*
@@ -25,6 +27,7 @@
  */
 
 #include <errno.h>
+#include <string.h>
 #include <uart_async_adapter.h>
 
 #include <zephyr/kernel.h>
@@ -129,24 +132,8 @@ static uint8_t ble_data_received(struct bt_nus_client *nus,
 			return BT_GATT_ITER_CONTINUE;
 		}
 
-		/* ALTERADO PELO CURSO (nrf-manaus-2): modo de ponte binaria.
-		 *
-		 * O upstream foi escrito para TEXTO: ele reserva um byte e acrescenta
-		 * LF quando o pedaco recebido termina em CR. Isso e o que transforma o
-		 * "\r\n" do CSV do 01_gesture_recognition em linha no terminal.
-		 *
-		 * Com o 05_data_forwarder o fluxo e BINARIO (CBOR dentro de COBS): um
-		 * byte 0x0D no meio de um frame ganharia um 0x0A que nao existia. O CRC
-		 * do protocolo detecta e o frame e DESCARTADO — perda silenciosa.
-		 *
-		 * Com CONFIG_LAB_BRIDGE_BINARY a ponte repassa os bytes intactos.
-		 */
-		size_t tx_data_size = sizeof(tx->data);
-
-		if (!IS_ENABLED(CONFIG_LAB_BRIDGE_BINARY)) {
-			/* Reserva o ultimo byte para o LF. */
-			tx_data_size -= 1;
-		}
+		/* Keep the last byte of TX buffer for potential LF char. */
+		size_t tx_data_size = sizeof(tx->data) - 1;
 
 		if ((len - pos) > tx_data_size) {
 			tx->len = tx_data_size;
@@ -158,14 +145,12 @@ static uint8_t ble_data_received(struct bt_nus_client *nus,
 
 		pos += tx->len;
 
-		if (!IS_ENABLED(CONFIG_LAB_BRIDGE_BINARY)) {
-			/* Append the LF character when the CR character triggered
-			 * transmission from the peer.
-			 */
-			if ((pos == len) && (data[len - 1] == '\r')) {
-				tx->data[tx->len] = '\n';
-				tx->len++;
-			}
+		/* Append the LF character when the CR character triggered
+		 * transmission from the peer.
+		 */
+		if ((pos == len) && (data[len - 1] == '\r')) {
+			tx->data[tx->len] = '\n';
+			tx->len++;
 		}
 
 		err = uart_tx(uart, tx->data, tx->len, SYS_FOREVER_MS);
@@ -548,21 +533,110 @@ BT_SCAN_CB_INIT(scan_cb, scan_filter_match, NULL,
  * ou seja, o central conectava em QUALQUER dispositivo anunciando a NUS.
  *
  * Numa sala com varios tags anunciando ao mesmo tempo isso faz o aluno conectar no
- * tag do colega. Aqui o endereco vem de CONFIG_LAB_TAG_ADDR e o filtro passa a ser
- * SO por endereco, em modo AND (match_all = true).
+ * tag do colega. Aqui o endereco e o que o aluno digitou no terminal serial
+ * (read_tag_address_from_uart) e o filtro passa a ser SO por endereco, em modo
+ * AND (match_all = true).
  */
+static bt_addr_le_t tag_addr;
+
+/* Tamanho de uma linha digitada: "EC:EF:40:2D:5E:46 (random)" + CR/LF + folga. */
+#define TAG_ADDR_LINE_SIZE 48
+#define TAG_ADDR_PROMPT_PERIOD K_SECONDS(5)
+
+/* Interpreta o que o aluno digitou. Aceita "EC:EF:40:2D:5E:46",
+ * "EC:EF:40:2D:5E:46 random" e "EC:EF:40:2D:5E:46 (random)" — o que se copia da
+ * linha "Identity:" do log do tag. Sem tipo, assume random.
+ */
+static int parse_tag_address(char *line, bt_addr_le_t *addr)
+{
+	char *value;
+	char *type;
+	char *save;
+
+	value = strtok_r(line, " \t", &save);
+	if (!value) {
+		return -EINVAL;
+	}
+
+	type = strtok_r(NULL, " \t", &save);
+	if (!type) {
+		type = "random";
+	} else {
+		size_t n = strlen(type);
+
+		if (n > 2 && type[0] == '(' && type[n - 1] == ')') {
+			type[n - 1] = '\0';
+			type++;
+		}
+	}
+
+	return bt_addr_le_from_str(value, type, addr);
+}
+
+/* Pede o endereco do tag no terminal serial e so retorna com um valido.
+ *
+ * Roda antes do scan, entao a UART ainda nao e ponte: os pedacos que uart_cb
+ * deixa em fifo_uart_rx_data sao a linha digitada. O prompt e repetido a cada
+ * TAG_ADDR_PROMPT_PERIOD para quem abre o terminal depois do boot.
+ */
+static void read_tag_address_from_uart(bt_addr_le_t *addr)
+{
+	char line[TAG_ADDR_LINE_SIZE];
+	size_t len = 0;
+	bool prompt = true;
+
+	for (;;) {
+		struct uart_data_t *buf;
+
+		if (prompt) {
+			/* Repete tambem o que ja foi digitado, se houver. */
+			line[len] = '\0';
+			printk("\nEndereco BLE do tag (ex.: EC:EF:40:2D:5E:46 random): %s",
+			       line);
+			prompt = false;
+		}
+
+		buf = k_fifo_get(&fifo_uart_rx_data, TAG_ADDR_PROMPT_PERIOD);
+		if (!buf) {
+			prompt = true;
+			continue;
+		}
+
+		for (size_t i = 0; i < buf->len; i++) {
+			char c = buf->data[i];
+
+			if (c == '\r' || c == '\n') {
+				line[len] = '\0';
+
+				if (len == 0) {
+					/* Linha vazia (ou o LF de um CR+LF): ignora. */
+				} else if (parse_tag_address(line, addr) == 0) {
+					printk("\n");
+					k_free(buf);
+					return;
+				} else {
+					printk("\nEndereco invalido. Use o formato "
+					       "EC:EF:40:2D:5E:46 random\n");
+					prompt = true;
+				}
+				len = 0;
+			} else if (c >= ' ' && c <= '~' && len < sizeof(line) - 1) {
+				/* So ASCII imprimivel: a abertura da porta no PC pode
+				 * soltar um byte de lixo, que nao deve entrar na linha.
+				 */
+				line[len++] = c;
+				printk("%c", c);
+			}
+		}
+
+		k_free(buf);
+	}
+}
+
 static int add_tag_address_filter(uint8_t *filter_mode)
 {
-	bt_addr_le_t tag_addr;
+	char addr_str[BT_ADDR_LE_STR_LEN];
 	int err;
-
-	err = bt_addr_le_from_str(CONFIG_LAB_TAG_ADDR_VALUE, CONFIG_LAB_TAG_ADDR_TYPE,
-				  &tag_addr);
-	if (err) {
-		LOG_ERR("CONFIG_LAB_TAG_ADDR invalido: \"%s (%s)\" (err %d)",
-			CONFIG_LAB_TAG_ADDR_VALUE, CONFIG_LAB_TAG_ADDR_TYPE, err);
-		return err;
-	}
 
 	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_ADDR, &tag_addr);
 	if (err) {
@@ -571,8 +645,8 @@ static int add_tag_address_filter(uint8_t *filter_mode)
 	}
 
 	*filter_mode |= BT_SCAN_ADDR_FILTER;
-	LOG_INF("Filtrando pelo tag %s (%s)", CONFIG_LAB_TAG_ADDR_VALUE,
-		CONFIG_LAB_TAG_ADDR_TYPE);
+	bt_addr_le_to_str(&tag_addr, addr_str, sizeof(addr_str));
+	LOG_INF("Filtrando pelo tag %s", addr_str);
 
 	return 0;
 }
@@ -713,12 +787,23 @@ int main(void)
 	}
 
 	scan_init();
+
+	/* ALTERADO PELO CURSO (nrf-manaus-2): o endereco do tag vem do terminal,
+	 * digitado no boot. Depois disto a serial volta a ser so a ponte NUS<->UART,
+	 * sem texto do central, para nao sujar o CSV.
+	 */
+	read_tag_address_from_uart(&tag_addr);
+	{
+		char addr_str[BT_ADDR_LE_STR_LEN];
+
+		bt_addr_le_to_str(&tag_addr, addr_str, sizeof(addr_str));
+		printk("Procurando o tag %s...\n", addr_str);
+	}
+
 	err = scan_start();
 	if (err) {
 		return 0;
 	}
-
-	printk("Starting Bluetooth Central UART sample\n");
 
 	struct uart_data_t nus_data = {
 		.len = 0,

@@ -8,6 +8,13 @@ src/main.c):
     IQ,<counter>,<ap>,<canal 2..76>,<i_local>,<q_local>,<i_remote>,<q_remote>   x75
     CS,<counter>,<ap>,<tone_quality 1/0>,<ifft>,<phase_slope>,<rtt>,<rtt_count>,<rtt_half_ns>
 
+Antes disso, no boot, o firmware pede o endereco do TAG na mesma serial:
+
+    Endereco BLE do tag (ex.: EC:EF:40:2D:5E:46 random):
+
+e so comeca a varrer depois de uma resposta valida. TAG_PROMPT/is_tag_prompt()
+e responder_tag() sao o que os scripts usam para reconhecer e responder.
+
 Este modulo so le e escreve esse formato. Quem calcula e cs_de_numpy.py.
 """
 from __future__ import annotations
@@ -18,6 +25,23 @@ import numpy as np
 
 NCH = 75
 CH_OFFSET = 2          # CHANNEL_INDEX_OFFSET do firmware: indice 0 = canal 2
+
+TAG_PROMPT = "Endereco BLE do tag"
+
+
+def is_tag_prompt(line: str) -> bool:
+    return TAG_PROMPT in line
+
+
+def responder_tag(serial_port, tag: str | None) -> None:
+    """Manda o endereco do TAG para o firmware, se houver um.
+
+    O firmware so le a serial enquanto esta no prompt; se ja passou dele, a
+    linha e ignorada — por isso pode ser mandada sempre que a porta abre.
+    """
+    if tag:
+        serial_port.write((tag.strip() + "\r\n").encode("ascii"))
+        serial_port.flush()
 
 
 def _f(s: str) -> float:

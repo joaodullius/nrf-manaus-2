@@ -10,9 +10,9 @@
  *
  * DIVERGENCIA DO CURSO (duas):
  *   1. scan_init() e add_tag_address_filter(). O upstream filtra so pelo UUID
- *      do Ranging Service, em modo OR. Aqui entra um filtro pelo endereco de
- *      CONFIG_LAB_TAG_ADDR_VALUE e o modo passa a AND — cada aluno conecta no
- *      seu proprio TAG.
+ *      do Ranging Service, em modo OR. Aqui entra um filtro pelo endereco do
+ *      TAG, digitado no terminal serial no boot (src/lab_tag_addr.c), e o modo
+ *      passa a AND — cada aluno conecta no seu proprio TAG.
  *   2. main(): CONFIG_LAB_PROCEDURE_INTERVAL sobrescreve o intervalo de procedure
  *      quando diferente de 0 (escalonamento entre bancadas).
  */
@@ -42,6 +42,8 @@
 #include <bluetooth/cs_de.h>
 
 #include <dk_buttons_and_leds.h>
+
+#include "lab_tag_addr.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(app_main, LOG_LEVEL_INF);
@@ -753,22 +755,16 @@ BT_SCAN_CB_INIT(scan_cb, scan_filter_match, NULL, scan_connecting_error, scan_co
  * Upstream: so o filtro de UUID do Ranging Service, em modo OR
  * (bt_scan_filter_enable(..., false)) — o initiator conectava em QUALQUER
  * reflector anunciando RAS. Numa sala com seis TAGs iguais isso cruza as
- * estacoes. Aqui entra o filtro pelo endereco de CONFIG_LAB_TAG_ADDR_VALUE e o
- * modo passa a AND (match_all = true): precisa ser um reflector RAS E ser o
+ * estacoes. Aqui entra o filtro pelo endereco digitado no terminal
+ * (lab_tag_addr_read) e o modo passa a AND (match_all = true): precisa ser um reflector RAS E ser o
  * meu TAG. Mesmo padrao do edge_ai/03_central_uart.
  */
+static bt_addr_le_t tag_addr;
+
 static int add_tag_address_filter(uint8_t *filter_mode)
 {
-	bt_addr_le_t tag_addr;
+	char addr_str[BT_ADDR_LE_STR_LEN];
 	int err;
-
-	err = bt_addr_le_from_str(CONFIG_LAB_TAG_ADDR_VALUE, CONFIG_LAB_TAG_ADDR_TYPE,
-				  &tag_addr);
-	if (err) {
-		LOG_ERR("CONFIG_LAB_TAG_ADDR invalido: \"%s (%s)\" (err %d)",
-			CONFIG_LAB_TAG_ADDR_VALUE, CONFIG_LAB_TAG_ADDR_TYPE, err);
-		return err;
-	}
 
 	err = bt_scan_filter_add(BT_SCAN_FILTER_TYPE_ADDR, &tag_addr);
 	if (err) {
@@ -777,8 +773,8 @@ static int add_tag_address_filter(uint8_t *filter_mode)
 	}
 
 	*filter_mode |= BT_SCAN_ADDR_FILTER;
-	LOG_INF("Filtrando pelo tag %s (%s)", CONFIG_LAB_TAG_ADDR_VALUE,
-		CONFIG_LAB_TAG_ADDR_TYPE);
+	bt_addr_le_to_str(&tag_addr, addr_str, sizeof(addr_str));
+	LOG_INF("Filtrando pelo tag %s", addr_str);
 
 	return 0;
 }
@@ -881,6 +877,9 @@ int main(void)
 		.conn_param = BT_LE_CONN_PARAM(0x10, 0x10, 0, BT_GAP_MS_TO_CONN_TIMEOUT(4000)),
 		.connect_if_match = 1
 	};
+
+	/* ALTERADO PELO CURSO (nrf-manaus-2): endereco do TAG pelo terminal. */
+	lab_tag_addr_read(&tag_addr);
 
 	err = scan_init(&scan_params);
 	if (err) {

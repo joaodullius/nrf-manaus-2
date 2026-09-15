@@ -81,8 +81,11 @@ int data_fwd_sensor_init(void)
 	}
 #endif
 
-	/* Setting scale in G to match the sensor scale */
-	full_scale.val1 = 2; /* G */
+	/* Setting scale in G to match the sensor scale.
+	 * DIVERGENCIA DO CURSO: o upstream usa 2 g; aqui 4 g, o mesmo fundo de
+	 * escala do 01_gesture_recognition e do 04_classify_led.
+	 */
+	full_scale.val1 = 4; /* G */
 	full_scale.val2 = 0;
 	sampling_freq.val1 = FREQUENCY_HZ; /* Hz. Performance mode */
 	sampling_freq.val2 = 0;
@@ -98,8 +101,10 @@ int data_fwd_sensor_init(void)
 	 */
 	ok &= bmi_set_attr(SENSOR_CHAN_ACCEL_XYZ, SENSOR_ATTR_SAMPLING_FREQUENCY, &sampling_freq);
 
-	/* Setting scale in degrees/s to match the sensor scale */
-	full_scale.val1 = 500; /* dps */
+	/* Setting scale in degrees/s to match the sensor scale.
+	 * DIVERGENCIA DO CURSO: o upstream usa 500 dps; aqui 1000 dps.
+	 */
+	full_scale.val1 = 1000; /* dps */
 	full_scale.val2 = 0;
 	sampling_freq.val1 = FREQUENCY_HZ; /* Hz. Performance mode */
 	sampling_freq.val2 = 0;

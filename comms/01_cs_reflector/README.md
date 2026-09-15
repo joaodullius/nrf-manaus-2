@@ -78,7 +78,8 @@ manda — a aplicação não participa.
 ## O endereço do seu TAG
 
 É o mesmo do Edge AI: o endereço BLE estático vem do próprio chip e não muda com o
-firmware. Reaproveite o `meu_tag.conf` do `edge_ai/03_central_uart` nos labs 2, 3 e 5.
+firmware. É o mesmo endereço que você digitou no central do `edge_ai/03_central_uart`,
+e os initiators dos labs 2, 3 e 5 pedem do mesmo jeito: na serial, a cada boot.
 Se precisar reler, ele está na linha `Identity:` do boot, no RTT.
 
 ## Pegadinhas

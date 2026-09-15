@@ -36,11 +36,8 @@ Lab 3a: TAG no `DEBUG OUT`, grava, tira. É o mesmo TAG, o endereço não muda.
 
 ## Passo 2 — o endereço
 
-O mesmo `meu_tag.conf` do lab 2 (e do Edge AI):
-
-```
-copy ..\..\02_cs_initiator\meu_tag.conf meu_tag.conf
-```
+O mesmo do lab 2 (e do Edge AI), e do mesmo jeito: o initiator **pergunta na serial a
+cada boot**. Nada a preencher antes do build.
 
 ## Passo 3 — compilar e gravar a DK
 
@@ -48,13 +45,19 @@ TAG fora do `DEBUG OUT`.
 
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/03_cs_ipt/initiator/build_lm20 C:/work/nrf-manaus-2/comms/03_cs_ipt/initiator -- -DEXTRA_CONF_FILE=meu_tag.conf
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/03_cs_ipt/initiator/build_lm20 C:/work/nrf-manaus-2/comms/03_cs_ipt/initiator
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/03_cs_ipt/initiator/build_lm20
 ```
 
 ## Passo 4 — ler e comparar
 
-Serial USB da DK, 115200 8N1:
+Serial USB da DK, 115200 8N1. Primeiro o prompt do endereço (repete a cada 5 s;
+formatos e regras no Passo 3 do lab 2), depois o log:
+
+```
+Endereco BLE do tag (ex.: EC:EF:40:2D:5E:46 random): EC:EF:40:2D:5E:46
+Procurando o tag EC:EF:40:2D:5E:46 (random)...
+```
 
 ```
 I: Filtrando pelo tag EC:EF:40:2D:5E:46 (random)
@@ -73,7 +76,7 @@ exigente dos labs para uma sala compartilhada. Seis pares medindo ao mesmo tempo
 procedure por estação:
 
 ```
--- -DEXTRA_CONF_FILE=meu_tag.conf -DCONFIG_LAB_PROCEDURE_INTERVAL=<67 + n*17>
+-- -DCONFIG_LAB_PROCEDURE_INTERVAL=<67 + n*17>
 ```
 
 com `n` = número da estação (0 a 5). O valor está em intervalos de conexão de 15 ms:
@@ -82,10 +85,11 @@ degradar: duas ondas de três bancadas.
 
 ## As duas divergências do curso
 
-1. **`src/main.c` — filtro por endereço.** O upstream filtra só pelo nome
-   `Nordic CS IPT Reflector` em modo OR — e todos os TAGs da sala têm esse nome. Aqui
-   `add_tag_address_filter()` acrescenta o endereço de `CONFIG_LAB_TAG_ADDR_VALUE` e
-   `bt_scan_filter_enable()` passa a `match_all = true`.
+1. **`src/main.c` + `src/lab_tag_addr.c` — filtro por endereço.** O upstream filtra só
+   pelo nome `Nordic CS IPT Reflector` em modo OR — e todos os TAGs da sala têm esse
+   nome. Aqui `lab_tag_addr_read()` lê o endereço digitado na serial,
+   `add_tag_address_filter()` o acrescenta ao scan e `bt_scan_filter_enable()` passa a
+   `match_all = true`. Mesmo `lab_tag_addr.c` do lab 2.
 2. **`src/main.c` — intervalo de procedure.** `CONFIG_LAB_PROCEDURE_INTERVAL`, quando
    diferente de 0, sobrescreve o intervalo escolhido pelo sample.
 
@@ -93,8 +97,9 @@ E `prj.conf` ganha `CONFIG_BT_SCAN_ADDRESS_CNT=1`, o slot do filtro.
 
 ## Pegadinhas
 
-- **Não conecta.** O endereço em `meu_tag.conf` é o do **seu** TAG? A linha
-  `Filtrando pelo tag ...` mostra o que o firmware está usando. Se o TAG estava
+- **Não conecta.** O endereço que você digitou é o do **seu** TAG? A linha
+  `Filtrando pelo tag ...` mostra o que o firmware está usando; um reset na DK
+  pergunta de novo. Se o TAG estava
   conectado quando você regravou a DK, ele pode ter parado de anunciar: reset no
   TAG (ver pegadinhas do lab 1).
 

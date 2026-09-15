@@ -16,12 +16,12 @@ fonte deste repo no commit em que foi gerado; regenerar tudo é um comando (abai
 |---|---|---|---|---|
 | `01_cs_reflector_tag.hex` | CS 1 | TAG | reflector RAS, o default do lab | 247.796 / 62.590 |
 | `01_cs_reflector_demo_tag.hex` | CS 1 · demo | TAG | o mesmo com `android_ranging.conf;demo.conf;s26.conf` — o da demo com smartphone | 263.216 / 59.878 |
-| `02_cs_initiator_lm20.hex` | CS 2 | LM20-DK (B) | initiator RAS com `ifft`, `phase_slope` e `rtt` | 287.612 / 67.528 |
-| `02_cs_initiator_pbr_lm20.hex` | CS 2 · só PBR | LM20-DK (B) | o mesmo com `pbr_only.conf` (modo 2: sem a coluna `rtt`) | 287.584 / 67.528 |
+| `02_cs_initiator_lm20.hex` | CS 2 | LM20-DK (B) | initiator RAS com `ifft`, `phase_slope` e `rtt` | 288.256 / 67.536 |
+| `02_cs_initiator_pbr_lm20.hex` | CS 2 · só PBR | LM20-DK (B) | o mesmo com `pbr_only.conf` (modo 2: sem a coluna `rtt`) | 288.228 / 67.536 |
 | `03_cs_ipt_reflector_tag.hex` | CS 3 | TAG | reflector IPT | 240.876 / 52.888 |
-| `03_cs_ipt_initiator_lm20.hex` | CS 3 | LM20-DK (B) | initiator IPT | 274.092 / 54.848 |
-| `05_cs_iq_music_lm20.hex` | CS 5 | LM20-DK (B) | IQ para o PC, 1 procedure/s | 298.452 / 83.616 |
-| `05_cs_iq_music_demo_lm20.hex` | CS 5 · demo | LM20-DK (B) | o mesmo a ~2/s (`demo.conf`), para o painel ao vivo | 298.452 / 83.616 |
+| `03_cs_ipt_initiator_lm20.hex` | CS 3 | LM20-DK (B) | initiator IPT | 274.720 / 54.856 |
+| `05_cs_iq_music_lm20.hex` | CS 5 | LM20-DK (B) | IQ para o PC, 1 procedure/s | 299.036 / 83.624 |
+| `05_cs_iq_music_demo_lm20.hex` | CS 5 · demo | LM20-DK (B) | o mesmo a ~2/s (`demo.conf`), para o painel ao vivo | 299.036 / 83.624 |
 | `06_wifi_shell_lm20.hex` | Lab 6 | LM20-DK (B) + EB II | shell de Wi-Fi da Nordic. **É também o firmware da Parte A do lab 11** | 746.740 / 353.824 |
 | `08a_wifi_provisioning_lm20.hex` | Lab 8a | LM20-DK (B) + EB II | provisionamento por SoftAP, SSID `nrf-wifiprov` | 728.140 / 271.813 |
 | `08b_wifi_provisioning_ble_lm20.hex` | Lab 8b | LM20-DK (B) + EB II | provisionamento por Bluetooth LE | 678.024 / 320.304 |
@@ -29,10 +29,9 @@ fonte deste repo no commit em que foi gerado; regenerar tudo é um comando (abai
 Os dois hex do **05** têm tamanho idêntico porque a única diferença é uma constante
 (`LAB_PROCEDURE_INTERVAL`); os binários **são** diferentes.
 
-⚠️ **Os quatro hex de initiator filtram pelo endereço do TAG de referência**
-(`EC:EF:40:2D:5E:46`, `random`) — o mesmo do `edge_ai/hex`. Servem na bancada do
-instrutor. O aluno **tem de compilar o dele** com o endereço do próprio TAG em
-`meu_tag.conf`: um initiator com o endereço errado nunca conecta.
+Os hex de initiator servem para qualquer aluno: o firmware **pede o endereço do TAG na
+serial a cada boot** (115200 8N1) e só começa a varrer depois de um válido — um
+initiator com o endereço errado nunca conecta.
 
 As placas LM20-DK do curso são a variante **B** (`nrf54lm20dk/nrf54lm20b/cpuapp`); os hex
 da DK não servem na variante A. Os três hex de Wi-Fi só funcionam com a **nRF7002-EB II
@@ -89,8 +88,8 @@ python comms\hex\build_all.py 02 05           # so as que comecam com 02 ou 05
 
 Cada variante é compilada **pristine** em `build/hex/<nome>/`, com `--sysbuild` e, nos
 labs de Wi-Fi, com os `-D<imagem>_SHIELD` / `_SNIPPET` prefixados pelo nome da imagem —
-a regra do sysbuild que vale para toda a frente. O endereço do TAG e a credencial entram
-por fragmentos gerados **fora do repo**, então nenhum build altera um arquivo versionado.
+a regra do sysbuild que vale para toda a frente. A credencial de Wi-Fi entra por um
+fragmento gerado **fora do repo**, então nenhum build altera um arquivo versionado.
 
 Requisitos: NCS v3.4.0 em `C:/ncs/v3.4.0` e os blobs do nRF70
 (`west blobs fetch nrf_wifi`) — ver [`PREREQUISITOS.md`](../../PREREQUISITOS.md).

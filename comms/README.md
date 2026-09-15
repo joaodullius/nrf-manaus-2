@@ -11,7 +11,7 @@ Implementação e validação das principais tecnologias de conectividade e loca
 | Lab | Descrição | Kit | Status |
 |-----|-----------|-----|--------|
 | [`01_cs_reflector/`](01_cs_reflector/) | **CS 1** — Reflector RAS no TAG, CS default da Nordic. Log por RTT (o TAG não tem UART). Fragmentos da demo com smartphone | nRF54L15-TAG | ✅ |
-| [`02_cs_initiator/`](02_cs_initiator/) | **CS 2** — Initiator RAS no LM20-DK: `ifft`, `phase_slope` e `rtt` lado a lado. Filtra pelo endereço do TAG do aluno (mesmo `meu_tag.conf` do Edge AI). Experimento com trena e obstrução | nRF54LM20-DK | ✅ |
+| [`02_cs_initiator/`](02_cs_initiator/) | **CS 2** — Initiator RAS no LM20-DK: `ifft`, `phase_slope` e `rtt` lado a lado. Filtra pelo endereço do TAG do aluno, digitado na serial no boot (como no Edge AI). Experimento com trena e obstrução | nRF54LM20-DK | ✅ |
 | [`03_cs_ipt/reflector/`](03_cs_ipt/reflector/) + [`03_cs_ipt/initiator/`](03_cs_ipt/initiator/) | **CS 3** — O mesmo par com IPT: a contribuição do reflector viaja na fase do tom, não por GATT. A coluna `rtt` some; `time_delta` cai | TAG + LM20-DK | ✅ |
 | [`04_cs_seguranca/`](04_cs_seguranca/) | **CS 4** — Roteiro: ACL cifrada, CS Security Enable, RTT como limite físico contra relé, o que o IPT abre mão, o que o SDC não suporta | par do CS 2 | ✅ (conforme o tempo) |
 | [`05_cs_iq_music/`](05_cs_iq_music/) | **CS 5** — IQ para o PC: port do `cs_de` em NumPy reproduz o chip; MUSIC (skig/waves, MIT) sobre o mesmo IQ; dois caminhos de antena e a escolha entre eles; obstrução; painel ao vivo (`cs_dash.py`). Tese: o firmware fornece os dados, a distância é do algoritmo | LM20-DK + TAG + PC | ✅ (conforme o tempo) |
@@ -41,7 +41,8 @@ para ele — gravar "a DK" nessa hora grava o TAG. Sem DFU/OTA neste módulo.
 
 Os seis TAGs da sala anunciam o mesmo UUID e o mesmo nome: todo initiator do módulo
 filtra pelo endereço BLE do TAG do aluno, que é o **mesmo do Edge AI** (vem do chip,
-não do firmware). Um `meu_tag.conf` serve para os três initiators.
+não do firmware). Os três initiators pedem o endereço no terminal serial a cada boot,
+como o `03_central_uart` do Edge AI — nada a preencher antes do build.
 
 ### Wi-Fi 6+ — ordem de ensino
 

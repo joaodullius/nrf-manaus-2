@@ -19,7 +19,8 @@ São só dois kits por aluno, e a DK faz os dois papéis **em sequência**:
 
 1. TAG no `DEBUG OUT` → grava o 01 em modo de coleta e lê o endereço BLE no RTT (Passos 1 e 2)
 2. tira a TAG do `DEBUG OUT` — ela segue na bateria CR2032, anunciando
-3. grava **este** central no próprio SoC da DK, com o endereço lido (Passo 3)
+3. grava **este** central no próprio SoC da DK e digita o endereço lido no terminal
+   serial (Passo 3)
 
 A ordem importa: enquanto a TAG está encaixada e alimentada, o debugger da DK aponta para
 ela, não para o SoC da DK — gravar o central nessa hora gravaria a TAG.
@@ -92,26 +93,33 @@ passo grava o próprio SoC da DK.
 
 ## Passo 3 — central com o seu endereço
 
-Preencha [`meu_tag.conf`](meu_tag.conf) com o que você leu:
-
-```conf
-CONFIG_LAB_TAG_ADDR_VALUE="EC:EF:40:2D:5E:46"
-CONFIG_LAB_TAG_ADDR_TYPE="random"
-```
+O endereço não é config de build: o central **pede no terminal serial a cada boot**. O
+mesmo binário serve para qualquer aluno (é o
+[`03_central_uart_texto_lm20dk.hex`](../hex/README.md) de referência).
 
 ```
 west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp ^
   -d C:\work\nrf-manaus-2\edge_ai\03_central_uart\build_lm20 ^
-  C:\work\nrf-manaus-2\edge_ai\03_central_uart ^
-  -- -DEXTRA_CONF_FILE=meu_tag.conf
+  C:\work\nrf-manaus-2\edge_ai\03_central_uart
 ```
 
-No VS Code: build configuration da DK (`nrf54lm20dk/nrf54lm20b/cpuapp`) com
-`meu_tag.conf` em *Kconfig fragments*. As DKs do curso são a variante **B**
-(nRF54LM20B); a A também compila, com `nrf54lm20a`.
+No VS Code: build configuration da DK (`nrf54lm20dk/nrf54lm20b/cpuapp`). As DKs do curso
+são a variante **B** (nRF54LM20B); a A também compila, com `nrf54lm20a`.
 
-Deixar o endereço vazio **falha o build de propósito** (`CMakeLists.txt`), com a mensagem
-explicando onde achar o endereço. Um central sem filtro conectaria no tag errado.
+Grave, abra a serial USB da DK (**115200 8N1**, ver Passo 4 para qual das duas COM) e
+responda ao prompt com o que leu na linha `Identity:`:
+
+```
+Endereco BLE do tag (ex.: EC:EF:40:2D:5E:46 random): EC:EF:40:2D:5E:46 random
+Procurando o tag EC:EF:40:2D:5E:46 (random)...
+```
+
+Aceita `EC:EF:40:2D:5E:46`, `EC:EF:40:2D:5E:46 random` ou `EC:EF:40:2D:5E:46 (random)`
+— sem o tipo, assume `random`. O prompt se repete a cada 5 s enquanto não chega nada,
+então tanto faz abrir o terminal antes ou depois do reset; endereço inválido é recusado e
+o prompt volta. O central só começa a varrer depois de um endereço válido, e a partir daí
+a serial não recebe mais texto do central: só os bytes vindos do tag. Um central sem filtro
+conectaria no tag errado — por isso não existe valor padrão.
 
 ## Passo 4 — ler os dados
 
@@ -123,6 +131,7 @@ O que sai por onde:
 
 | | Canal | Para quê |
 |---|---|---|
+| Prompt do endereço | **serial USB** (uart20) | responder no boot, antes de qualquer dado |
 | CSV do IMU | **serial USB** (uart20) | é o dado a capturar |
 | Log do central | **RTT** | conferir `Filtrando pelo tag ...` e `Connected:` quando algo falhar |
 
@@ -130,8 +139,9 @@ Isso é escolha do sample, e é a escolha certa aqui: o `chosen` do `nrf54lm20dk
 `zephyr,console = &uart20` / `zephyr,shell-uart = &uart20` e **não há** `nordic,nus-uart`,
 então os dados da NUS caem no mesmo uart20 do console. Ligar `CONFIG_LOG_BACKEND_UART`
 intercalaria linhas de log no meio do CSV e sujaria a captura — por isso o sample manda o
-log para RTT e ainda usa `CONFIG_LOG_PRINTK=n`. Só o banner de boot do Zephyr escapa para
-a serial.
+log para RTT e ainda usa `CONFIG_LOG_PRINTK=n`. Na serial, antes do CSV, só o banner de
+boot do Zephyr, o prompt do endereço e a linha `Procurando o tag ...` — todos via `printk`,
+que o sample já usava na mesma UART.
 
 ```
 87799 67,9602,535,1,-3,0
@@ -250,8 +260,10 @@ O Lab exige alvo começando em 0, e a ordem do enum do lab 01 já satisfaz isso.
 
 **1. `src/main.c` — filtro por endereço.** O upstream filtra por UUID da NUS em modo OR e
 alimenta o filtro de endereço a partir dos *bonds*, ou seja, conecta em qualquer coisa que
-anuncie NUS. Aqui o endereço vem de `CONFIG_LAB_TAG_ADDR_VALUE`, o filtro de UUID sai, e
-`bt_scan_filter_enable()` passa a `match_all = true`.
+anuncie NUS. Aqui `read_tag_address_from_uart()` lê o endereço digitado na serial no boot
+(`bt_addr_le_from_str`), o filtro de UUID sai, e `bt_scan_filter_enable()` passa a
+`match_all = true`. A leitura reaproveita o RX por linha do sample: antes do scan, o que
+`uart_cb` deixa em `fifo_uart_rx_data` é a linha digitada; depois, é o que vai para a NUS.
 
 **2. `prj.conf` — buffers de log.** Ver abaixo.
 

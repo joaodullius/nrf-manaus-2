@@ -3,8 +3,8 @@
 build_all.py — gera os .hex de referencia de cada passo do modulo Edge AI.
 
 Cada variante e compilada PRISTINE num build dir proprio (build/hex/<nome>),
-com as edicoes temporarias que o passo exige (fundo de escala do 05, blocos do
-04, endereco do tag no 03) aplicadas antes e desfeitas depois — os fontes do
+com as edicoes temporarias que o passo exige (blocos do 04) aplicadas antes e
+desfeitas depois — os fontes do
 repo ficam exatamente como estavam, mesmo se um build falhar.
 
 Uso (de qualquer pasta):
@@ -33,11 +33,6 @@ NCS_VER = "v3.4.0"
 
 TAG = "nrf54l15tag/nrf54l15/cpuapp"
 LM20 = "nrf54lm20dk/nrf54lm20b/cpuapp"
-
-# Endereco da TAG da bancada de referencia. Os hex do 03 filtram por ele.
-TAG_ADDR_VALUE = "EC:EF:40:2D:5E:46"
-TAG_ADDR_TYPE = "random"
-
 
 # --------------------------------------------------------------- edicoes
 class Edit:
@@ -76,14 +71,6 @@ def edit_01_modelo(nome):
                 sub_once(r'^set\(CURSO_MODELO "fabrica"\)', f'set(CURSO_MODELO "{nome}")'))
 
 
-def edit_05_escala():
-    def fn(s):
-        s2 = s.replace("full_scale.val1 = 2; /* G */", "full_scale.val1 = 4; /* G */", 1)
-        s2 = s2.replace("full_scale.val1 = 500; /* dps */", "full_scale.val1 = 1000; /* dps */", 1)
-        return s2
-    return Edit(EDGE / "05_data_forwarder" / "src" / "sensor" / "bmi270.c", fn)
-
-
 def edit_04_cmake_ventilador():
     return Edit(EDGE / "04_classify_led" / "CMakeLists.txt",
                 sub_once(r'^set\(CURSO_MODELO "Neuton"\)', 'set(CURSO_MODELO "ventilador_95922")'))
@@ -109,15 +96,6 @@ def edit_04_main_ventilador():
     return Edit(EDGE / "04_classify_led" / "src" / "main.c", fn)
 
 
-def conf_03_tag():
-    """Fragmento com o endereco da TAG de referencia, fora do repo."""
-    p = BUILD / "meu_tag_referencia.conf"
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(f'CONFIG_LAB_TAG_ADDR_VALUE="{TAG_ADDR_VALUE}"\n'
-                 f'CONFIG_LAB_TAG_ADDR_TYPE="{TAG_ADDR_TYPE}"\n', encoding="utf-8")
-    return str(p).replace("\\", "/")
-
-
 # --------------------------------------------------------------- variantes
 # nome do hex (sem extensao), app, board, extra args do west, edicoes temporarias
 VARIANTES = [
@@ -130,17 +108,13 @@ VARIANTES = [
     ("02_anomaly_lm20dk", "02_anomaly", LM20,
      ["--sysbuild"], []),
     ("03_central_uart_texto_lm20dk", "03_central_uart", LM20,
-     ["--", lambda: f"-DEXTRA_CONF_FILE={conf_03_tag()}"], []),
-    ("03_central_uart_binario_lm20dk", "03_central_uart", LM20,
-     ["--", lambda: f"-DEXTRA_CONF_FILE={conf_03_tag()};binary_bridge.conf"], []),
+     ["--sysbuild"], []),
     ("04_classify_led_neuton_tag", "04_classify_led", TAG,
-     [], []),
+     ["--sysbuild"], []),
     ("04_classify_led_ventilador_tag", "04_classify_led", TAG,
-     [], [edit_04_cmake_ventilador, edit_04_main_ventilador]),
-    ("05_data_forwarder_sample_tag", "05_data_forwarder", TAG,
-     [], []),
-    ("05_data_forwarder_4g_tag", "05_data_forwarder", TAG,
-     [], [edit_05_escala]),
+     ["--sysbuild"], [edit_04_cmake_ventilador, edit_04_main_ventilador]),
+    ("05_data_forwarder_tag", "05_data_forwarder", TAG,
+     ["--sysbuild"], []),
     ("06_mic_check_lm20dk", "06_mic_check", LM20,
      ["--sysbuild"], []),
     ("07_ww_kws_lm20dk", "07_ww_kws", LM20,
@@ -167,8 +141,11 @@ def west(args):
 
 
 def acha_hex(build_dir, app):
-    for cand in (build_dir / "merged.hex",
-                 build_dir / Path(app).name / "zephyr" / "zephyr.hex",
+    # sysbuild: merged.hex (NCS <= 3.1) ou merged_<board>.hex (NCS 3.4)
+    merged = sorted(build_dir.glob("merged*.hex"))
+    if merged:
+        return merged[0]
+    for cand in (build_dir / Path(app).name / "zephyr" / "zephyr.hex",
                  build_dir / "zephyr" / "zephyr.hex"):
         if cand.exists():
             return cand
@@ -176,8 +153,9 @@ def acha_hex(build_dir, app):
 
 
 def tamanho(log):
-    m = re.search(r"FLASH:\s+(\d+) B.*?RAM:\s+(\d+) B", log, re.S)
-    return (int(m.group(1)), int(m.group(2))) if m else (None, None)
+    # com sysbuild + MCUboot o log tem um FLASH/RAM por imagem; o da app e o maior
+    ms = re.findall(r"FLASH:\s+(\d+) B.*?RAM:\s+(\d+) B", log, re.S)
+    return max(((int(f), int(r)) for f, r in ms), default=(None, None))
 
 
 def build(nome, app, board, extra, edits):

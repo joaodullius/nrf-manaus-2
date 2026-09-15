@@ -13,24 +13,21 @@ corresponde ao fonte deste repo no commit em que foi gerado; regenerar tudo é u
 | `01_gesture_coleta_tag.hex` | loop 1 · coletar | TAG | o mesmo, com `data_collection.conf`: sem inferência, IMU por NUS | 302.048 / 63.632 |
 | `01_gesture_manaus_4gestos_tag.hex` | loop 1 · substituir | TAG | `CURSO_MODELO manaus_4gestos` (solution 95867, 4 classes) | 317.544 / 65.184 |
 | `02_anomaly_lm20dk.hex` | anomalia | LM20-DK (B) | `02_anomaly`, vetores embarcados | 62.812 / 8.960 |
-| `03_central_uart_texto_lm20dk.hex` | loop 1 · ponte | LM20-DK (B) | `03_central_uart` filtrando pela TAG de referência, ponte de texto | 235.264 / 45.396 |
-| `03_central_uart_binario_lm20dk.hex` | loop 2 · plano B | LM20-DK (B) | o mesmo com `binary_bridge.conf` (bytes intactos, MTU 247) | 235.248 / 49.768 |
+| `03_central_uart_texto_lm20dk.hex` | loop 1 · ponte | LM20-DK (B) | `03_central_uart`, ponte de texto; pede o endereço da TAG na serial no boot | 235.616 / 45.404 |
 | `04_classify_led_neuton_tag.hex` | loop 2 · modelo original | TAG | `04_classify_led` com o exemplo da Nordic (solution 90449, 50/1/7) | 87.608 / 19.488 |
 | `04_classify_led_ventilador_tag.hex` | loop 2 · modelo do curso | TAG | `CURSO_MODELO ventilador_95922` (128/6/4), blocos do ventilador | 89.600 / 24.016 |
-| `05_data_forwarder_sample_tag.hex` | loop 2 · coletar | TAG | `05_data_forwarder` como o sample: ±2 g / ±500 dps, 9 canais, LED de estado | 202.380 / 47.304 |
-| `05_data_forwarder_4g_tag.hex` | loop 2 · coletar (curso) | TAG | o mesmo com o fundo de escala editado: **±4 g / ±1000 dps** — o da coleta do dataset de referência | 202.380 / 47.304 |
-| `06_mic_check_lm20dk.hex` | Axon · provar o mic | LM20-DK (B) | `06_mic_check`, barra de VU do microfone PDM na VCOM1 | 52.692 / 9.896 |
-| `07_ww_kws_lm20dk.hex` | Axon · wake word + comandos | LM20-DK (B) | `07_ww_kws`, "Okay Nordic" + 10 comandos na NPU; estados na VCOM0 | 511.656 / 54.216 |
-| `08_cough_detection_lm20dk.hex` | Axon · um zip do Lab | LM20-DK (B) | `08_cough_detection`, detector de tosse; painel na VCOM1 | 143.308 / 25.512 |
-| `09_dog_bark_detection_lm20dk.hex` | Axon · outro zip, mesmo molde | LM20-DK (B) | `09_dog_bark_detection`, detector de latido | 143.344 / 25.512 |
-| `10_sound_events_lm20dk.hex` | Axon · cinco detectores | LM20-DK (B) | `10_sound_events`, 5 modelos intercalados na NPU, painel com rms e traço bruto | 285.404 / 46.896 |
-| `11_benchmark_axon_lm20dk.hex` | benchmark · NPU | LM20-DK (B) | `11_benchmark_npu_vs_cpu` variante Axon: 700 inferências/rajada, latência na VCOM1 | 95.600 / 13.080 |
-| `11_benchmark_neuton_lm20dk.hex` | benchmark · CPU | LM20-DK (B) | o mesmo com o modelo Neuton na CPU | 75.540 / 11.536 |
+| `05_data_forwarder_tag.hex` | loop 2 · coletar | TAG | `05_data_forwarder` do repo: ±4 g / ±1000 dps, 9 canais, LED de estado — o da coleta do dataset de referência | 202.380 / 47.304 |
+| `06_mic_check_lm20dk.hex` | Axon · provar o mic | LM20-DK (B) | `06_mic_check`, barra de VU do microfone PDM na VCOM1 | 52.772 / 9.896 |
+| `07_ww_kws_lm20dk.hex` | Axon · wake word + comandos | LM20-DK (B) | `07_ww_kws`, "Okay Nordic" + 10 comandos na NPU; estados na VCOM0 | 511.648 / 54.216 |
+| `08_cough_detection_lm20dk.hex` | Axon · um zip do Lab | LM20-DK (B) | `08_cough_detection`, detector de tosse; painel na VCOM1 | 143.304 / 25.512 |
+| `09_dog_bark_detection_lm20dk.hex` | Axon · outro zip, mesmo molde | LM20-DK (B) | `09_dog_bark_detection`, detector de latido | 143.336 / 25.512 |
+| `10_sound_events_lm20dk.hex` | Axon · cinco detectores | LM20-DK (B) | `10_sound_events`, 5 modelos intercalados na NPU, painel com rms e traço bruto | 285.396 / 46.896 |
+| `11_benchmark_axon_lm20dk.hex` | benchmark · NPU | LM20-DK (B) | `11_benchmark_npu_vs_cpu` variante Axon: 700 inferências/rajada, latência na VCOM1 | 95.112 / 13.080 |
+| `11_benchmark_neuton_lm20dk.hex` | benchmark · CPU | LM20-DK (B) | o mesmo com o modelo Neuton na CPU | 75.056 / 11.528 |
 
-⚠️ **Os dois hex do 03 filtram pelo endereço da TAG de referência** (`EC:EF:40:2D:5E:46`,
-`random`). Servem na bancada do instrutor e como referência. O aluno **tem de compilar o
-dele** com o endereço da própria TAG em `meu_tag.conf` — um central com o endereço errado
-nunca conecta.
+O hex do 03 serve para qualquer aluno: o central **pede o endereço da TAG no
+terminal serial a cada boot** (115200 8N1) e só começa a varrer depois de um endereço
+válido — um central com o endereço errado nunca conecta.
 
 As placas LM20-DK do curso são a variante **B** (`nrf54lm20dk/nrf54lm20b/cpuapp`); os
 hex da DK não servem na variante A.
@@ -67,8 +64,9 @@ python edge_ai\hex\build_all.py 04 05      # so as que comecam com 04 ou 05
 ```
 
 O script compila cada variante **pristine** em `build/hex/<nome>/`, aplica as edições
-temporárias que o passo exige (fundo de escala do 05, blocos do 04, endereço do 03) e as
+temporárias que o passo exige (blocos do 04) e as
 **desfaz** em seguida — o fonte do repo não muda, mesmo se um build falhar. Os hex vêm
-do `merged.hex` do sysbuild quando existe, senão do `zephyr.hex` da app.
+do `merged*.hex` do sysbuild quando existe (o 04 precisa de `sysbuild.conf` com
+`SB_CONFIG_MERGED_HEX_FILES=y` para gerá-lo), senão do `zephyr.hex` da app.
 
 Depois de regenerar, commite os hex junto com o fonte que os gerou.

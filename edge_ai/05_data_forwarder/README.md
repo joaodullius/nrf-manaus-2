@@ -14,7 +14,7 @@ levam amostras do IMU da TAG para o PC; mudam o firmware, o protocolo e a ferram
 | Firmware na TAG | **o mesmo do 01**, com um fragmento | outro firmware |
 | Protocolo | texto: `"<id> ax,...,gz\r\n"` | **CBOR + COBS + CRC-16** |
 | Ferramenta no PC | `prep_dataset.py` (terminal) | **Data Forwarder Host** (GUI) |
-| Segunda placa | nRF54LM20-DK obrigatória | opcional (o PC conecta por BLE) |
+| Segunda placa | nRF54LM20-DK obrigatória | não: o PC conecta por BLE (a DK só grava a TAG) |
 | Unidades | mili | **micro** (`INT32_VALUES=y`) |
 | Vantagem | continuidade com o Ato 1, unidades já casam | GUI com plot ao vivo, ferramenta oficial |
 
@@ -72,13 +72,14 @@ descrito no fim desta seção.
 
 ### Antes de começar: três decisões
 
-**1. Fundo de escala.** O sample crava ±2 g / ±500 dps em `src/sensor/bmi270.c:85` e
-`:102`. O 04 usa ±4 g / ±1000 dps. Alinhar o 05 antes de coletar: um sinal que satura a
-±2 g na captura não satura na inferência, e o modelo aprende algo que a app nunca vai ver.
+**1. Fundo de escala.** O sample da Nordic crava ±2 g / ±500 dps; este repo já vem em
+**±4 g / ±1000 dps**, o mesmo do 01 e do 04 (`src/sensor/bmi270.c`, marcado como
+divergência). Não mexer: um sinal que satura a ±2 g na captura não satura na inferência,
+e o modelo aprende algo que a app nunca vai ver.
 
-**2. Como receber.** Opção A: PC direto por BLE (Data Forwarder Host, fonte *BLE NUS*).
-Opção B: nRF54LM20-DK como ponte binária, Host com fonte *UART*. Tentar A; se o BLE do
-Windows não conectar ou perder frames, B. A doc da Nordic segue essa mesma ordem.
+**2. Como receber.** PC direto por BLE (Data Forwarder Host, fonte *BLE NUS*). A DK não
+entra: ela só serve para gravar a TAG. Quem não tiver Bluetooth no notebook usa um
+adaptador USB BLE.
 
 **3. O que classificar.** 3 a 5 classes (limite prático do LED RGB, ver README do 04).
 O caso do curso é **vibração**: a velocidade de um ventilador, 4 classes (`idle`, `vel1`,
@@ -119,23 +120,21 @@ Só faz falta na opção A; na B a DK é regravada de qualquer jeito.
 
 TAG encaixada no `DEBUG OUT` da LM20-DK.
 
-**Fundo de escala — o aluno edita, o repo fica como o sample.** O repo mantém os
-literais do sample (±2 g / ±500 dps) e o aluno muda para casar com o 04 (±4 g / ±1000
-dps). É um exercício de leitura de código, e vale um slide: dois literais em
-`src/sensor/bmi270.c`, sem Kconfig.
+**Fundo de escala — a primeira divergência do curso.** Dois literais em
+`src/sensor/bmi270.c`, sem Kconfig, já trocados no repo:
 
 ```c
-/* src/sensor/bmi270.c:85 — acelerômetro */
-full_scale.val1 = 2; /* G */        →   full_scale.val1 = 4; /* G */
+/* src/sensor/bmi270.c — acelerômetro: 2 g no sample, 4 g aqui */
+full_scale.val1 = 4; /* G */
 
-/* src/sensor/bmi270.c:102 — giroscópio */
-full_scale.val1 = 500; /* dps */    →   full_scale.val1 = 1000; /* dps */
+/* src/sensor/bmi270.c — giroscópio: 500 dps no sample, 1000 dps aqui */
+full_scale.val1 = 1000; /* dps */
 ```
 
 Não muda a unidade (continua micro-unidade em int32), só o teto antes de saturar. A
-mesma escala tem de ser configurada no `imu_init()` do 04 (Passo 7).
+mesma escala está no `imu_init()` do 04 (Passo 7).
 
-**LED de estado — a única divergência de código do curso.** O sample não usa LED, e na
+**LED de estado — a segunda divergência.** O sample não usa LED, e na
 aula a TAG roda na bateria, sem RTT. Acrescentado em `src/main.c` (marcado no cabeçalho)
 com `CONFIG_GPIO=y` no `prj.conf`:
 
@@ -273,16 +272,6 @@ dizer em sala antes do clique.
 *Validado 2026-09-02:* Windows 11, adaptador Bluetooth interno do notebook, `bleak`.
 `BLE NUS link negotiated ATT MTU = 247 bytes`, conectado a `EC:EF:40:2D:5E:46`.
 
-**Passo 3-B — se o BLE do PC falhar.** Tirar a TAG do `DEBUG OUT` (bateria). Conferir o
-endereço em `meu_tag.conf`. Gravar a ponte binária na DK:
-
-```
-west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp -d C:\work\nrf-manaus-2\edge_ai\03_central_uart\build_lm20_bin C:\work\nrf-manaus-2\edge_ai\03_central_uart -- -DEXTRA_CONF_FILE="meu_tag.conf;binary_bridge.conf"
-west flash -d C:\work\nrf-manaus-2\edge_ai\03_central_uart\build_lm20_bin --dev-id <serial da DK>
-```
-
-No Host, sessão com fonte **UART**, a **vcom1** da DK, 115200 8N1. Se ficar muda, a outra.
-
 ### Passo 4 — gravar uma classe por vez ✅
 
 Na aba da sessão: **label** (`vel1`), pasta de saída, `Record`, uns 5 minutos na
@@ -314,8 +303,7 @@ o modelo do loop 2 é treinado em micro e alimentado em micro.)
 *Validado 2026-09-03, BLE direto no PC (Bluetooth interno de um notebook Windows):* as
 4 gravações de [`dataset_referencia/`](dataset_referencia/), 24 min no total, com **18
 amostras perdidas em 146 mil** (`device_time_ms` avança 9/10/11 ms; `producer_drop_count
-= 0` nos sidecars). A ponte na DK segue como plano B para quem não tiver adaptador ou
-não conseguir conectar, não por falta de banda.
+= 0` nos sidecars).
 
 ### Passo 5 — converter para o Lab (`tools/fwd_to_lab.py`) ✅
 
@@ -345,8 +333,26 @@ Quem preferir tirá-las antes usa `--drop-env`. `--session-col` acrescenta `sess
 índice do arquivo, que o Lab aceita como *Session ID* para separar treino e validação
 por gravação.
 
-Gestos discretos (swipes) ainda precisam de centralização depois disso, como no loop 1
-(`center_gestures.py` do 03). Vibração, `idle` e `unknown` não.
+**Gestos discretos (swipes) precisam de centralização antes do `merge`**, como no
+loop 1: o pico do gesto tem de cair no meio da janela. Vibração, `idle` e `unknown` não.
+[`tools/center_host.py`](tools/center_host.py) faz isso num CSV do Host por vez, e devolve
+um CSV **no mesmo formato**, só com as janelas dos gestos — entra no `merge` como
+qualquer gravação:
+
+```
+python tools/center_host.py <pasta>\swipe_left_ble-xxxx.csv -w 100
+python tools/center_host.py <pasta>\swipe_right_ble-xxxx.csv -w 100
+python tools/fwd_to_lab.py merge <pasta>\*_centrado.csv <pasta>\idle_*.csv --classes idle,swipe_left,swipe_right --out dataset.csv
+```
+
+`-w` é a janela e tem de ser **par e igual ao Window size do Lab**. O algoritmo e a
+calibração automática de eixo e limiar são os do `center_gestures.py` do 03 (importado
+por caminho relativo, o script da Nordic continua num lugar só); precisa de `numpy` e
+`pandas`. Conferido com a mesma gravação de swipe nas duas escalas (mili no 03, micro
+aqui): mesmo eixo, mesmo coeficiente, mesmos 112 gestos, linhas idênticas — o limiar da
+Nordic é relativo à média do envelope, então a escala não muda o recorte. `info` num
+arquivo centrado não faz sentido (taxa e amostras perdidas refletem os cortes, não a
+gravação). Testes em `tools/test_center_host.py`.
 
 *Validado 2026-09-03 com o caso do ventilador (abaixo):* 4 gravações → 4 classes,
 146.523 linhas, `ax,ay,az,gx,gy,gz,temp,hum,pres,class`; recusas exercitadas (classe
@@ -446,7 +452,7 @@ no repo em `src/nrf_edgeai_generated/ventilador_95922/`; para o seu, o caminho �
    comentada).
 4. A leitura dos 6 eixos em **micro-unidades** (`sensor_value_to_micro()`, ordem
    `ax,ay,az,gx,gy,gz` do CSV) já está no `main.c`. Conferir só `IMU_ACCEL_FS_G` e
-   `IMU_GYRO_FS_DPS`: o mesmo fundo de escala deixado no `bmi270.c` antes de coletar.
+   `IMU_GYRO_FS_DPS`: o mesmo fundo de escala do `bmi270.c` do 05 (4 g / 1000 dps).
 
 ```
 west build -p -b nrf54l15tag/nrf54l15/cpuapp -d C:\work\nrf-manaus-2\edge_ai\04_classify_led\build_tag C:\work\nrf-manaus-2\edge_ai\04_classify_led

@@ -126,7 +126,7 @@ def acha_porta(baud: int, espera: float = 3.0) -> str:
     morrer(
         "nenhuma porta esta enviando dados no formato esperado.\n"
         "       confira: a DK esta gravada com o 03_central_uart? o tag esta ligado\n"
-        "       e com o data_collection.conf? o endereco em meu_tag.conf esta certo?"
+        "       e com o data_collection.conf? o endereco digitado no central esta certo?"
     )
 
 

@@ -94,8 +94,9 @@ def west(args):
 
 def acha_hex(build_dir):
     """O tfm_merged.hex e o que o west flash grava no alvo /ns."""
+    # merged_<board>.hex vem do SB_CONFIG_MERGED_HEX_FILES (sysbuild.conf) no NCS 3.4
     for cand in (build_dir / APP / "zephyr" / "tfm_merged.hex",
-                 build_dir / "merged.hex",
+                 *sorted(build_dir.glob("merged*.hex")),
                  build_dir / APP / "zephyr" / "zephyr.hex"):
         if cand.exists():
             return cand

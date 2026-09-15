@@ -8,7 +8,8 @@
  * Para conferir se divergiu do SDK:
  *   diff <este arquivo> C:/ncs/sdk-edge-ai/edge-ai/samples/data_forwarder/src/main.c
  *
- * DIVERGENCIA DO CURSO (unica): LED de estado — led_init() e led_tick().
+ * DIVERGENCIA DO CURSO: LED de estado — led_init() e led_tick(). (A outra
+ *   divergencia do lab e o fundo de escala do IMU, em src/sensor/bmi270.c.)
  *   O upstream nao usa LED. Na aula a TAG roda na bateria, sem RTT, e o aluno
  *   precisa saber o que ela esta fazendo:
  *
