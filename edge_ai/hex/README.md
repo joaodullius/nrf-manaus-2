@@ -15,7 +15,7 @@ corresponde ao fonte deste repo no commit em que foi gerado; regenerar tudo é u
 | `02_anomaly_lm20dk.hex` | anomalia | LM20-DK (B) | `02_anomaly`, vetores embarcados | 62.812 / 8.960 |
 | `03_central_uart_texto_lm20dk.hex` | loop 1 · ponte | LM20-DK (B) | `03_central_uart`, ponte de texto; pede o endereço da TAG na serial no boot | 235.616 / 45.404 |
 | `04_classify_led_neuton_tag.hex` | loop 2 · modelo original | TAG | `04_classify_led` com o exemplo da Nordic (solution 90449, 50/1/7) | 87.608 / 19.488 |
-| `04_classify_led_ventilador_tag.hex` | loop 2 · modelo do curso | TAG | `CURSO_MODELO ventilador_95922` (128/6/4), blocos do ventilador | 89.600 / 24.016 |
+| `04_classify_led_ventilador_tag.hex` | loop 2 · modelo do curso | TAG | `CURSO_MODELO ventilador_95922` (128/6/4), blocos do ventilador | 89.384 / 24.016 |
 | `05_data_forwarder_tag.hex` | loop 2 · coletar | TAG | `05_data_forwarder` do repo: ±4 g / ±1000 dps, 9 canais, LED de estado — o da coleta do dataset de referência | 202.380 / 47.304 |
 | `06_mic_check_lm20dk.hex` | Axon · provar o mic | LM20-DK (B) | `06_mic_check`, barra de VU do microfone PDM na VCOM1 | 52.772 / 9.896 |
 | `07_ww_kws_lm20dk.hex` | Axon · wake word + comandos | LM20-DK (B) | `07_ww_kws`, "Okay Nordic" + 10 comandos na NPU; estados na VCOM0 | 511.648 / 54.216 |

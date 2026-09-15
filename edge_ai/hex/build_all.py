@@ -80,10 +80,19 @@ def edit_04_main_ventilador():
     """Comenta o bloco Neuton (constantes + cores) e descomenta o do ventilador."""
     def fn(s):
         for macro in ("USER_WINDOW_SIZE", "USER_UNIQ_INPUTS_NUM", "USER_MODELS_CLASS_NUM"):
-            s, n1 = re.subn(rf'^#define {macro} ', f'// #define {macro} ', s, count=1, flags=re.M)
+            # Primeiro descomenta a linha do ventilador (a unica comentada) e SO
+            # DEPOIS comenta a primeira "#define" — a do Neuton, que vem antes.
+            # Na ordem inversa o segundo regex casava com a linha do Neuton
+            # recem-comentada e a devolvia: o hex saia com 50/1/7 e o modelo
+            # do ventilador (128/6/4) → ASSERTION FAIL em main():294 no boot.
             s, n2 = re.subn(rf'^// #define {macro} (\s*\d+U)', rf'#define {macro} \1', s, count=1, flags=re.M)
+            s, n1 = re.subn(rf'^#define {macro} ', f'// #define {macro} ', s, count=1, flags=re.M)
             if n1 != 1 or n2 != 1:
                 raise RuntimeError(f"bloco de {macro} nao encontrado")
+        for macro, val in (("USER_WINDOW_SIZE", 128), ("USER_UNIQ_INPUTS_NUM", 6),
+                           ("USER_MODELS_CLASS_NUM", 4)):
+            if not re.search(rf'^#define {macro}\s+{val}U', s, re.M):
+                raise RuntimeError(f"{macro} nao ficou em {val}U depois da edicao")
         a = s.index("/* Neuton (exemplo da Nordic): estados de transporte")
         b = s.index("/* ventilador_95922 (modelo do curso): na ordem")
         c = s.index("// };", b) + len("// };")
