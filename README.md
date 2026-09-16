@@ -43,4 +43,4 @@ O board target de cada lab está indicado no `README.md` do próprio lab.
 
 ## Material de apoio
 
-Slides e material complementar ficam na pasta local `doc/` (não versionada) e são distribuídos separadamente durante o treinamento. A pasta local `referencias/` (também não versionada) guarda material de referência usado no preparo do curso.
+Os slides de cada módulo ficam em `doc/` (um `.pptx` por bloco, organizados por módulo). As fontes que geram esses decks ficam na pasta local `doc-source/` (repositório separado, não versionado aqui). A pasta local `referencias/` (também não versionada) guarda material de referência usado no preparo do curso.

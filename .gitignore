@@ -1,5 +1,9 @@
-# Material de apoio (ppts, PDFs) - nao versionado
-doc/
+# Fontes dos decks (repo nrf-manaus-2-docs, aninhado) - nao versionado.
+# Os .pptx gerados por doc-source/_template/build_*.py vao para doc/, versionada.
+doc-source/
+
+# Lock files do Office
+~$*
 
 # Referencias de material para preparo do curso - nao versionado
 referencias/
