@@ -1,7 +1,7 @@
 # Channel Sounding · Lab 4 — Segurança: o que o rádio garante e o que o chip suporta
 
 Sem firmware novo. O TAG volta ao reflector RAS (lab 1) e o par do lab 2 é
-reexaminado com outros olhos: **por que Channel Sounding resiste a um ataque de relé
+reexaminado com outros olhos: **por que Channel Sounding resiste a um relay attack
 onde RSSI não resiste**, e onde o lab 3 abriu mão disso.
 
 ## 1. O que já aconteceu antes da primeira medida
@@ -22,9 +22,10 @@ Três coisas para notar:
   `bt_conn_set_security(connection, BT_SECURITY_L2)` e espera — sem ACL cifrada não
   há CS. O pareamento não é burocracia: é de onde saem as chaves do passo seguinte.
 - **`CS security enabled`** é o `bt_le_cs_security_enable()`: initiator e reflector
-  derivam da chave da conexão os segredos que embaralham a sequência de canais e o
-  conteúdo dos pacotes de RTT. Um terceiro que só escuta não sabe qual canal vem
-  depois nem o que vai dentro do pacote.
+  trocam vetores aleatórios (CS_IV, CS_IN e CS_PV) pelo enlace já cifrado e com eles
+  semeiam um DRBG que sorteia a sequência de canais, os payloads de RTT e a permutação
+  de antenas. Um terceiro que só escuta não reproduz a sequência: não sabe qual canal
+  vem depois nem o que vai dentro do pacote.
 - **`.rtt_type = BT_CONN_LE_CS_RTT_TYPE_AA_ONLY`** em `cs_config_get()`: o RTT deste
   sample carimba o tempo no *access address* do pacote. O SoftDevice Controller também
   suporta RTT com payload aleatório de 32, 64, 96 ou 128 bits — quanto mais bits
@@ -32,11 +33,11 @@ Três coisas para notar:
 
 ## 2. Por que RSSI é fácil de enganar e CS não
 
-Com RSSI, "perto" significa "sinal forte". Um relé — dois rádios que repetem o sinal
-entre a chave e a fechadura — faz o sinal chegar forte de longe. É o ataque clássico
-contra chave de carro.
+Com RSSI, "perto" significa "sinal forte". Um relay attack — dois rádios que repetem
+o sinal entre a chave e a fechadura — faz o sinal chegar forte de longe. É o ataque
+clássico contra chave de carro.
 
-Com **RTT**, distância é **tempo de voo**. Um relé pode amplificar, mas não pode
+Com **RTT**, distância é **tempo de voo**. Um relay pode amplificar, mas não pode
 fazer o sinal chegar **antes** do que a luz permite: ele só acrescenta atraso. O RTT
 dá um **limite inferior físico** para a distância. Com o payload aleatório e a
 sequência de canais secreta, o atacante também não consegue pré-computar a resposta.
@@ -94,4 +95,4 @@ enable` usa vêm do pareamento BLE — e é lá que a história continua.
 - nRF Connect SDK v3.4.0 — `ras_initiator/src/main.c` (`bt_conn_set_security`, `bt_le_cs_security_enable`, `cs_config_get`)
 - Nordic, *LE Channel Sounding* — tabela "CS feature support for the SoftDevice Controller"
 - Nordic, *Bluetooth: Channel Sounding Initiator with Inline PCT Transfer* — "Drawbacks of CS IPT"
-- Bluetooth SIG, *Bluetooth Channel Sounding* (página de tecnologia) — segurança e o ataque de relé
+- Bluetooth SIG, *Bluetooth Channel Sounding* (página de tecnologia) — segurança e o relay attack

@@ -63,7 +63,10 @@ Procurando o tag EC:EF:40:2D:5E:46 (random)...
 ```
 
 Aceita `EC:EF:40:2D:5E:46`, `... random` ou `... (random)`; sem o tipo, assume
-`random`. Inválido é recusado e o prompt volta. Não existe valor padrão: um initiator sem
+`random`. Inválido é recusado e o prompt volta. **Digite o endereço; não cole.** O
+firmware lê a console por polling a cada 10 ms, e um endereço colado chega inteiro
+numa rajada de 1,5 ms: só o primeiro caractere sobrevive e o resto é recusado como
+inválido. Digitado, cada tecla chega com dezenas de ms de intervalo. Não existe valor padrão: um initiator sem
 filtro conectaria no TAG do colega, e os seis TAGs da sala anunciam o mesmo UUID. Só
 depois do `Procurando` o scan começa. Sequência esperada:
 
@@ -154,7 +157,7 @@ ou outro ritmo:
 
 | Ajuste | Valor | Por quê |
 |---|---|---|
-| `CONFIG_BT_L2CAP_TX_MTU` | 498 | o Ranging Data de um procedure tem ~512 B por lado; o Ranging Profile pede MTU ≥ 247 |
+| `CONFIG_BT_L2CAP_TX_MTU` | 498 | o Ranging Data de um procedure tem ~860 B por lado (10 B por step de PBR com um caminho de antena); o Ranging Profile pede MTU ≥ 247 |
 | `CONFIG_BT_BUF_ACL_TX_SIZE` / `_RX_SIZE` | 502 | buffer ACL acima da MTU, senão o L2CAP fragmenta |
 | `CONFIG_BT_CTLR_DATA_LENGTH_MAX` | 251 | Data Length Extension: 251 B por PDU em vez de 27 — uma notificação de Ranging Data em 1–2 PDUs em vez de 10 |
 | `CONFIG_BT_ATT_PREPARE_COUNT` | 3 | escritas longas no RAS Control Point |
