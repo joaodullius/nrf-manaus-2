@@ -12,8 +12,9 @@ Antes disso, no boot, o firmware pede o endereco do TAG na mesma serial:
 
     Endereco BLE do tag (ex.: EC:EF:40:2D:5E:46 random):
 
-e so comeca a varrer depois de uma resposta valida. TAG_PROMPT/is_tag_prompt()
-e responder_tag() sao o que os scripts usam para reconhecer e responder.
+e so comeca a varrer depois de uma resposta valida. O aluno responde num terminal
+serial e o fecha antes de rodar os scripts; TAG_PROMPT/is_tag_prompt() e o que os
+scripts usam para reconhecer que a DK ainda esta no prompt.
 
 Este modulo so le e escreve esse formato. Quem calcula e cs_de_numpy.py.
 """
@@ -31,17 +32,6 @@ TAG_PROMPT = "Endereco BLE do tag"
 
 def is_tag_prompt(line: str) -> bool:
     return TAG_PROMPT in line
-
-
-def responder_tag(serial_port, tag: str | None) -> None:
-    """Manda o endereco do TAG para o firmware, se houver um.
-
-    O firmware so le a serial enquanto esta no prompt; se ja passou dele, a
-    linha e ignorada — por isso pode ser mandada sempre que a porta abre.
-    """
-    if tag:
-        serial_port.write((tag.strip() + "\r\n").encode("ascii"))
-        serial_port.flush()
 
 
 def _f(s: str) -> float:

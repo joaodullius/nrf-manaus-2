@@ -27,22 +27,3 @@ def test_waiting_for_tag():
     assert not cs_capture.waiting_for_tag(LINES)
     assert not cs_capture.waiting_for_tag([])
 
-
-def test_responder_tag():
-    import cs_csv
-
-    class Porta:
-        def __init__(self):
-            self.dados = b""
-
-        def write(self, b):
-            self.dados += b
-
-        def flush(self):
-            pass
-
-    p = Porta()
-    cs_csv.responder_tag(p, None)
-    assert p.dados == b""
-    cs_csv.responder_tag(p, " EC:EF:40:2D:5E:46 ")
-    assert p.dados == b"EC:EF:40:2D:5E:46\r\n"

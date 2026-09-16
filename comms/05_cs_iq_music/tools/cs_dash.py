@@ -4,12 +4,11 @@
 
     python cs_dash.py --trena 3.0
     python cs_dash.py --port COM22 --trena 5 --janela 12
-    python cs_dash.py --tag EC:EF:40:2D:5E:46 --trena 3.0
     python cs_dash.py --texto              (sem janela grafica, so terminal)
 
-O firmware pede o endereco do TAG na serial a cada boot: --tag responde ao abrir
-a porta (ignorado se a DK ja passou do prompt); sem --tag, responda num terminal
-e feche-o antes.
+Antes de rodar: o firmware pede o endereco do TAG na serial a cada boot. Abra
+a COM num terminal serial, digite o endereco (nao cole), Enter, e FECHE o
+terminal - a porta aceita um leitor por vez. So entao rode o script.
 
 Le a serial do 05_cs_iq_music, monta cada procedure, roda TODOS os estimadores
 sobre o mesmo IQ e mostra o resultado atualizando. Feito para a demonstracao em
@@ -76,7 +75,7 @@ def mad(v) -> float:
 
 
 # ----------------------------------------------------------------- serial ---
-def autodetect(tag: str | None = None, espera: float = 3.0) -> str:
+def autodetect(espera: float = 3.0) -> str:
     """Mesma busca do cs_capture.py: a porta que esta mandando IQ,/CS,."""
     from serial import Serial, SerialException
     from serial.tools import list_ports
@@ -90,8 +89,7 @@ def autodetect(tag: str | None = None, espera: float = 3.0) -> str:
         try:
             with Serial(porta, BAUD, timeout=0.3, dsrdtr=False) as s:
                 s.dtr = True                      # o VCOM da LM20-DK exige DTR
-                cs_csv.responder_tag(s, tag)
-                fim = time.time() + max(espera, 6.0 if tag is None else espera)
+                fim = time.time() + max(espera, 6.0)   # o prompt repete a cada 5 s
                 vistas = 0
                 while time.time() < fim:
                     line = s.readline().decode("utf-8", "replace")
@@ -102,20 +100,18 @@ def autodetect(tag: str | None = None, espera: float = 3.0) -> str:
                             return porta
                     elif cs_csv.is_tag_prompt(line):
                         no_prompt = porta
-                        if tag is None:
-                            break
+                        break
         except (SerialException, OSError):
             continue
     if no_prompt:
         sys.exit(f"erro: a DK em {no_prompt} esta pedindo o endereco do TAG.\n"
-                 "       passe --tag EC:EF:40:2D:5E:46 (o do SEU TAG), ou responda num\n"
-                 "       terminal e feche-o antes de rodar de novo.")
+                 "       abra essa COM num terminal, digite o endereco do SEU TAG, Enter,\n"
+                 "       feche o terminal e rode de novo.")
     sys.exit("erro: nenhuma porta esta enviando linhas IQ,/CS,.\n"
              "       a DK esta com o 05_cs_iq_music? o TAG esta ligado?")
 
 
-def leitor(porta: str, saida: "queue.Queue", parar: threading.Event, rapido: bool,
-           tag: str | None = None):
+def leitor(porta: str, saida: "queue.Queue", parar: threading.Event, rapido: bool):
     """Thread: le a serial, monta procedures e poe um dicionario de metricas na fila."""
     from serial import Serial
 
@@ -124,7 +120,6 @@ def leitor(porta: str, saida: "queue.Queue", parar: threading.Event, rapido: boo
     ultimo = None
     with Serial(porta, BAUD, timeout=1, dsrdtr=False) as s:
         s.dtr = True
-        cs_csv.responder_tag(s, tag)
         while not parar.is_set():
             rec = cs_csv.parse_line(s.readline().decode("utf-8", "replace"))
             if rec is None:
@@ -310,7 +305,6 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--port", help="COMx (default: procura sozinho)")
-    ap.add_argument("--tag", help="endereco BLE do SEU TAG, respondido ao prompt do firmware")
     ap.add_argument("--trena", type=float, default=3.0, help="distancia de referencia (m)")
     ap.add_argument("--janela", type=int, default=8,
                     help="quantas procedures entram na mediana (default 8)")
@@ -319,10 +313,10 @@ def main() -> None:
                     help="pula o MUSIC (so as contas do firmware), se o PC nao acompanhar")
     args = ap.parse_args()
 
-    porta = args.port or autodetect(args.tag)
+    porta = args.port or autodetect()
     fila: "queue.Queue" = queue.Queue()
     parar = threading.Event()
-    t = threading.Thread(target=leitor, args=(porta, fila, parar, args.rapido, args.tag),
+    t = threading.Thread(target=leitor, args=(porta, fila, parar, args.rapido),
                          daemon=True)
     t.start()
     painel = Painel(args.trena, args.janela)

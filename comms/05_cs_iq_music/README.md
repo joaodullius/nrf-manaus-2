@@ -41,16 +41,13 @@ nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/wo
 ```
 
 Como nos labs 2 e 3, o initiator **pede o endereço do TAG na serial a cada boot**
-(115200 8N1) e só começa a varrer depois de um válido. Aqui quem costuma abrir a porta é
-um script, então há dois jeitos de responder:
-
-- `cs_capture.py` e `cs_dash.py` aceitam `--tag EC:EF:40:2D:5E:46` e mandam a linha
-  ao abrir a porta (se a DK já passou do prompt, a linha é ignorada);
-- ou responda num terminal e feche-o antes de rodar o script — a DK não reseta quando
-  a porta é aberta.
-
-Sem `--tag`, o autodetect reconhece o prompt e diz que falta responder, em vez de
-"porta não encontrada".
+(115200 8N1) e só começa a varrer depois de um válido. A resposta é manual, antes de
+qualquer script: abra a COM num terminal serial, **digite** o endereço (não cole: o
+firmware lê a console por polling a cada 10 ms, e um endereço colado chega numa
+rajada em que só o primeiro caractere sobrevive), Enter, e **feche o terminal**. A
+porta aceita um leitor por vez, e a DK não reseta quando a porta é aberta ou fechada.
+Se um script encontrar a DK ainda no prompt, ele diz isso em vez de "porta não
+encontrada".
 
 O que sai na serial depois do `Procurando`, por procedure — 75 linhas `IQ` e uma `CS`:
 
@@ -82,7 +79,7 @@ O log do sample (`Filtrando pelo tag`, `CS procedures enabled`, ...) vai para o
 ```
 cd tools
 python -m pip install -r requirements.txt
-python -m pytest -q          # 20 passed: o port e o adaptador batem com IQ sintetico
+python -m pytest -q          # 38 passed: o port e o adaptador batem com IQ sintetico
 ```
 
 ## Passo 3 — capturar
@@ -91,8 +88,11 @@ python -m pytest -q          # 20 passed: o port e o adaptador batem com IQ sint
 python cs_capture.py --seconds 30 --out ../capturas/1m.csv
 ```
 
-Acha a porta sozinho, mostra a taxa e a última estimativa, e guarda só as linhas
-válidas. Repita para 3 m e 5 m, com trena. `capturas/` não é versionada.
+Acha a porta sozinho e, enquanto grava, mostra uma linha de status por segundo com o
+tempo decorrido, o número de procedures e a última estimativa. Avisa quando chega a
+primeira linha de dados (a DK conectou no TAG e o CS está ativo), avisa se em 10 s
+nenhuma procedure chegou, e Ctrl+C encerra antes mantendo o arquivo. Guarda só as
+linhas válidas. Repita para 3 m e 5 m, com trena. `capturas/` não é versionada.
 
 O `cs_capture.py` ativa o DTR ao abrir a porta: a serial USB da LM20-DK só fala com
 o VCOM se o DTR estiver ligado. Se você abrir a mesma COM num terminal próprio
