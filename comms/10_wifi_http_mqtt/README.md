@@ -91,19 +91,19 @@ eles se **empilham** sobre ele. É o mal-entendido mais comum sobre esse trio.
 | **MQTT** | `CONFIG_MQTT_LIB` (+ `MQTT_KEEPALIVE`) | 431 |
 
 Nenhum dos três usa `CONFIG_DNS_RESOLVER`: o endereço do servidor é um IP literal
-(`CONFIG_LAB_SERVIDOR_IP`), não um nome. Num produto real isso mudaria, e o DNS entraria
+(digitado no terminal no boot e gravado em settings, ver o lab 9), não um nome. Num produto real isso mudaria, e o DNS entraria
 como mais uma camada comum aos três.
 
 ### O custo de cada escolha, medido
 
 | | FLASH | RAM | Ciclo de telemetria |
 |---|---|---|---|
-| TCP puro | 555.664 B (26,65%) | 191.952 B (36,68%) | 2050 ms |
-| HTTP | 567.160 B (27,20%) | 192.200 B (36,73%) | 2095 ms |
-| MQTT | 560.992 B (26,91%) | 193.392 B (36,96%) | 2053 ms |
+| TCP puro | 566772 B | 192200 B | 2050 ms |
+| HTTP | 578268 B (+11496) | 192448 B (+248) | 2095 ms |
+| MQTT | 572084 B (+5312) | 193640 B (+1440) | 2053 ms |
 
 Com `CONFIG_LAB_INTERVALO_MS=2000` nos três. A diferença de FLASH entre o mais leve e o
-mais pesado é de **11,5 KB** — pouco, para três protocolos de aplicação diferentes, e é
+mais pesado é de poucos KB — pouco, para três protocolos de aplicação diferentes, e é
 a evidência de que a parte cara da pilha (Wi-Fi, supplicant, TCP/IP) é a mesma nos três.
 
 > **Os ciclos nem sempre foram iguais.** Até 2026-09-07 o TCP e o MQTT mediam ~3000 ms
@@ -158,30 +158,41 @@ binário quando o transporte correspondente é o escolhido.
 
 `CONFIG_LAB_PORTA` (já existia no lab 9) passou a servir três papéis
 dependendo do transporte: porta do TCP puro, porta do `wifi_http_server.py`,
-ou porta do broker MQTT. O padrão (9000) só faz sentido para TCP — para
-HTTP e MQTT, passe a porta certa na linha de build (ver abaixo).
+ou porta do broker MQTT. Ele é só o **padrão que o prompt do boot propõe**
+(`Porta do servidor (Enter = <padrão>):`); o valor efetivo é o que fica
+gravado em settings (`src/lab_rede.c`, ver o lab 9). O padrão de fábrica
+(9000) só faz sentido para TCP — para HTTP e MQTT, passe a porta certa na
+linha de build (ver abaixo), e o prompt propõe o valor certo.
 
 ## Compilar as três variantes
-
-Com `minha_rede.conf` preenchido (mesma convenção do lab 9) e o IP do PC em
-mãos:
 
 ```bash
 cd C:\ncs\v3.4.0
 
 # TCP (igual ao lab 9, porta 9000)
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/09_wifi_tcp/build_TCP C:/work/nrf-manaus-2/comms/09_wifi_tcp -- -D09_wifi_tcp_SHIELD="nrf7002eb2" -D09_wifi_tcp_SNIPPET=nrf70-wifi -D09_wifi_tcp_EXTRA_CONF_FILE=minha_rede.conf -D09_wifi_tcp_CONFIG_LAB_SERVIDOR_IP=\"<ip-do-pc>\" -D09_wifi_tcp_CONFIG_LAB_TRANSPORTE_TCP=y
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/09_wifi_tcp/build_TCP C:/work/nrf-manaus-2/comms/09_wifi_tcp -- -D09_wifi_tcp_SHIELD="nrf7002eb2" -D09_wifi_tcp_SNIPPET=nrf70-wifi -D09_wifi_tcp_CONFIG_LAB_TRANSPORTE_TCP=y
 
 # HTTP (wifi_http_server.py, porta 8000)
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/09_wifi_tcp/build_HTTP C:/work/nrf-manaus-2/comms/09_wifi_tcp -- -D09_wifi_tcp_SHIELD="nrf7002eb2" -D09_wifi_tcp_SNIPPET=nrf70-wifi -D09_wifi_tcp_EXTRA_CONF_FILE=minha_rede.conf -D09_wifi_tcp_CONFIG_LAB_SERVIDOR_IP=\"<ip-do-pc>\" -D09_wifi_tcp_CONFIG_LAB_TRANSPORTE_HTTP=y -D09_wifi_tcp_CONFIG_LAB_PORTA=8000
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/09_wifi_tcp/build_HTTP C:/work/nrf-manaus-2/comms/09_wifi_tcp -- -D09_wifi_tcp_SHIELD="nrf7002eb2" -D09_wifi_tcp_SNIPPET=nrf70-wifi -D09_wifi_tcp_CONFIG_LAB_TRANSPORTE_HTTP=y -D09_wifi_tcp_CONFIG_LAB_PORTA=8000
 
 # MQTT (broker mosquitto, porta 1883)
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/09_wifi_tcp/build_MQTT C:/work/nrf-manaus-2/comms/09_wifi_tcp -- -D09_wifi_tcp_SHIELD="nrf7002eb2" -D09_wifi_tcp_SNIPPET=nrf70-wifi -D09_wifi_tcp_EXTRA_CONF_FILE=minha_rede.conf -D09_wifi_tcp_CONFIG_LAB_SERVIDOR_IP=\"<ip-do-pc>\" -D09_wifi_tcp_CONFIG_LAB_TRANSPORTE_MQTT=y -D09_wifi_tcp_CONFIG_LAB_PORTA=1883
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/09_wifi_tcp/build_MQTT C:/work/nrf-manaus-2/comms/09_wifi_tcp -- -D09_wifi_tcp_SHIELD="nrf7002eb2" -D09_wifi_tcp_SNIPPET=nrf70-wifi -D09_wifi_tcp_CONFIG_LAB_TRANSPORTE_MQTT=y -D09_wifi_tcp_CONFIG_LAB_PORTA=1883
 ```
 
 Os três builds ficam em `comms/09_wifi_tcp/build_TCP`, `build_HTTP` e
 `build_MQTT` — caminho curto de propósito (Constraints globais da frente).
-Gravar com `west flash -d <pasta do build>`, igual ao lab 9.
+Gravar com `west flash -d <pasta do build>`, igual ao lab 9. Sem compilar:
+`comms/hex/10_wifi_http_lm20.hex` e `comms/hex/10_wifi_mqtt_lm20.hex` são
+estes dois builds, prontos para gravar (o TCP é `09_wifi_tcp_lm20.hex`);
+nenhum carrega credencial.
+
+> **Ao trocar de transporte, troque a porta gravada.** A porta que vale é a
+> última digitada, não a da linha de build. Quem grava o HTTP por cima do
+> TCP vê no boot `Rede gravada: "<ssid>" (com senha), servidor <ip>:9000` —
+> a porta do TCP. Pressione uma tecla na janela de 5 s, repita SSID, senha e
+> IP, e aceite o novo padrão com Enter (`Porta do servidor (Enter = 8000):`).
+> Sem isso, o firmware HTTP tenta a porta 9000 e fica no backoff do lab 9. O
+> mesmo vale do HTTP para o MQTT (1883) e na volta para o TCP (9000).
 
 ## FLASH e RAM medidos
 
@@ -194,27 +205,19 @@ binário que comprovadamente roda, não só que compila limpo.
 
 | Transporte | FLASH | % FLASH (2036 KB) | RAM | % RAM (511 KB) |
 |---|---|---|---|---|
-| TCP | 555512 B | 26,64% | 191952 B | 36,68% |
-| HTTP | 567184 B | 27,20% | 192200 B | 36,73% |
-| MQTT | 560904 B | 26,90% | 193392 B | 36,96% |
+| TCP | 566772 B | 27,19% | 192200 B | 36,73% |
+| HTTP | 578268 B | 27,74% | 192448 B | 36,78% |
+| MQTT | 572084 B | 27,44% | 193640 B | 37,01% |
 
-**O tamanho exato varia alguns bytes com o comprimento do SSID e da senha**,
-porque `minha_rede.conf` é compilado no binário (`CONFIG_WIFI_CREDENTIALS_
-STATIC_SSID`/`PASSWORD`) — os números acima vêm de um build com uma
-credencial de preenchimento (`minha_rede.conf` não pode ficar vazio, ver o
-lab 9), não da rede real de nenhuma sala. Comparando com a mesma imagem TCP
-no lab 9 (`../09_wifi_tcp/README.md`, medida com a credencial real de uma
-bancada): **555508 B**, 4 bytes a menos que aqui — a diferença é só o
-comprimento da credencial, não uma divergência de código. Se o seu número
-depois de compilar não bater exatamente com esta tabela, é essa a causa
-mais provável, não um erro seu.
+Os três binários não carregam credencial nem IP (entram pelo terminal no
+boot), então o tamanho não depende da rede da sala: o seu número depois de
+compilar deve bater com esta tabela.
 
-As três cabem com folga (RAM entre 36,68% e 36,96% dos 511 KB — a diferença
-entre elas é pequena, ~0,28 ponto percentual). **O MQTT não precisou virar
-referência lida**. HTTP custa mais FLASH que os outros dois (+11672 B sobre
-o TCP, o parser HTTP embutido do Zephyr) mas pouco RAM a mais (+248 B) — o
-grosso do custo de HTTP é código, não estado. MQTT soma +1440 B de RAM sobre
-o TCP: é o preço de **dois slots** (`struct mqtt_slot`, ~720 B cada — dois
+As três cabem com folga, e a diferença de RAM entre elas é pequena. **O MQTT
+não precisou virar referência lida**. HTTP custa mais FLASH que os outros
+dois (o parser HTTP embutido do Zephyr) mas pouco RAM a mais — o grosso do
+custo de HTTP é código, não estado. MQTT soma RAM sobre o TCP: é o preço de
+**dois slots** (`struct mqtt_slot`, ~720 B cada — dois
 buffers de 256 B para RX/TX do cliente MQTT mais o resto do estado da
 conexão), não um só. Ter dois slots em vez de um é o que corrige o item 2 da
 rodada de correção 1 (ver a seção seguinte): a reconexão MQTT monta e
@@ -482,9 +485,9 @@ allow_anonymous true
 ```
 
 `listener 1883 0.0.0.0` faz o broker escutar em todas as interfaces de rede
-do PC, não só `localhost` — na mesma porta que o firmware usa
-(`CONFIG_LAB_PORTA`; 1883 no exemplo de build deste README, mas o número
-tem que bater dos dois lados). `allow_anonymous true` aceita conexão sem
+do PC, não só `localhost` — na mesma porta que o firmware usa (a porta
+digitada no boot; 1883 é o padrão que o build MQTT deste README propõe, mas
+o número tem que bater dos dois lados). `allow_anonymous true` aceita conexão sem
 usuário/senha, porque o kit não manda nenhum. **Isso é aceitável só para o
 laboratório**: um broker de produto real pede credencial e roda atrás de
 TLS — abrir mão dos dois de propósito para um kit numa rede de sala fechada
@@ -562,7 +565,9 @@ python -m pytest -q
 
 ## Roteiro de bancada
 
-Gravar cada variante com o servidor certo rodando no PC:
+Gravar cada variante com o servidor certo rodando no PC, e no boot trocar a
+porta gravada para a daquele transporte (aviso em "Compilar as três
+variantes"):
 - `build_TCP` → `python ../09_wifi_tcp/tools/wifi_server.py --porta 9000`
 - `build_HTTP` → `python tools/wifi_http_server.py --porta 8000`
 - `build_MQTT` → mosquitto com o arquivo de configuração da seção
@@ -597,8 +602,8 @@ dois sentidos (telemetria subindo, comando de LED descendo):**
   — não é a porta que este README recomenda; redigida para 1883 aqui, para
   o exemplo ficar coerente com o resto do lab (o `mosquitto.conf`, a regra
   de firewall e o comando de build acima usam 1883). Qualquer porta livre
-  serve, desde que a mesma esteja em `CONFIG_LAB_PORTA` (build), no
-  `mosquitto.conf` e na regra de firewall — os três precisam bater.
+  serve, desde que a mesma esteja gravada no kit (a porta digitada no
+  boot), no `mosquitto.conf` e na regra de firewall — os três precisam bater.
 
   A queda foi detectada por **dois caminhos ao mesmo tempo** — a thread de
   recepção (`MQTT desconectado`) e a de telemetria (`Falha ao enviar`) — e
@@ -621,5 +626,6 @@ dois sentidos (telemetria subindo, comando de LED descendo):**
 ## Plano B — sem rede utilizável na sala, ou com isolamento de cliente
 
 Mesmo remédio do lab 9 (`../09_wifi_tcp/README.md`, seção "Plano B"): não
-muda nada de firmware nem de servidor, só a rede à qual PC e kit se
-associam. Vale para os três transportes deste lab.
+muda nada de firmware nem de servidor, e não precisa recompilar — só a rede
+à qual PC e kit se associam, digitada de novo na janela do boot. Vale para
+os três transportes deste lab.

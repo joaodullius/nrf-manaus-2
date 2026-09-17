@@ -42,9 +42,9 @@ config TEST_TYPE_BLE
 	help
 	  Enable BLE
 
-config NET_CONFIG_PEER_IPV4_ADDR
-	string "Peer IPv4 address"
-	default "192.168.1.253"
+# ALTERADO PELO CURSO (nrf-manaus-2): NET_CONFIG_PEER_IPV4_ADDR saiu daqui. O IP
+# do PC e digitado no terminal no boot e gravado em settings (src/lab_rede.c);
+# NET_CONFIG_PEER_IPV4_PORT fica como a porta que o prompt propoe.
 
 config NET_CONFIG_PEER_IPV4_PORT
 	int "Peer IPv4 port"

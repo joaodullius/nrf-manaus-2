@@ -1,4 +1,4 @@
-# Wi-Fi · Lab 7 — Associação programática com `minha_rede.conf`
+# Wi-Fi · Lab 7 — Associação programática com a rede digitada no terminal
 
 > **Antes de tudo: com a EB II acoplada, a VCOM do console muda.** Sem o shield, o
 > console desta DK fica na `uart20`, que sai na **segunda** VCOM do chip de interface
@@ -14,17 +14,21 @@
 
 Este lab é a primeira aplicação com lógica própria da frente de Wi-Fi: `nrf/samples/
 wifi/sta` rodando na nRF54LM20-DK (variante B) com a nRF7002 EB-II encaixada. Em vez
-do shell interativo do lab 6, o firmware conecta sozinho, sem intervenção do usuário,
-usando a credencial armazenada por `CONFIG_WIFI_CREDENTIALS_STATIC`. É aqui que entra
-a convenção de credencial do curso — `minha_rede.conf`, um fragmento por aluno — que
-os labs 9, 11, 12 e 13 também consomem.
+do shell interativo do lab 6, o firmware conecta sozinho, com a credencial que a
+biblioteca `wifi_credentials` guarda em settings. É aqui que entra o módulo do curso
+`src/lab_rede.c`: no primeiro boot ele pede SSID e senha no terminal serial e grava;
+nos boots seguintes usa o que está gravado. O mesmo arquivo é copiado igual nos labs
+9, 11, 12 e 13.
 
 > **Origem.** Cópia integral de `nrf/samples/wifi/sta` do **nRF Connect SDK v3.4.0**.
 > Licença Nordic preservada em [LICENSE](LICENSE). `prj.conf`, `CMakeLists.txt` e
-> `src/main.c` levam o cabeçalho `ORIGEM:` do curso. Duas divergências do SDK, as
-> duas descritas abaixo: a credencial sai do `prj.conf` e vai para o
-> `minha_rede.conf`, e o `CMakeLists.txt` ganha uma falha proposital quando esse
-> fragmento não foi preenchido.
+> `src/main.c` levam o cabeçalho `ORIGEM:` do curso. Divergências do SDK, descritas
+> abaixo: `src/lab_rede.c` e `src/lab_rede.h` (arquivos do curso) entram no
+> `target_sources` do `CMakeLists.txt`; `main()` chama `lab_rede_ler()` antes de
+> qualquer outra coisa; e o `prj.conf` troca `CONFIG_WIFI_CREDENTIALS_STATIC` pelo
+> backend de settings (`CONFIG_SETTINGS`, `CONFIG_FLASH`, `CONFIG_FLASH_MAP`,
+> `CONFIG_FLASH_PAGE_LAYOUT`, `CONFIG_ZMS`, `CONFIG_SETTINGS_ZMS`,
+> `CONFIG_WIFI_CREDENTIALS_MAX_ENTRIES=1`).
 
 ## Hardware
 
@@ -37,85 +41,69 @@ os labs 9, 11, 12 e 13 também consomem.
 Com o shield acoplado, `sw3` some do overlay (ele não existe mais): sobram `sw0`–`sw2`
 e os quatro LEDs.
 
-## `minha_rede.conf` — a credencial do aluno
+## A rede da sala — digitada no terminal, gravada em settings
 
-O `prj.conf` deste sample, como veio do SDK, tinha `CONFIG_WIFI_CREDENTIALS_STATIC_
-SSID="Myssid"` e a senha de exemplo em texto puro. O curso tira essas duas linhas do
-`prj.conf` e move a credencial para um fragmento externo, rastreado pelo git e
-**vazio**:
+O binário não carrega credencial nenhuma. No primeiro boot, `lab_rede_ler()` pede na
+console (115200 8N1; com a EB II encaixada é a **primeira** VCOM):
 
 ```
-CONFIG_WIFI_CREDENTIALS_STATIC_SSID=""
-CONFIG_WIFI_CREDENTIALS_STATIC_PASSWORD=""
+=== Rede Wi-Fi ===
+SSID da rede: <ssid>
+Senha (Enter vazio = rede aberta): <senha>
+Gravado. Rede "<ssid>".
 ```
 
-Cada aluno preenche o seu localmente com a rede da sala e compila com:
+A senha é ecoada em claro. SSID tem de 1 a 32 caracteres; senha WPA2, de 8 a 63.
+Entrada inválida repete só aquele campo; não há prompt periódico. O módulo grava pela
+biblioteca `wifi_credentials`, com o backend de settings (ZMS na `storage_partition`
+da placa), e a conexão segue por `NET_REQUEST_WIFI_CONNECT_STORED`, o mesmo caminho
+do sample.
+
+Nos boots seguintes o firmware mostra o que tem e abre uma janela única:
 
 ```
-west build ... -- -D07_wifi_sta_EXTRA_CONF_FILE=minha_rede.conf
+=== Rede Wi-Fi ===
+Rede gravada: "<ssid>" (com senha)
+Enter (ou nada em 5 s) usa essa; qualquer outra tecla troca:
 ```
 
-**Nunca commitar a senha real.** Antes de qualquer commit, esvaziar o arquivo de
-volta:
-
-```
-git checkout comms/07_wifi_sta/minha_rede.conf
-```
-
-## Falha proposital sem a credencial
-
-Se o `minha_rede.conf` estiver vazio (o estado padrão do repositório) e o build for
-disparado sem `-D07_wifi_sta_EXTRA_CONF_FILE`, o `CMakeLists.txt` para na configuração, antes de
-compilar uma linha sequer, com:
-
-```
-CMake Error at CMakeLists.txt:29 (message):
-  CONFIG_WIFI_CREDENTIALS_STATIC_SSID nao definido.
-
-  Preencha o minha_rede.conf com o SSID e a senha da rede da sala:
-
-    CONFIG_WIFI_CREDENTIALS_STATIC_SSID="nrf-curso"
-    CONFIG_WIFI_CREDENTIALS_STATIC_PASSWORD="..."
-
-  e compile com -D07_wifi_sta_EXTRA_CONF_FILE=minha_rede.conf
-```
-
-Confirmado nesta máquina: o build sem o fragmento falha exatamente com essa
-mensagem, e sem gerar nenhum artefato. É intencional — um kit gravado sem
-credencial não conecta em rede nenhuma, e o erro em tempo de build (segundos) é mais
-barato que descobrir isso só com o log da bancada rodando.
+Sem tecla em 5 s, ou com Enter, usa a gravada; qualquer outra tecla pede SSID e senha
+de novo. Um `west flash` ou `nrfutil device program` normal não apaga a
+`storage_partition`, então a rede sobrevive à regravação do firmware. `nrfutil device
+recover` (ou `west flash --erase`) apaga a partição e o prompt volta.
 
 ## Passo 1 — compilar e gravar
 
 Shield e snippet são escopados pela imagem — que o sysbuild nomeia `07_wifi_sta`,
-igual ao nome da pasta. Com o `minha_rede.conf` preenchido:
+igual ao nome da pasta:
 
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/07_wifi_sta/build_lm20 C:/work/nrf-manaus-2/comms/07_wifi_sta -- -D07_wifi_sta_SHIELD="nrf7002eb2" -D07_wifi_sta_SNIPPET=nrf70-wifi -D07_wifi_sta_EXTRA_CONF_FILE=minha_rede.conf
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/07_wifi_sta/build_lm20 C:/work/nrf-manaus-2/comms/07_wifi_sta -- -D07_wifi_sta_SHIELD="nrf7002eb2" -D07_wifi_sta_SNIPPET=nrf70-wifi
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/07_wifi_sta/build_lm20
 ```
 
+Para gravar sem compilar, o hex pronto está em `comms/hex/07_wifi_sta_lm20.hex`
+(público: não tem credencial dentro).
+
 Build limpo, `exit 0`, imagem única (o nRF7002 é um companion por SPI, não um
-segundo SoC). Resumo de memória (com credencial de teste preenchida, só para medir o
-binário — não a rede da sala):
+segundo SoC). Resumo de memória:
 
 | Região | Usado | Região total | % usado |
 |---|---|---|---|
-| FLASH | 554880 B | 2036 KB | 26,61% |
-| RAM | 188672 B | 511 KB | 36,06% |
-
-O número de FLASH varia alguns bytes conforme o tamanho da credencial em
-`minha_rede.conf` (SSID e senha viram string compilada na imagem) — não é motivo
-para estranhar uma diferença pequena entre builds de alunos diferentes. RAM não
-varia com isso.
+| FLASH | 565940 B | 2036 KB | 27,15% |
+| RAM | 188920 B | 511 KB | 36,10% |
 
 ## Passo 2 — bancada
 
 Medido nesta bancada: nRF54LM20-DK var. B + nRF7002 EB-II, console na **primeira**
 VCOM (a segunda ficou muda) — coerente com o aviso do topo.
 
-### Cronometragem, do reset ao IP
+### Cronometragem, do prompt ao IP
+
+O `t = 0` da tabela é o Enter do prompt de rede (ou o fim da janela de 5 s, quando a
+rede já está gravada), não o reset: até ali o firmware está parado em
+`lab_rede_ler()`, esperando o teclado.
 
 | t (s) | evento |
 |---|---|
@@ -128,13 +116,13 @@ VCOM (a segunda ficou muda) — coerente com o aviso do topo.
 | 7,2 | `Connected` |
 | 7,4 | `DHCP IP address: <ip>`, lease 14400 s, gateway `<gateway>` |
 
-Do reset ao IP por DHCP: **cerca de 7 s**, dos quais **~4 s são a varredura**. É o
+Do prompt ao IP por DHCP: **cerca de 7 s**, dos quais **~4 s são a varredura**. É o
 número a esperar num boot normal — se o kit demorar bem mais que isso para
 conectar, o gargalo provavelmente não está no firmware.
 
 ### Checklist
 
-- [x] Gravar com o `minha_rede.conf` preenchido com a rede real da sala.
+- [x] Gravar e digitar a rede da sala no primeiro boot.
 - [x] Abrir a porta serial certa e confirmar o log de boot.
 - [x] Conferir a sequência de eventos no console: `Connection requested` →
       `SCANNING` → `AUTHENTICATING` → `Connected` → `DHCP IP address: ...`.
@@ -153,8 +141,8 @@ Wi-Fi associado: é `CONFIG_NET_CONFIG_MY_IPV4_ADDR` (`192.168.1.99/24`, gateway
 log o rotula de "overridable" e ele não tem relação nenhuma com a rede real. O que
 vale é o **segundo** IPv4, o que sai vários segundos depois em `DHCP IP address:
 <ip>`, já com o link associado. Quem lê o log de cima para baixo e para no primeiro
-número vai apontar `CONFIG_LAB_SERVIDOR_IP` (labs 9 e 13) para o endereço errado —
-o estático do exemplo, não o da rede da sala.
+número vai digitar, no prompt de IP do servidor dos labs 9 e 13, um endereço da
+sub-rede errada — a do exemplo estático, não a da rede da sala.
 
 ### Aviso benigno durante a associação
 
@@ -209,6 +197,11 @@ se lê o log sem abrir o código.
 ```
           main()
             |
+  +---------v-----------+   "=== Rede Wi-Fi ===" e os prompts
+  | lab_rede_ler()      |   (ou "Rede gravada: ..." + janela de 5 s)
+  | (codigo do curso)   |   -> grava SSID/senha no wifi_credentials
+  +---------+-----------+
+            |
   +---------v-----------+   registra callbacks de
   | net_mgmt_callback   |   CONNECT_RESULT, DISCONNECT_RESULT,
   | _init()             |   IPV4_DHCP_BOUND                       (sem log)
@@ -222,7 +215,7 @@ se lê o log sem abrir o código.
   +---------v-----------+
   | NET_REQUEST_WIFI_   |   "Connection requested"
   | CONNECT_STORED      |   (credencial vem do wifi_credentials,
-  +---------+-----------+    nao de argumento)
+  +---------+-----------+    gravada pelo lab_rede_ler)
             |
   +---------v-----------+
   | laco de status      |   "State: SCANNING" a cada 300 ms
@@ -260,13 +253,14 @@ Repare no que o LED **não** indica: **ele não sabe se há IP.** Pisca a partir
 `Connected`, antes do DHCP. Um kit com LED piscando e sem endereço é possível.
 ## O que observar
 
-- Este sample não tem shell de Wi-Fi: a lógica de conexão mora em `src/main.c`, que
-  o curso não modifica (nenhuma divergência além do cabeçalho `ORIGEM:`). O fluxo é:
-  `net_mgmt_callback_init()` registra os callbacks de `NET_EVENT_WIFI_CONNECT_
-  RESULT`, `NET_EVENT_WIFI_DISCONNECT_RESULT` e `NET_EVENT_IPV4_DHCP_BOUND`; depois
-  `start_app()` chama `NET_REQUEST_WIFI_CONNECT_STORED` — a credencial vem do
-  subsistema `wifi_credentials` (a mesma static credential do `minha_rede.conf`), não
-  de um argumento em texto.
+- Este sample não tem shell de Wi-Fi: a lógica de conexão mora em `src/main.c`, e a
+  única linha que o curso acrescenta a ela é a chamada a `lab_rede_ler()` no início
+  de `main()`. O fluxo é: `net_mgmt_callback_init()` registra os callbacks de
+  `NET_EVENT_WIFI_CONNECT_RESULT`, `NET_EVENT_WIFI_DISCONNECT_RESULT` e
+  `NET_EVENT_IPV4_DHCP_BOUND`; depois `start_app()` chama
+  `NET_REQUEST_WIFI_CONNECT_STORED` — a credencial vem do subsistema
+  `wifi_credentials` (backend de settings, gravada pelo `lab_rede_ler()`), não de um
+  argumento em texto.
 - `LOG_INF("Connected")` sai do `handle_wifi_connect_result()`; a linha de IP sai de
   `print_dhcp_ip()`, disparada só quando o `NET_EVENT_IPV4_DHCP_BOUND` chega — ou
   seja, a associação Wi-Fi e a obtenção de IP são dois eventos distintos no log, na
@@ -294,11 +288,12 @@ Repare no que o LED **não** indica: **ele não sabe se há IP.** Pisca a partir
   têm o shield: entre eles a VCOM não muda (é sempre a `uart30`/primeira). A troca
   só aparece quando se compara um firmware **sem** shield com um **com** shield.
 - **`sw3` não existe mais.** O overlay do shield remove o botão e o alias junto.
-- **Nunca commitar a credencial real.** `minha_rede.conf` é rastreado e deve
-  permanecer vazio no repositório; `git checkout comms/07_wifi_sta/minha_rede.conf`
-  antes de qualquer commit.
-- **Build falha sem o fragmento — é o comportamento esperado**, não um bug do lab
-  (ver seção "Falha proposital" acima).
+- **O kit "não faz nada" depois do boot.** Está parado no prompt de rede, esperando
+  o teclado — abra a primeira VCOM. Se a rede já está gravada, a janela de 5 s passa
+  sozinha e a conexão começa.
+- **Rede errada gravada.** No boot seguinte, tecle qualquer coisa que não seja Enter
+  dentro da janela de 5 s e digite de novo. `nrfutil device recover` também apaga a
+  `storage_partition`, mas regravar o firmware por `west flash` não.
 
 ## Fontes
 

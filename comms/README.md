@@ -16,7 +16,7 @@ Implementação e validação das principais tecnologias de conectividade e loca
 | [`04_cs_seguranca/`](04_cs_seguranca/) | **CS 4** — Roteiro: ACL cifrada, CS Security Enable, RTT como limite físico contra relay attack, o que o IPT abre mão, o que o SDC não suporta | par do CS 2 | ✅ (conforme o tempo) |
 | [`05_cs_iq_music/`](05_cs_iq_music/) | **CS 5** — IQ para o PC: port do `cs_de` em NumPy reproduz o chip; MUSIC (skig/waves, MIT) sobre o mesmo IQ; dois caminhos de antena e a escolha entre eles; obstrução; painel ao vivo (`cs_dash.py`). Tese: o firmware fornece os dados, a distância é do algoritmo | LM20-DK + TAG + PC | ✅ (conforme o tempo) |
 | [`06_wifi_shell/`](06_wifi_shell/) | **Lab 6** — Shell de Wi-Fi da própria Nordic (`wifi scan`/`connect`/`status`) puro sobre a EB II, sem lógica de aplicação. Base dos labs seguintes; primeira aparição da troca de console (VCOM) e do achado de que "802.11ax no rótulo" não garante TWT | nRF54LM20-DK + nRF7002-EBII | ✅ |
-| [`07_wifi_sta/`](07_wifi_sta/) | **Lab 7** — Associação programática por `minha_rede.conf`: o firmware conecta e sobe IP sozinho, sem shell; falha proposital de build sem a credencial preenchida | nRF54LM20-DK + nRF7002-EBII | ✅ |
+| [`07_wifi_sta/`](07_wifi_sta/) | **Lab 7** — Associação programática: SSID e senha digitados no terminal no primeiro boot e gravados em settings; o firmware conecta e sobe IP sozinho, sem shell | nRF54LM20-DK + nRF7002-EBII | ✅ |
 | [`08a_wifi_provisioning/`](08a_wifi_provisioning/) | **Lab 8a** — Provisionamento por SoftAP: a DK sobe como AP, escaneia sozinha e recebe a credencial por HTTPS/protobuf via `provision.py` — sem formulário web | nRF54LM20-DK + nRF7002-EBII | ✅  |
 | [`08b_wifi_provisioning_ble/`](08b_wifi_provisioning_ble/) | **Lab 8b** — O mesmo provisionamento pelo outro transporte: a DK anuncia por Bluetooth LE (`PVxxxxxx`, nome derivado do MAC) e o app nRF Wi-Fi Provisioner entrega a credencial por GATT — o celular nunca sai da rede em que já está | nRF54LM20-DK + nRF7002-EBII + celular | ✅  |
 | [`09_wifi_tcp/`](09_wifi_tcp/) | **Lab 9** — Lab central da frente: telemetria por socket TCP puro, mesmo payload do lab 10; reconexão com backoff e queda de conexão como o próprio ponto do lab | nRF54LM20-DK + nRF7002-EBII | ✅ |
@@ -48,7 +48,7 @@ como o `03_central_uart` do Edge AI — nada a preencher antes do build.
 
 ```
 Lab 6   shell da Nordic          "o companion visivel"           scan, connect, status
-Lab 7   associacao programada    "conectar sem intervencao"      minha_rede.conf
+Lab 7   associacao programada    "conectar sem intervencao"      rede digitada no boot, settings
 Lab 8a  provisionamento SoftAP   "a DK escaneia por voce"        HTTPS + protobuf, sem web
 Lab 8b  provisionamento BLE      "o mesmo, por outro radio"      app da Nordic, GATT + protobuf
 Lab 9   telemetria TCP           "o lab central"                 payload reaproveitado no lab 10, backoff
@@ -62,10 +62,11 @@ O par nRF54LM20-DK + nRF7002 EB-II é o mesmo do lab 6 ao 13; só o lab 8b (celu
 o app nRF Wi-Fi Provisioner) e o lab 12 (o par BLE do teste de coexistência) somam um
 segundo dispositivo. A troca de console — o
 shield move `zephyr,console` da `uart20` (segunda VCOM) para a `uart30` (primeira) —
-é medida e documentada uma vez no lab 6 e vale para todos os que seguem. O fragmento
-de credencial `minha_rede.conf`, rastreado pelo git e vazio, aparece pela primeira vez
-no lab 7 e é reaproveitado pelos labs 9, 11, 12 e 13; nenhum dos cinco compila sem ele
-preenchido — é falha proposital, não bug. O payload de telemetria do lab 9
+é medida e documentada uma vez no lab 6 e vale para todos os que seguem. A rede da
+sala não entra no build: o `src/lab_rede.c`, que aparece no lab 7 e é copiado igual
+nos labs 9, 11, 12 e 13, pede SSID e senha (e, onde há servidor no PC, IP e porta) no
+terminal serial no primeiro boot e grava em settings — o mesmo molde do endereço do
+TAG nos initiators de Channel Sounding. O payload de telemetria do lab 9
 (`src/payload.c`, uma amostra JSON) é reaproveitado só pelo lab 10, que recompila o
 mesmo firmware sobre outro transporte; o lab 13 manda outra coisa — uma linha por
 ponto de acesso visto (`AP,<bssid>,<rssi>,<frequência>,<ssid>`) — porque o dado é de
@@ -76,11 +77,9 @@ qualquer build desta frente — ver [`PREREQUISITOS.md`](../PREREQUISITOS.md).
 
 ### Hex de referência
 
-[`hex/`](hex/) tem um binário pronto de cada passo que **pode** ser distribuído, para
-gravar sem compilar — os cinco de Channel Sounding e os três labs de Wi-Fi que não
-embutem credencial (6, 8a, 8b). Os outros seis labs de Wi-Fi levam a senha da rede
-dentro do binário e por isso **não são versionados**; o `hex/build_all.py` gera esses na
-sala, com a credencial da sala, para fora do repo.
+[`hex/`](hex/) tem um binário pronto de cada passo, para gravar sem compilar: os de
+Channel Sounding e todos os de Wi-Fi. Nenhum embute credencial — nos labs que precisam
+da rede da sala, ela é digitada no terminal no primeiro boot (`src/lab_rede.c`).
 
 ### Wi-Fi 6+ — os módulos da solução, e como reconhecê-los no log
 
@@ -158,12 +157,12 @@ problema é elétrico ou de encaixe, **não** de configuração de rede.
 **Dois módulos que só aparecem em alguns labs:**
 
 - **`wifi_credentials`** — o cofre de credenciais por trás do
-  `NET_REQUEST_WIFI_CONNECT_STORED` dos labs 7, 8a e 8b. A API é a mesma nos três,
-  **o backend não**: o lab 7 usa `WIFI_CREDENTIALS_STATIC`, com a credencial compilada
-  a partir do `minha_rede.conf` — some se você mudar de rede, e é isso que justifica o
-  provisionamento; os labs 8a e 8b gravam em memória não volátil (`SETTINGS_ZMS` e
-  `SETTINGS_NVS`, respectivamente), e é por isso que o kit provisionado volta sozinho à
-  rede depois de um reset.
+  `NET_REQUEST_WIFI_CONNECT_STORED` dos labs 7, 8a, 8b, 9, 11, 12 e 13. A API é a
+  mesma em todos; o que muda é **quem grava**: nos labs 7, 9, 11, 12 e 13 é o
+  `lab_rede.c`, com o que o aluno digita no terminal; nos labs 8a e 8b é o
+  provisionamento (SoftAP ou Bluetooth LE). O backend é settings em memória não
+  volátil (`SETTINGS_ZMS`, ou `SETTINGS_NVS` no 8b), e é por isso que o kit volta
+  sozinho à rede depois de um reset ou de uma regravação.
 - **`wifi_prov_core`** — a máquina de provisionamento e o **protobuf** compartilhados
   pelos labs 8a e 8b. A diferença entre os dois é **só o transporte** (HTTPS sobre o
   SoftAP contra GATT sobre Bluetooth LE); a codificação da credencial é a mesma nos

@@ -26,6 +26,7 @@
 
 #include "payload.h"
 #include "transporte.h"
+#include "lab_rede.h"
 
 LOG_MODULE_REGISTER(lab_wifi_tcp, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -162,7 +163,7 @@ static void abrir_com_backoff(void)
 		tentativas++;
 		if (!ja_conectou_alguma_vez && tentativas == RECONEXAO_TENTATIVAS_AVISO_CONFIG) {
 			LOG_ERR("Sem conseguir conectar depois de %u tentativas -- confira "
-				"CONFIG_LAB_SERVIDOR_IP e CONFIG_LAB_PORTA, se o PC e o "
+				"o IP e a porta digitados no boot, se o PC e o "
 				"kit estao na mesma rede, e se o firewall do PC deixa o "
 				"servidor receber conexao nessa porta", tentativas);
 		}
@@ -501,6 +502,11 @@ static int conectar_wifi(void)
 
 int main(void)
 {
+	/* CURSO: rede da sala e IP/porta do servidor, digitados no terminal e
+	 * gravados em settings. So retorna com tudo valido.
+	 */
+	lab_rede_ler(true, CONFIG_LAB_PORTA);
+
 	net_mgmt_init_event_callback(&wifi_cb, handler_wifi, NET_EVENT_WIFI_CONNECT_RESULT);
 	net_mgmt_add_event_callback(&wifi_cb);
 

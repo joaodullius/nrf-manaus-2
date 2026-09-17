@@ -8,8 +8,8 @@
  * Para conferir se divergiu do SDK:
  *   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/wifi/sta/src/main.c
  *
- * DIVERGENCIA DO CURSO (duas): 1. minha_rede.conf; 2. falha de build no
- * CMakeLists.
+ * DIVERGENCIA DO CURSO: #include "lab_rede.h" e a chamada lab_rede_ler() no
+ * inicio de main() -- a rede e digitada no terminal e gravada em settings.
  */
 
 /*
@@ -48,6 +48,7 @@ LOG_MODULE_REGISTER(sta, CONFIG_LOG_DEFAULT_LEVEL);
 #endif
 
 #include "net_private.h"
+#include "lab_rede.h"
 
 #define WIFI_SHELL_MODULE "wifi"
 
@@ -511,6 +512,9 @@ static int register_wifi_ready(void)
 int main(void)
 {
 	int ret = 0;
+
+	/* CURSO: rede da sala digitada no terminal e gravada em settings. */
+	lab_rede_ler(false, 0);
 
 	net_mgmt_callback_init();
 

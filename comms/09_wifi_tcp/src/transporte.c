@@ -33,6 +33,7 @@
 #include <zephyr/net/socket.h>
 
 #include "transporte.h"
+#include "lab_rede.h"
 
 LOG_MODULE_REGISTER(lab_transporte, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -66,11 +67,11 @@ int transporte_abrir(void)
 	}
 
 	endereco.sin_family = NET_AF_INET;
-	endereco.sin_port = net_htons(CONFIG_LAB_PORTA);
+	endereco.sin_port = net_htons(lab_rede_porta());
 
-	ret = net_addr_pton(NET_AF_INET, CONFIG_LAB_SERVIDOR_IP, &endereco.sin_addr);
+	ret = net_addr_pton(NET_AF_INET, lab_rede_ip(), &endereco.sin_addr);
 	if (ret < 0) {
-		LOG_ERR("CONFIG_LAB_SERVIDOR_IP invalido: %s", CONFIG_LAB_SERVIDOR_IP);
+		LOG_ERR("IP do servidor invalido: %s", lab_rede_ip());
 		zsock_close(novo_sock);
 		return ret;
 	}
@@ -83,7 +84,7 @@ int transporte_abrir(void)
 	if (ret < 0) {
 		ret = -errno;
 		LOG_ERR("Falha ao conectar em %s:%d (%d)",
-			CONFIG_LAB_SERVIDOR_IP, CONFIG_LAB_PORTA, ret);
+			lab_rede_ip(), lab_rede_porta(), ret);
 		zsock_close(novo_sock);
 		return ret;
 	}
@@ -96,7 +97,7 @@ int transporte_abrir(void)
 	sock = novo_sock;
 	k_mutex_unlock(&transporte_mutex);
 
-	LOG_INF("Conectado em %s:%d", CONFIG_LAB_SERVIDOR_IP, CONFIG_LAB_PORTA);
+	LOG_INF("Conectado em %s:%d", lab_rede_ip(), lab_rede_porta());
 	return 0;
 }
 
@@ -267,6 +268,7 @@ void transporte_fechar(void)
 #include <zephyr/net/http/client.h>
 
 #include "transporte.h"
+#include "lab_rede.h"
 
 LOG_MODULE_REGISTER(lab_transporte, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -335,11 +337,11 @@ static int abrir_conexao(void)
 	}
 
 	endereco.sin_family = NET_AF_INET;
-	endereco.sin_port = net_htons(CONFIG_LAB_PORTA);
+	endereco.sin_port = net_htons(lab_rede_porta());
 
-	ret = net_addr_pton(NET_AF_INET, CONFIG_LAB_SERVIDOR_IP, &endereco.sin_addr);
+	ret = net_addr_pton(NET_AF_INET, lab_rede_ip(), &endereco.sin_addr);
 	if (ret < 0) {
-		LOG_ERR("CONFIG_LAB_SERVIDOR_IP invalido: %s", CONFIG_LAB_SERVIDOR_IP);
+		LOG_ERR("IP do servidor invalido: %s", lab_rede_ip());
 		zsock_close(sock);
 		return ret;
 	}
@@ -359,16 +361,16 @@ int transporte_abrir(void)
 	struct net_sockaddr_in endereco = {0};
 
 	/* Nao ha conexao para abrir de verdade (cada requisicao abre a sua) --
-	 * so confere aqui que CONFIG_LAB_SERVIDOR_IP e um IPv4 valido, o
+	 * so confere aqui que lab_rede_ip() e um IPv4 valido, o
 	 * mesmo erro que o TCP so detectaria no primeiro connect().
 	 */
-	if (net_addr_pton(NET_AF_INET, CONFIG_LAB_SERVIDOR_IP, &endereco.sin_addr) < 0) {
-		LOG_ERR("CONFIG_LAB_SERVIDOR_IP invalido: %s", CONFIG_LAB_SERVIDOR_IP);
+	if (net_addr_pton(NET_AF_INET, lab_rede_ip(), &endereco.sin_addr) < 0) {
+		LOG_ERR("IP do servidor invalido: %s", lab_rede_ip());
 		return -EINVAL;
 	}
 
 	LOG_INF("HTTP pronto para %s:%d (uma conexao por requisicao)",
-		CONFIG_LAB_SERVIDOR_IP, CONFIG_LAB_PORTA);
+		lab_rede_ip(), lab_rede_porta());
 	return 0;
 }
 
@@ -389,7 +391,7 @@ int transporte_enviar(const char *buf, size_t len)
 
 	req.method = HTTP_POST;
 	req.url = "/telemetria";
-	req.host = CONFIG_LAB_SERVIDOR_IP;
+	req.host = lab_rede_ip();
 	req.protocol = "HTTP/1.1";
 	req.content_type_value = "application/json";
 	req.payload = buf;
@@ -445,7 +447,7 @@ int transporte_receber(char *buf, size_t len, k_timeout_t espera)
 
 	req.method = HTTP_GET;
 	req.url = "/comando";
-	req.host = CONFIG_LAB_SERVIDOR_IP;
+	req.host = lab_rede_ip();
 	req.protocol = "HTTP/1.1";
 	req.response = resposta_cb;
 	req.recv_buf = http_recv_buf;
@@ -555,6 +557,7 @@ void transporte_fechar(void)
 #include <zephyr/net/mqtt.h>
 
 #include "transporte.h"
+#include "lab_rede.h"
 
 LOG_MODULE_REGISTER(lab_transporte, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -687,10 +690,10 @@ int transporte_abrir(void)
 	int ret;
 
 	novo->endereco_broker.sin_family = NET_AF_INET;
-	novo->endereco_broker.sin_port = net_htons(CONFIG_LAB_PORTA);
-	ret = net_addr_pton(NET_AF_INET, CONFIG_LAB_SERVIDOR_IP, &novo->endereco_broker.sin_addr);
+	novo->endereco_broker.sin_port = net_htons(lab_rede_porta());
+	ret = net_addr_pton(NET_AF_INET, lab_rede_ip(), &novo->endereco_broker.sin_addr);
 	if (ret < 0) {
-		LOG_ERR("CONFIG_LAB_SERVIDOR_IP invalido: %s", CONFIG_LAB_SERVIDOR_IP);
+		LOG_ERR("IP do servidor invalido: %s", lab_rede_ip());
 		return ret;
 	}
 
@@ -772,8 +775,8 @@ int transporte_abrir(void)
 	slot_ativo = novo;
 	k_mutex_unlock(&transporte_mutex);
 
-	LOG_INF("MQTT conectado em %s:%d, publicando em %s", CONFIG_LAB_SERVIDOR_IP,
-		CONFIG_LAB_PORTA, CONFIG_LAB_MQTT_TOPICO);
+	LOG_INF("MQTT conectado em %s:%d, publicando em %s", lab_rede_ip(),
+		lab_rede_porta(), CONFIG_LAB_MQTT_TOPICO);
 	return 0;
 }
 

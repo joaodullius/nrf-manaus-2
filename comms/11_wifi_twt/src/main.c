@@ -45,6 +45,7 @@ LOG_MODULE_REGISTER(twt, CONFIG_LOG_DEFAULT_LEVEL);
 
 #include "net_private.h"
 #include "traffic_gen.h"
+#include "lab_rede.h"
 
 #define WIFI_SHELL_MODULE "wifi"
 
@@ -378,6 +379,9 @@ static int wifi_connect(void)
 int main(void)
 {
 	memset(&context, 0, sizeof(context));
+
+	/* CURSO: rede da sala digitada no terminal e gravada em settings. */
+	lab_rede_ler(false, 0);
 
 	net_mgmt_init_event_callback(&wifi_shell_mgmt_cb,
 			wifi_mgmt_event_handler,

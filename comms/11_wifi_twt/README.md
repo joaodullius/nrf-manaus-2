@@ -9,11 +9,14 @@
 > **Origem.** Cópia integral de `nrf/samples/wifi/twt` do **nRF Connect SDK v3.4.0**.
 > Licença Nordic preservada em [LICENSE](LICENSE). Levam o cabeçalho `ORIGEM:` do
 > curso o `prj.conf`, o `CMakeLists.txt`, o `src/main.c` e os seis de
-> `modules/traffic_gen/`. A única divergência é a mesma dos labs 7 e 9, e
-> está nos dois primeiros: as credenciais saem para `minha_rede.conf` e o
-> `CMakeLists.txt` ganha uma falha proposital de build quando ele está vazio. O
-> `src/main.c` e o `modules/traffic_gen/` estão byte a byte iguais ao SDK, e o
-> cabeçalho de cada um diz isso e traz o `diff` para conferir.
+> `modules/traffic_gen/`. As divergências são as mesmas do lab 7: `src/lab_rede.c` e
+> `src/lab_rede.h` (arquivos do curso) entram no `target_sources` do
+> `CMakeLists.txt`; `main()` chama `lab_rede_ler()` logo no início; e o `prj.conf`
+> troca `CONFIG_WIFI_CREDENTIALS_STATIC` pelo backend de settings (`CONFIG_SETTINGS`,
+> `CONFIG_FLASH`, `CONFIG_FLASH_MAP`, `CONFIG_FLASH_PAGE_LAYOUT`, `CONFIG_ZMS`,
+> `CONFIG_SETTINGS_ZMS`, `CONFIG_WIFI_CREDENTIALS_MAX_ENTRIES=1`). O
+> `modules/traffic_gen/` está byte a byte igual ao SDK, e o cabeçalho de cada
+> arquivo diz isso e traz o `diff` para conferir.
 
 Este lab fecha o bloco de **energia e transporte** da frente de Wi-Fi — depois dele
 o módulo segue para os dois temas que diferenciam Wi-Fi 6 na prática, coexistência
@@ -32,7 +35,7 @@ O lab tem duas partes:
   vira número.
 - **Parte B — degrau 3 (TWT).** Depende de um AP que negocie TWT individual. Na
   bancada de preparação, a ONT da sala é 802.11ax confirmado e respondeu
-  `Peer not TWT capable` — fica pendente de um AP com TWT (EX3000).
+  `Peer not TWT capable`; o AP da sala (`sidia2026_2e5`) negocia — ver Parte B.
 
 ## Hardware
 
@@ -433,7 +436,7 @@ reporta tudo pelo console.
 Vale dizer em sala: este é um lab em que **a placa fica visualmente morta** enquanto
 tudo acontece. O que se observa é a curva do PPK2 e o `ping` — o silêncio da placa é o
 assunto do lab, não um sintoma.
-## Parte B — TWT (pendente do AP)
+## Parte B — TWT (negociado com o AP da sala)
 
 TWT é um **acordo**: a estação negocia com o AP o seu próprio horário de despertar,
 em vez de herdar o calendário coletivo de DTIM. Dorme de segundos a horas — e, como
@@ -449,23 +452,48 @@ a Parte A roda inteira no firmware do lab 6.
 
 ```bash
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/11_wifi_twt/build_lm20 C:/work/nrf-manaus-2/comms/11_wifi_twt -- -D11_wifi_twt_SHIELD="nrf7002eb2" -D11_wifi_twt_SNIPPET=nrf70-wifi -D11_wifi_twt_EXTRA_CONF_FILE=minha_rede.conf
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/11_wifi_twt/build_lm20 C:/work/nrf-manaus-2/comms/11_wifi_twt -- -D11_wifi_twt_SHIELD="nrf7002eb2" -D11_wifi_twt_SNIPPET=nrf70-wifi
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/11_wifi_twt/build_lm20
 ```
 
 `SHIELD` e `SNIPPET` levam o prefixo `11_wifi_twt_` (o nome da imagem no sysbuild)
-porque, sem prefixo, valeriam para **todas** as imagens; `EXTRA_CONF_FILE` e
-qualquer `CONFIG_*` já valem para a aplicação principal sem prefixo. Build limpo
-nesta bancada, `exit 0`:
+porque, sem prefixo, valeriam para **todas** as imagens; qualquer `CONFIG_*` já vale
+para a aplicação principal sem prefixo. Para gravar sem compilar, o hex pronto está
+em `comms/hex/11_wifi_twt_lm20.hex` (público: não tem credencial dentro). Build
+limpo nesta bancada, `exit 0`:
 
 | Região | Usado | Região total | % usado |
 |---|---|---|---|
-| FLASH | 558284 B | 2036 KB | 26,78% |
-| RAM | 266048 B | 511 KB | 50,84% |
+| FLASH | 569372 B | 2036 KB | 27,31% |
+| RAM | 266296 B | 511 KB | 50,89% |
+
+#### A rede da sala — digitada no terminal, gravada em settings
+
+O binário não carrega credencial. Este firmware **não tem shell**: o prompt do
+`lab_rede` é a única interação, antes de o sample negociar TWT sozinho. No primeiro
+boot ele pede na console (115200 8N1; com a EB II é a **primeira** VCOM):
+
+```
+=== Rede Wi-Fi ===
+SSID da rede: <ssid>
+Senha (Enter vazio = rede aberta): <senha>
+Gravado. Rede "<ssid>".
+```
+
+A senha é ecoada em claro. SSID tem de 1 a 32 caracteres; senha WPA2, de 8 a 63.
+Entrada inválida repete só aquele campo; não há prompt periódico. O módulo grava pela
+biblioteca `wifi_credentials`, com o backend de settings (ZMS na `storage_partition`
+da placa), e a conexão segue por `NET_REQUEST_WIFI_CONNECT_STORED`, como no sample.
+
+Nos boots seguintes o firmware mostra `Rede gravada: "<ssid>" (com senha)` e
+`Enter (ou nada em 5 s) usa essa; qualquer outra tecla troca:`. Sem tecla em 5 s usa a
+gravada; qualquer outra tecla pede SSID e senha de novo. Um `west flash` ou `nrfutil
+device program` normal não apaga a `storage_partition`, então a rede sobrevive à
+regravação; `nrfutil device recover` (ou `west flash --erase`) apaga e o prompt volta.
 
 Se for usar o `traffic_gen`, ajuste `CONFIG_TRAFFIC_GEN_REMOTE_IPV4_ADDR` para o IP
-do PC (por linha de comando, como o `CONFIG_LAB_SERVIDOR_IP` do lab 9, para não
-gravar IP nenhum em arquivo versionado) e suba o servidor:
+do PC (por linha de comando, para não gravar IP nenhum em arquivo versionado) e suba o
+servidor:
 
 ```bash
 python C:/ncs/v3.4.0/nrf/scripts/traffic_gen_server.py
@@ -487,26 +515,68 @@ wifi twt teardown_all
 
 ### Estado da negociação
 
-Medido na bancada de preparação: a ONT Askey da sala é 802.11ax confirmado e
-responde `Peer not TWT capable` — não negocia TWT individual. A Parte B depende de
-um AP que negocie (EX3000, ainda não confirmado). Se o AP também não negociar, o
-resultado registrado é este mesmo — negativo, mas com valor didático: mostra que
-TWT é um acordo, não um recurso automático do driver.
+Dois APs, dois resultados. A ONT Askey da bancada de preparação é 802.11ax e responde
+`Peer not TWT capable`: não negocia TWT individual. O AP da sala (`sidia2026_2e5`,
+802.11ax, 5 GHz, canal 36, `DTIM: 1`) mostra `TWT: Supported` no `wifi status` e aceita
+a negociação, no firmware do lab 6:
+
+```
+uart:~$ wifi twt quick_setup 65024 524288
+TWT operation TWT setup with dg: 1, flow_id: 0 requested
+TWT response: TWT accept
+== TWT negotiated parameters ==
+TWT Dialog token: 1
+TWT flow ID: 1
+TWT negotiation type: TWT individual negotiation
+TWT responder: false
+TWT implicit: true
+TWT announce: false
+TWT trigger: false
+TWT wake interval: 65024 us
+TWT interval: 524000 us
+========================
+```
+
+Os dois resultados juntos têm valor didático: "AP Wi-Fi 6" não implica TWT, e TWT é um
+acordo, não um recurso do driver.
 
 | Regime | Comando | Corrente média (60 s) |
 |---|---|---|
-| TWT ligado | `wifi twt quick_setup <wake_us> <interval_us>` | pendente — depende do AP |
-| TWT desligado (volta a DTIM) | `wifi twt teardown_all` | pendente — depende do AP |
+| TWT ligado | `wifi twt quick_setup 65024 524288` | a medir com o PPK2 no AP da sala |
+| TWT desligado (volta a DTIM) | `wifi twt teardown_all` | a medir |
 
-### Se aparecer um AP com TWT no curso — receita pronta, não testada
+### O acordo, campo a campo
 
-**Decisão do instrutor (2026-09-07): o EX3000 foi descartado** e a Parte B não será
-ensaiada antes do curso. O que segue está pronto para ser executado se algum AP com TWT
-aparecer em sala — mas **nada aqui foi verificado nesta bancada**, e é preciso dizer isso
-à turma se for demonstrado ao vivo.
+![TWT negociado: wake interval × interval](wifi_twt_sp.png)
+
+| Campo do log | O que é |
+|---|---|
+| `TWT wake interval: 65024 us` | quanto tempo a estação fica **acordada** em cada despertar, a *service period*. No 802.11 é o *Nominal Minimum TWT Wake Duration*, transmitido em unidades de 256 µs: 254 × 256. Faixa aceita: 1 a 256 ms; a Nordic recomenda não descer de 8 ms |
+| `TWT interval: 524000 us` | **de quanto em quanto** a service period se repete. É o *TWT Wake Interval* do 802.11, mantissa × 2^expoente; o driver do nRF70 faz a conversão em milissegundos inteiros, por isso os 524 288 pedidos viram 524 000 |
+| `Dialog token: 1` | numera a troca pedido/resposta do setup |
+| `flow ID: 1` | identifica este acordo; é o que `wifi twt teardown` usa. O pedido saiu com flow 0 e o AP atribuiu 1 |
+| `negotiation type: individual` | a estação negocia o próprio horário; broadcast TWT não tem driver nesta versão |
+| `responder: false` | a estação é a *requester*; o AP responde |
+| `implicit: true` | a próxima service period é a anterior mais o interval; o AP não anuncia cada uma |
+| `announce: false` | *unannounced*: o AP transmite no início da service period sem esperar um PS-Poll da estação |
+| `trigger: false` | *non-trigger*: o uplink dentro da service period sai por contenção (EDCA), sem trigger frame do AP |
+
+A relação entre os dois números é o ciclo de trabalho: 65 ÷ 524 = 12,4 % do tempo com o
+rádio ligado. A corrente média fica perto de I_sono + I_ativa × 0,124, mais o custo de
+acordar e ressincronizar com o AP. Atenção ao nome: a Zephyr chama a duração de
+`twt_wake_interval` e o período de `twt_interval`; a documentação da Nordic chama a
+duração de *Wake Duration* e o período de *Wake Interval*. São os mesmos dois números,
+com os rótulos trocados de lugar.
+
+### A demonstração ao vivo, no firmware do lab 6
+
+A demonstração usa o AP da sala. A sequência abaixo foi executada até o `quick_setup`;
+a medida de 60 s com o PPK2 ainda não foi feita, e é isso que falta para fechar a
+tabela da seção anterior.
 
 > **Atenção — o firmware deste lab NÃO tem shell.** O `prj.conf` do sample não liga
-> `CONFIG_SHELL` nem `CONFIG_NET_L2_WIFI_SHELL`: ele **negocia TWT sozinho no boot**, com
+> `CONFIG_SHELL` nem `CONFIG_NET_L2_WIFI_SHELL`: depois do prompt de rede do
+> `lab_rede`, ele **negocia TWT sozinho**, com
 > os parâmetros de `CONFIG_TWT_WAKE_INTERVAL` (65000 µs) e `CONFIG_TWT_INTERVAL`
 > (524000 µs), e sai com `AP is not TWT capable, exiting the sample` se o AP não
 > anunciar TWT. **Os comandos `wifi twt` abaixo só existem no firmware do lab 6**
@@ -516,7 +586,7 @@ aparecer em sala — mas **nada aqui foi verificado nesta bancada**, e é precis
 Sequência mínima **no firmware do lab 6**, já associado ao AP:
 
 ```
-wifi status                       # confirmar: TWT: Supported (na nossa ONT dá Not supported)
+wifi status                       # confirmar: TWT: Supported (o AP da sala dá; a ONT da bancada, nao)
 wifi ps                           # anotar o estado de partida
 wifi twt quick_setup 65024 524288 # acorda ~65 ms a cada ~524 ms
 wifi ps                           # deve listar um TWT flow

@@ -31,6 +31,7 @@
 #endif /* CONFIG_WIFI_READY_LIB */
 
 LOG_MODULE_REGISTER(lab_wifi_location, CONFIG_LOG_DEFAULT_LEVEL);
+#include "lab_rede.h"
 
 /* sw3 nao existe com o shield nrf7002eb2 nesta versao do SDK (o overlay
  * apaga o botao e o alias): o botao do lab e o sw0, mesma nota do lab 9.
@@ -197,11 +198,11 @@ static int mandar_scan_para_pc(void)
 	}
 
 	endereco.sin_family = NET_AF_INET;
-	endereco.sin_port = net_htons(CONFIG_LAB_PORTA);
+	endereco.sin_port = net_htons(lab_rede_porta());
 
-	ret = net_addr_pton(NET_AF_INET, CONFIG_LAB_SERVIDOR_IP, &endereco.sin_addr);
+	ret = net_addr_pton(NET_AF_INET, lab_rede_ip(), &endereco.sin_addr);
 	if (ret < 0) {
-		LOG_ERR("CONFIG_LAB_SERVIDOR_IP invalido: %s", CONFIG_LAB_SERVIDOR_IP);
+		LOG_ERR("IP do servidor invalido: %s", lab_rede_ip());
 		zsock_close(sock);
 		return ret;
 	}
@@ -210,7 +211,7 @@ static int mandar_scan_para_pc(void)
 	if (ret < 0) {
 		ret = -errno;
 		LOG_ERR("Falha ao conectar em %s:%d (%d)",
-			CONFIG_LAB_SERVIDOR_IP, CONFIG_LAB_PORTA, ret);
+			lab_rede_ip(), lab_rede_porta(), ret);
 		zsock_close(sock);
 		return ret;
 	}
@@ -230,7 +231,7 @@ static int mandar_scan_para_pc(void)
 	zsock_close(sock);
 
 	LOG_INF("Scan (%d AP(s)) enviado para %s:%d", ret,
-		CONFIG_LAB_SERVIDOR_IP, CONFIG_LAB_PORTA);
+		lab_rede_ip(), lab_rede_porta());
 	return 0;
 }
 
@@ -395,6 +396,11 @@ static int conectar_wifi(void)
 
 int main(void)
 {
+	/* CURSO: rede da sala e IP/porta do servidor, digitados no terminal e
+	 * gravados em settings. So retorna com tudo valido.
+	 */
+	lab_rede_ler(true, lab_rede_porta());
+
 	net_mgmt_init_event_callback(&wifi_cb, handler_wifi, NET_EVENT_WIFI_CONNECT_RESULT);
 	net_mgmt_add_event_callback(&wifi_cb);
 

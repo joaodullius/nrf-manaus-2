@@ -15,8 +15,8 @@
 
 Este lab é a segunda aplicação com lógica própria da frente de Wi-Fi: `nrf/samples/
 wifi/provisioning/softap` rodando na nRF54LM20-DK (variante B) com a nRF7002 EB-II
-encaixada. Diferente do lab 7 (credencial fixa em `minha_rede.conf`), aqui o
-provisionamento acontece em tempo de execução: a DK sobe como Access Point próprio,
+encaixada. Diferente do lab 7 (credencial digitada no terminal serial), aqui o
+provisionamento acontece sem cabo: a DK sobe como Access Point próprio,
 escaneia as redes ao seu redor e recebe a credencial por HTTPS de um cliente
 conectado a essa rede temporária.
 
@@ -68,8 +68,7 @@ padrão da biblioteca) e não haveria como saber em qual deles você entrou. O S
 é uma rede **aberta** — a biblioteca não expõe opção de senha —, então o SSID é a
 única coisa que distingue um kit do outro no ar.
 
-Por isso este lab tem um fragmento por aluno, no mesmo idioma do `minha_rede.conf`
-dos labs 7, 9, 11, 12 e 13:
+Por isso este lab tem um fragmento de Kconfig por aluno:
 
 ```
 CONFIG_SOFTAP_WIFI_PROVISION_SSID="nrf-wifiprov"
@@ -90,11 +89,12 @@ sai da caixa funcionando. Para ter o seu próprio nome, troque o valor e compile
 > - use o `scripts/provision.py`, que **não olha o SSID do SoftAP**: você entra na rede
 >   na mão e ele fala com `wifiprov.local`. Por script, qualquer nome serve.
 
-Duas diferenças em relação ao `minha_rede.conf`, e as duas importam:
+Duas observações sobre esse fragmento:
 
 - **Este valor não é segredo.** Pode ser commitado à vontade; não há senha nenhuma
-  aqui. O `minha_rede.conf` é rastreado e vazio justamente porque guarda senha — este
-  é rastreado e **com valor de verdade**.
+  aqui — é só o nome do AP que a DK anuncia. A senha da rede da sala nunca entra em
+  arquivo nenhum do repo: neste lab chega pelo provisionamento, nos labs 7, 9, 11, 12
+  e 13 é digitada no terminal.
 - **Não mexa no `CONFIG_NET_HOSTNAME` por causa disto.** O certificado do servidor
   HTTPS é amarrado ao **hostname** (`wifiprov.local`), não ao SSID, e é o hostname que
   o `provision.py` resolve. Mudar só o SSID **não** obriga a regerar certificado

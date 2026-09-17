@@ -23,10 +23,14 @@ nRF7002 EB-II encaixada, e mede o throughput dos dois com o árbitro de coexist�
 > **Origem.** Cópia integral de `nrf/samples/wifi/ble_coex` do **nRF Connect SDK
 > v3.4.0**. Licença Nordic preservada em [LICENSE](LICENSE). `prj.conf`,
 > `CMakeLists.txt`, `src/main.c` e `src/bt_throughput_test.c` levam o cabeçalho
-> `ORIGEM:` do curso. Duas divergências do SDK, as duas descritas abaixo: a
-> credencial Wi-Fi sai do `prj.conf` e vai para o `minha_rede.conf`, e o
-> `CMakeLists.txt` ganha uma falha proposital quando esse fragmento não foi
-> preenchido — mesmo padrão dos labs 7 e 9.
+> `ORIGEM:` do curso. Divergências do SDK, as mesmas dos labs 7 e 9: `src/lab_rede.c`
+> e `src/lab_rede.h` (arquivos do curso) entram no `target_sources` do
+> `CMakeLists.txt`; `main()` chama `lab_rede_ler()` antes de subir os rádios; o
+> `prj.conf` troca `CONFIG_WIFI_CREDENTIALS_STATIC` pelo backend de settings
+> (`CONFIG_SETTINGS`, `CONFIG_FLASH`, `CONFIG_FLASH_MAP`, `CONFIG_FLASH_PAGE_LAYOUT`,
+> `CONFIG_ZMS`, `CONFIG_SETTINGS_ZMS`, `CONFIG_WIFI_CREDENTIALS_MAX_ENTRIES=1`); e o
+> símbolo `CONFIG_NET_CONFIG_PEER_IPV4_ADDR` sai do `Kconfig` do lab, porque o IP do
+> PC passa a vir do prompt.
 
 ## Hardware
 
@@ -48,49 +52,49 @@ nRF7002 EB-II encaixada, e mede o throughput dos dois com o árbitro de coexist�
 Com o shield acoplado, `sw3` não existe nesta versão do SDK (o overlay não o traz
 mais): sobram `sw0`–`sw2` e os quatro LEDs.
 
-## `minha_rede.conf` — a credencial do aluno
+## A rede da sala e o IP do PC — digitados no terminal, gravados em settings
 
-O `prj.conf` deste sample, como veio do SDK, tinha `CONFIG_WIFI_CREDENTIALS_STATIC_
-SSID="Myssid"` e a senha de exemplo em texto puro — usadas pelo cliente Wi-Fi para
-conectar ao AP antes de subir o zperf. O curso tira essas duas linhas do `prj.conf` e
-move a credencial para o mesmo fragmento externo dos labs 7 e 9, rastreado pelo git e
-**vazio**:
+O binário não carrega credencial nem IP. Nas variantes que ligam o Wi-Fi
+(`TEST_TYPE_WLAN_ONLY` e `TEST_TYPE_WLAN_BLE`), `lab_rede_ler()` pede no primeiro boot,
+pela console (115200 8N1; com a EB II é a **primeira** VCOM):
 
 ```
-CONFIG_WIFI_CREDENTIALS_STATIC_SSID=""
-CONFIG_WIFI_CREDENTIALS_STATIC_PASSWORD=""
+=== Rede Wi-Fi ===
+SSID da rede: <ssid>
+Senha (Enter vazio = rede aberta): <senha>
+IP do servidor no PC (ex.: 192.168.0.100): <ip-do-pc>
+Porta do servidor (Enter = 5001): 
+Gravado. Rede "<ssid>", servidor <ip-do-pc>:5001.
 ```
 
-Cada aluno preenche o seu localmente com a rede da sala e compila com:
+A senha é ecoada em claro. SSID tem de 1 a 32 caracteres; senha WPA2, de 8 a 63; o IP
+é validado como IPv4; a porta aceita 1 a 65535, e Enter escolhe o padrão, que vem de
+`CONFIG_NET_CONFIG_PEER_IPV4_PORT` (5001, a porta do iPerf). Entrada inválida repete só
+aquele campo; não há prompt periódico. SSID e senha vão para a biblioteca
+`wifi_credentials`, com o backend de settings (ZMS na `storage_partition` da placa), e
+a conexão segue por `NET_REQUEST_WIFI_CONNECT_STORED`, o mesmo caminho do sample. IP e
+porta ficam em settings, nas chaves `lab_rede/ip` e `lab_rede/porta`, e alimentam o
+`zperf` no lugar do antigo `CONFIG_NET_CONFIG_PEER_IPV4_ADDR`.
+
+Nos boots seguintes o firmware mostra o que tem e abre uma janela única:
 
 ```
--D12_wifi_coex_EXTRA_CONF_FILE=minha_rede.conf
+=== Rede Wi-Fi ===
+Rede gravada: "<ssid>" (com senha), servidor <ip-do-pc>:5001
+Enter (ou nada em 5 s) usa essa; qualquer outra tecla troca:
 ```
 
-Opções de Kconfig e arquivos de fragmento como este, no sysbuild, valem para a
-**aplicação principal** com ou sem o prefixo de imagem — é assim de propósito, para o
-mesmo comando funcionar com ou sem sysbuild. No lab 7, compilar dos dois jeitos deu
-binário byte a byte idêntico.
+Sem tecla em 5 s, ou com Enter, usa o gravado; qualquer outra tecla pede tudo de novo.
+Um `west flash` ou `nrfutil device program` normal não apaga a `storage_partition`,
+então rede e IP sobrevivem à troca entre `build_on` e `build_off`; `nrfutil device
+recover` (ou `west flash --erase`) apaga e o prompt volta. A variante `ble_only` não
+liga o Wi-Fi e não mostra o prompt.
 
-Mesmo assim, **o curso escreve sempre a forma prefixada**, em todos os labs. Dois
-motivos. O primeiro é não obrigar o aluno a guardar qual opção aceita as duas formas e
-qual não aceita — para o `SHIELD` e o `SNIPPET` do Passo 1 o prefixo **é** obrigatório,
-por um motivo diferente (ver a seção abaixo). O segundo é uma observação de bancada que
-continua sem explicação: no lab 9, um build com `EXTRA_CONF_FILE` **sem** prefixo saiu
-com a senha vazia, o que a forma prefixada não reproduziu. Não sabemos por quê, não
-conseguimos reproduzir sob demanda, e não vale arriscar a aula: use a forma prefixada.
-
-**Nunca commitar a senha real.** Antes de qualquer commit, esvaziar o arquivo de
-volta:
-
-```
-git checkout comms/12_wifi_coex/minha_rede.conf
-```
-
-Se o `minha_rede.conf` estiver vazio (o estado padrão do repositório) e o build for
-disparado sem o fragmento, o `CMakeLists.txt` para na configuração, antes de compilar
-uma linha sequer, com `CONFIG_WIFI_CREDENTIALS_STATIC_SSID nao definido` — confirmado
-nesta máquina, mesmo comportamento dos labs 7 e 9.
+Sobre a linha de build: opções de Kconfig, no sysbuild, valem para a **aplicação
+principal** com ou sem o prefixo de imagem. Mesmo assim, **o curso escreve sempre a
+forma prefixada**, em todos os labs, para não obrigar o aluno a guardar qual opção
+aceita as duas formas e qual não aceita — para o `SHIELD` e o `SNIPPET` do Passo 1 o
+prefixo **é** obrigatório, por um motivo diferente (ver a seção abaixo).
 
 ## O shield é duplo, e a coexistência é escolha de build
 
@@ -117,7 +121,7 @@ uma segunda imagem, `ipc_radio`, no núcleo de rede). A nRF54LM20 é single-core
 labs 6–11: por convenção do curso, o `SHIELD` e o `SNIPPET` seguem escopados pela
 imagem, cujo nome no sysbuild é o nome da pasta do lab — `12_wifi_coex`.
 
-Aqui o prefixo importa de verdade — diferente do `EXTRA_CONF_FILE` da seção
+Aqui o prefixo importa de verdade — diferente das opções de Kconfig da seção
 anterior. `SHIELD` e `SNIPPET` sem prefixo de imagem, no sysbuild, valem para
 **todas** as imagens do build, não só a principal; num sample com mais de uma
 imagem (o próprio `ble_coex`, no nRF5340, soma a imagem `ipc_radio` do núcleo de
@@ -127,7 +131,7 @@ prefixo, já significa "aplicação principal" por padrão — não precisa do
 prefixo para chegar lá. Como este é o lab com shield **duplo** da frente, é o
 melhor lugar para fixar essa diferença: o prefixo é obrigatório para `SHIELD`/
 `SNIPPET` (o valor pode ir parar na imagem errada sem ele), e opcional — só por
-consistência — para `EXTRA_CONF_FILE` e demais opções de Kconfig.
+consistência — para as opções de Kconfig.
 
 **A coexistência liga e desliga é decidida em tempo de compilação**, não por botão ou
 shell em runtime: é o Kconfig `CONFIG_MPSL_CX` (confirmado no `README.rst` original do
@@ -147,26 +151,19 @@ própria linha em vez de depender do que o shield decide. O `TEST_TYPE_WLAN_BLE`
 concorrentes, os dois ligados) é o `default` do `Kconfig` do sample e não muda entre
 os dois builds.
 
-## O IP do servidor de tráfego — `CONFIG_NET_CONFIG_PEER_IPV4_ADDR`
+## O IP do servidor de tráfego
 
-Além da credencial Wi-Fi, este lab precisa saber o IP do PC que roda o servidor
-de tráfego (iPerf, para o lado Wi-Fi) — o mesmo papel que `CONFIG_LAB_SERVIDOR_IP`
-tem no lab 9. O `Kconfig` do sample define `CONFIG_NET_CONFIG_PEER_IPV4_ADDR`
-com o padrão `192.168.1.253` — um endereço de exemplo do SDK que **não existe**
-na rede da sala. Compilar sem sobrescrever esse valor grava um kit que manda
-todo o tráfego Wi-Fi para um destino inexistente: o lado Wi-Fi da medida
-simplesmente não acontece, sem nenhum erro que aponte para a causa.
+O lado Wi-Fi do teste é um cliente `zperf` UDP que manda tráfego para o iPerf no PC;
+o destino é o IP e a porta digitados no prompt do boot (seção acima). O `Kconfig` do
+sample original definia `CONFIG_NET_CONFIG_PEER_IPV4_ADDR` com um endereço de exemplo
+(`192.168.1.253`) que não existe na rede da sala; o curso removeu o símbolo, e o
+`main.c` lê `lab_rede_ip()` e `lab_rede_porta()` no lugar dele. Um IP errado no prompt
+tem o mesmo sintoma de sempre: o kit manda todo o tráfego Wi-Fi para um destino
+inexistente e o lado Wi-Fi da medida não acontece, sem erro que aponte a causa.
 
-Descubra o IP do PC na rede da sala (`ipconfig`, no PowerShell) e passe-o na
-linha de build — é uma opção de Kconfig, mesma regra do `EXTRA_CONF_FILE` explicada
-acima, e por isso escrita com o mesmo prefixo de imagem:
-
-```
--D12_wifi_coex_CONFIG_NET_CONFIG_PEER_IPV4_ADDR=\"<ip-do-pc>\"
-```
-
-**Nunca commitar o IP real** — ele só entra na linha de comando, nunca em um
-arquivo versionado.
+Descubra o IP do PC na rede da sala (`ipconfig`, no PowerShell) **antes** do primeiro
+boot, e confira que é o da interface Wi-Fi ligada à mesma rede do kit. Para trocar
+depois, basta teclar qualquer coisa na janela de 5 s do boot seguinte.
 
 ## Passo 1 — compilar
 
@@ -177,36 +174,38 @@ Coexistência **ligada**:
 
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_on C:/work/nrf-manaus-2/comms/12_wifi_coex -- -D12_wifi_coex_SHIELD="nrf7002eb2;nrf7002eb2_coex" -D12_wifi_coex_SNIPPET=nrf70-wifi -D12_wifi_coex_EXTRA_CONF_FILE=minha_rede.conf -D12_wifi_coex_CONFIG_NET_CONFIG_PEER_IPV4_ADDR=\"<ip-do-pc>\" -D12_wifi_coex_CONFIG_MPSL_CX=y -D12_wifi_coex_CONFIG_COEX_SEP_ANTENNAS=y
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_on C:/work/nrf-manaus-2/comms/12_wifi_coex -- -D12_wifi_coex_SHIELD="nrf7002eb2;nrf7002eb2_coex" -D12_wifi_coex_SNIPPET=nrf70-wifi -D12_wifi_coex_CONFIG_MPSL_CX=y -D12_wifi_coex_CONFIG_COEX_SEP_ANTENNAS=y
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_on
 ```
 
 Coexistência **desligada**:
 
 ```
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_off C:/work/nrf-manaus-2/comms/12_wifi_coex -- -D12_wifi_coex_SHIELD="nrf7002eb2;nrf7002eb2_coex" -D12_wifi_coex_SNIPPET=nrf70-wifi -D12_wifi_coex_EXTRA_CONF_FILE=minha_rede.conf -D12_wifi_coex_CONFIG_NET_CONFIG_PEER_IPV4_ADDR=\"<ip-do-pc>\" -D12_wifi_coex_CONFIG_MPSL_CX=n
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_off C:/work/nrf-manaus-2/comms/12_wifi_coex -- -D12_wifi_coex_SHIELD="nrf7002eb2;nrf7002eb2_coex" -D12_wifi_coex_SNIPPET=nrf70-wifi -D12_wifi_coex_CONFIG_MPSL_CX=n
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/12_wifi_coex/build_off
 ```
+
+Para gravar sem compilar, os dois hex prontos estão em
+`comms/hex/12_wifi_coex_on_lm20.hex` e `comms/hex/12_wifi_coex_off_lm20.hex`
+(públicos: não têm credencial nem IP dentro).
 
 Os dois builds fecham limpos, `exit 0`, imagem única (o nRF7002 é um companion por
 SPI, não um segundo SoC). Nenhum dos dois reduz `CONFIG_MAIN_STACK_SIZE` (5200) nem
 `CONFIG_NRF_WIFI_DATA_HEAP_SIZE` (168192) do sample original — são os maiores valores
 vistos até aqui na frente de Wi-Fi, porque este lab soma as pilhas de rede do Wi-Fi
-**e** as do throughput BLE. Resumo de memória (com credencial de teste preenchida, só
-para medir o binário — não a rede da sala):
+**e** as do throughput BLE. Resumo de memória:
 
 | Build | FLASH | % FLASH | RAM | % RAM |
 |---|---|---|---|---|
-| `build_on` (coex ligada) | 741084 B | 35,55% | 374100 B | 71,49% |
-| `build_off` (coex desligada) | 740528 B | 35,52% | 374076 B | 71,49% |
+| `build_on` (coex ligada) | 754376 B | 36,18% | 374508 B | 71,57% |
+| `build_off` (coex desligada) | 753820 B | 36,16% | 374492 B | 71,57% |
 
-A diferença é pequena (556 B de FLASH, 24 B de RAM) — é só o driver `mpsl_cx` sendo
-compilado ou não; o resto do binário (Wi-Fi, BLE, zperf, throughput) é idêntico.
+A diferença entre os dois é pequena — é só o driver `mpsl_cx` sendo compilado ou não;
+o resto do binário (Wi-Fi, BLE, zperf, throughput) é idêntico.
 
-71,49% de RAM ainda deixa cerca de **145,7 KiB livres** dos 511 KB da região — folga
-confortável. É o percentual mais alto da frente de Wi-Fi até aqui (o lab 9, por
-exemplo, usa 36%) porque este é o único lab que mantém as duas pilhas de rádio — Wi-Fi
-e BLE — abertas e ativas ao mesmo tempo, em vez de uma de cada vez.
+É o percentual de RAM mais alto da frente de Wi-Fi (o lab 9, por exemplo, usa 36%)
+porque este é o único lab que mantém as duas pilhas de rádio — Wi-Fi e BLE — abertas e
+ativas ao mesmo tempo, em vez de uma de cada vez.
 
 ## Passo 2 — bancada
 
@@ -243,8 +242,8 @@ Pré-requisitos antes de ligar qualquer coisa:
       regra de entrada o teste mede zero, em silêncio dos dois lados.
 - [x] Gravar a nRF54LM20-DK com `build_on` (primeira rodada).
 - [ ] Abrir a porta serial certa (aviso no topo deste README — primeira VCOM com o
-      shield acoplado) e confirmar a conexão Wi-Fi e o pareamento BLE no log de
-      boot.
+      shield acoplado), responder ao prompt de rede e IP do PC no primeiro boot, e
+      confirmar a conexão Wi-Fi e o pareamento BLE no log.
 
 Checklist de medição, uma passada por regime (`build_on`, depois `build_off`):
 
@@ -367,10 +366,12 @@ que se projeta.
 - **A VCOM muda com o shield — não é sempre a mesma porta.** Ver o aviso no topo
   deste README.
 - **`sw3` não existe mais** com o shield acoplado nesta versão do SDK.
-- **O IP padrão do peer Wi-Fi não existe na rede da sala.** `CONFIG_NET_CONFIG_
-  PEER_IPV4_ADDR` vem `192.168.1.253` de fábrica; sem sobrescrever, o kit manda
-  o tráfego Wi-Fi para um destino que não existe, sem erro nenhum que aponte
-  para a causa. Ver a seção acima, antes do Passo 1.
+- **IP do PC errado no prompt.** O kit manda o tráfego Wi-Fi para um destino que
+  não existe, sem erro nenhum que aponte para a causa; o iPerf fica em silêncio.
+  Confira com `ipconfig` que o IP digitado é o da interface Wi-Fi na rede da sala, e
+  troque na janela de 5 s do boot seguinte. Ver a seção antes do Passo 1.
+- **O kit "não faz nada" depois do boot.** Está parado no prompt de rede, esperando
+  o teclado na primeira VCOM. Com rede e IP já gravados, a janela de 5 s passa sozinha.
 - **O TAG do Channel Sounding não está conectado nesta bancada agora.** Sem um par
   BLE gravado com o sample de throughput, o central deste lab não tem para onde
   conectar — o teste concorrente não roda. Ver "Hardware" acima.
@@ -383,9 +384,6 @@ que se projeta.
 - **O firewall do Windows bloqueia servidor de rede na entrada em Private.** Mesmo
   sintoma e mesmo conserto do `comms/09_wifi_tcp/README.md`, aplicado ao iPerf em vez
   do `wifi_server.py`.
-- **Nunca commitar a credencial real.** `minha_rede.conf` é rastreado e deve
-  permanecer vazio no repositório; `git checkout comms/12_wifi_coex/minha_rede.conf`
-  antes de qualquer commit.
 
 ## Fontes
 
@@ -394,5 +392,5 @@ que se projeta.
 - nRF Connect SDK v3.4.0 — `zephyr/boards/shields/nrf7002eb2` (`nrf7002eb2_coex.
   overlay`: nó `nrf_radio_coex`, GPIOs `status0`/`req`/`grant` no
   `nordic_expansion_header`)
-- Build local, 2026-09-06 — nRF54LM20-DK var. B, `build_on` e `build_off`: FLASH e
-  RAM medidos nesta máquina, credencial Wi-Fi de teste (não a da sala)
+- Build local — nRF54LM20-DK var. B, `build_on` e `build_off`: FLASH e RAM medidos
+  nesta máquina

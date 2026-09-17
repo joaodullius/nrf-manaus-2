@@ -3,17 +3,13 @@
 #
 menu "Lab: telemetria por socket (nrf-manaus-2)"
 
-config LAB_SERVIDOR_IP
-	string "IP do servidor no PC"
-	default ""
-	help
-	  IPv4 do PC que roda o tools/wifi_server.py. Vazio faz o build falhar.
-
 config LAB_PORTA
-	int "Porta do servidor no PC"
+	int "Porta do servidor no PC (padrao do prompt do boot)"
 	default 9000
 	help
-	  Porta do TCP puro (padrao 9000), do wifi_http_server.py (lab 10,
+	  O IP do servidor e digitado no terminal no primeiro boot e gravado em
+	  settings (src/lab_rede.c); esta e a porta que o prompt propoe, e Enter
+	  aceita. Porta do TCP puro (padrao 9000), do wifi_http_server.py (lab 10,
 	  padrao 8000) ou do broker MQTT (lab 10, mosquitto, padrao 1883) --
 	  depende do LAB_TRANSPORTE escolhido abaixo. Precisa bater com a
 	  ferramenta de PC que vai atender essa porta.

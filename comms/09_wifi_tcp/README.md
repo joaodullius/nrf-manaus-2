@@ -32,25 +32,51 @@ Com o shield acoplado, `sw3` some do overlay nesta versão do SDK: o botão do l
 serigrafia da placa; a nRF54LM20-DK numera os LEDs a partir de 0, igual à devicetree,
 sem deslocamento).
 
-## Configuração — duas credenciais, dois fragmentos
+## Rede da sala e servidor — digitados no terminal, gravados em settings
 
-Além de `minha_rede.conf` (SSID/senha da rede da sala, mesma convenção do lab 7), este
-lab precisa saber o IP do PC que roda o servidor: `CONFIG_LAB_SERVIDOR_IP`. Vazio faz o
-`CMakeLists.txt` falhar de propósito na configuração, antes de compilar qualquer coisa
-— um kit sem IP de destino não teria para onde mandar a telemetria. Descubra o IP do PC
-na rede da sala (`ipconfig`) e passe os dois na linha de build.
+O binário não carrega credencial nem IP. No primeiro boot, o firmware pede tudo na
+console (115200 8N1; com a EB II acoplada é a **primeira** VCOM), nesta ordem:
 
-**Nunca commitar SSID, senha ou IP reais** — `minha_rede.conf` fica vazio no
-repositório; o IP do servidor vai só na linha de comando, nunca em um arquivo
-versionado.
+```
+=== Rede Wi-Fi ===
+SSID da rede:
+Senha (Enter vazio = rede aberta):
+IP do servidor no PC (ex.: 192.168.0.100):
+Porta do servidor (Enter = 9000):
+```
+
+A senha é ecoada em claro (WPA2: 8 a 63 caracteres). O IP é validado como IPv4; a
+porta padrão é `CONFIG_LAB_PORTA` (9000 neste lab). Uma entrada inválida repete só
+aquele campo; não há prompt periódico. Descubra o IP do PC na rede da sala com
+`ipconfig` antes de ligar o kit.
+
+SSID e senha vão para a biblioteca `wifi_credentials` (backend settings, ZMS na
+`storage_partition`); IP e porta ficam nas chaves `lab_rede/ip` e `lab_rede/porta`. A
+conexão segue por `NET_REQUEST_WIFI_CONNECT_STORED`, como no sample da Nordic. Nos
+boots seguintes o firmware mostra o que tem gravado e espera uma tecla:
+
+```
+Rede gravada: "<ssid>" (com senha), servidor <ip>:<porta>
+Enter (ou nada em 5 s) usa essa; qualquer outra tecla troca:
+```
+
+Um `west flash` ou `nrfutil device program` normal **não apaga** a `storage_partition`:
+rede e servidor sobrevivem à regravação. `nrfutil device recover` (ou `west flash
+--erase`) apaga tudo, e o prompt volta no boot seguinte.
+
+O código é `src/lab_rede.c` e `src/lab_rede.h` (arquivos do curso, copiados iguais nos
+labs 7, 9, 11, 12 e 13): `main()` chama `lab_rede_ler(true, CONFIG_LAB_PORTA)` antes de
+qualquer outra coisa, e `src/transporte.c` lê `lab_rede_ip()` e `lab_rede_porta()`.
 
 ## Atenção: o coredump despeja a senha da rede em texto claro
 
 `CONFIG_DEBUG_COREDUMP` fica ligado de propósito — se o firmware travar, o despejo da
-RAM sai inteiro pela serial, e isso inclui o SSID e a senha de `minha_rede.conf` em
-texto claro. Na prática: nunca colar um log de coredump inteiro num ticket, chat ou
-repositório sem apagar essa parte antes. Num produto de verdade a escolha seria outra —
-desligar `CONFIG_DEBUG_COREDUMP` ou usar um backend que não vá para a serial.
+RAM sai inteiro pela serial, e isso inclui o SSID e a senha da rede em texto claro: o
+`wifi_credentials` com backend settings guarda a credencial sem cifrar, tanto na RAM
+quanto na `storage_partition`. Na prática: nunca colar um log de coredump inteiro num
+ticket, chat ou repositório sem apagar essa parte antes. Num produto de verdade a
+escolha seria outra — desligar `CONFIG_DEBUG_COREDUMP` ou usar um backend que não vá
+para a serial.
 
 ## O payload, campo a campo
 
@@ -208,6 +234,7 @@ As três threads têm a mesma prioridade (7) e pilha de 3072 B, e são criadas p
 
 | # | O que `main()` faz | Log |
 |---|---|---|
+| 0 | `lab_rede_ler()`: lê rede e servidor do settings ou pede no terminal | `=== Rede Wi-Fi ===` |
 | 1 | registra os callbacks de `NET_EVENT_WIFI_CONNECT_RESULT` e `NET_EVENT_IPV4_DHCP_BOUND` | — |
 | 2 | configura `sw0` (interrupção) e `led1` (saída, apagado) | — |
 | 3 | espera o **supplicant** ficar pronto (`CONFIG_WIFI_READY_LIB`, até 10 s) | `Aguardando o supplicant do Wi-Fi ficar pronto...` |
@@ -268,20 +295,21 @@ e o que `tools/tests/` cobre automaticamente.
 
 ## Passo 1 — compilar e gravar
 
-Com `minha_rede.conf` preenchido e o IP do PC em mãos:
-
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/09_wifi_tcp/build_lm20 C:/work/nrf-manaus-2/comms/09_wifi_tcp -- -D09_wifi_tcp_SHIELD="nrf7002eb2" -D09_wifi_tcp_SNIPPET=nrf70-wifi -D09_wifi_tcp_EXTRA_CONF_FILE=minha_rede.conf -D09_wifi_tcp_CONFIG_LAB_SERVIDOR_IP=\"<ip-do-pc>\"
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/09_wifi_tcp/build_lm20 C:/work/nrf-manaus-2/comms/09_wifi_tcp -- -D09_wifi_tcp_SHIELD="nrf7002eb2" -D09_wifi_tcp_SNIPPET=nrf70-wifi
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/09_wifi_tcp/build_lm20
 ```
 
-Todas as quatro opções levam o prefixo `09_wifi_tcp_` — o nome da imagem no sysbuild.
-Para `SHIELD` e `SNIPPET` o prefixo é **obrigatório**: sem ele, os dois valeriam para
+Sem compilar: `comms/hex/09_wifi_tcp_lm20.hex` é este build, pronto para gravar (não
+carrega credencial — a rede e o servidor entram pelo terminal, seção anterior).
+
+As duas opções levam o prefixo `09_wifi_tcp_` — o nome da imagem no sysbuild. Para
+`SHIELD` e `SNIPPET` o prefixo é **obrigatório**: sem ele, os dois valeriam para
 **todas** as imagens do sysbuild, o que pode quebrar as que não usam esse shield. Para
-`EXTRA_CONF_FILE` e para qualquer `CONFIG_*` (como `CONFIG_LAB_SERVIDOR_IP`) o prefixo é
-**opcional** — sem ele a opção já vale para a aplicação principal, de propósito, para o
-mesmo comando funcionar com ou sem sysbuild.
+qualquer `CONFIG_*` (como o `CONFIG_LAB_PORTA` do lab 10) o prefixo é **opcional** — sem
+ele a opção já vale para a aplicação principal, de propósito, para o mesmo comando
+funcionar com ou sem sysbuild.
 
 O curso escreve sempre com prefixo, em todas as linhas de build da frente. Não é exigência
 da ferramenta: é para o aluno ler uma linha só e saber, sem decorar exceção, a qual
@@ -291,8 +319,8 @@ Resumo de memória:
 
 | Região | Usado | Região total | % usado |
 |---|---|---|---|
-| FLASH | 555508 B | 2036 KB | 26,64% |
-| RAM | 191952 B | 511 KB | 36,68% |
+| FLASH | 566772 B | 2036 KB | 27,19% |
+| RAM | 192200 B | 511 KB | 36,73% |
 
 ## Testes automáticos (PC, sem hardware)
 
@@ -316,7 +344,8 @@ tempo limite de leitura, com um limite pequeno passado só para o teste.
 ## Roteiro de bancada
 
 1. `python wifi_server.py --porta 9000` no PC.
-2. Gravar a DK com o IP do PC (Passo 1).
+2. Gravar a DK (Passo 1) e, no primeiro boot, digitar SSID, senha, o IP do PC e a
+   porta 9000 no terminal.
 3. Conferir: amostras chegando a cada `CONFIG_LAB_INTERVALO_MS` (padrão 2 s), `seq`
    incrementando.
 4. Apertar o **botão 1** (`sw0`) → amostra imediata, com `"botao":true`. **Validado em
@@ -359,7 +388,7 @@ Foi o que aconteceu por acidente nesta bancada, e rendeu melhor que provocar a q
                                                   ... nova tentativa em 8000 ms
                                                   ... nova tentativa em 16000 ms
 <err> lab_wifi_tcp: Sem conseguir conectar depois de 5 tentativas -- confira
-      CONFIG_LAB_SERVIDOR_IP e CONFIG_LAB_PORTA, se o PC e o kit estao na mesma rede,
+      o IP e a porta digitados no boot, se o PC e o kit estao na mesma rede,
       e se o firewall do PC deixa o servidor receber conexao nessa porta
                                                   ... nova tentativa em 30000 ms
 [servidor sobe aqui]
@@ -383,9 +412,10 @@ o aluno fica olhando um terminal parado achando que travou.
 
 Se a sala não tiver uma rede Wi-Fi utilizável (sem AP, sem credencial disponível,
 etc.), o remédio é o mesmo dos dois casos abaixo: subir um hotspot (celular do
-instrutor, ou compartilhamento de conexão do próprio PC) e apontar `minha_rede.conf`
-e `CONFIG_LAB_SERVIDOR_IP` para ele. Não muda uma linha de firmware nem do servidor —
-só a rede à qual os dois se associam.
+instrutor, ou compartilhamento de conexão do próprio PC), resetar o kit e, na janela
+de 5 s do boot, digitar o SSID e a senha do hotspot e o IP do PC nessa rede. Não muda
+uma linha de firmware nem do servidor, e não precisa recompilar — só a rede à qual os
+dois se associam.
 
 O outro caso é mais traiçoeiro: o AP da sala isola clientes entre si (client
 isolation) e o PC não alcança o kit mesmo os dois com IP na mesma sub-rede. O sintoma
@@ -429,12 +459,12 @@ que se demonstra que o transporte não está apenas repetindo um relógio.
 
 - **O firewall do Windows bloqueia o servidor sem avisar ninguém — e uma regra de
   bloqueio por programa vence qualquer permissão por porta.** Achado na bancada: com
-  `CONFIG_LAB_SERVIDOR_IP` e `CONFIG_LAB_PORTA` corretos, a conexão ainda falha com
-  `-116` (`ETIMEDOUT`) porque o Windows tem uma regra de bloqueio de entrada para o
-  Python no perfil de rede Private. O sintoma engana dos dois lados: no PC,
-  `wifi_server.py` fica ouvindo e nada chega, sem nenhum erro; no kit, o log do
-  firmware aponta para `CONFIG_LAB_SERVIDOR_IP`/`CONFIG_LAB_PORTA` (a mensagem que
-  aparece depois de 5 tentativas), que já estavam certos. **Se o aluno já clicou em
+  o IP e a porta digitados no boot corretos, a conexão ainda falha com `-116`
+  (`ETIMEDOUT`) porque o Windows tem uma regra de bloqueio de entrada para o Python
+  no perfil de rede Private. O sintoma engana dos dois lados: no PC, `wifi_server.py`
+  fica ouvindo e nada chega, sem nenhum erro; no kit, o log do firmware aponta para o
+  IP e a porta digitados no boot (a mensagem que aparece depois de 5 tentativas), que
+  já estavam certos. **Se o aluno já clicou em
   "Cancelar" num daqueles diálogos de rede do Windows para o Python, alguma vez**,
   fica registrada uma regra de bloqueio por programa (`Block`, perfil Private) — e
   essa regra vence qualquer permissão criada só por porta; liberar a porta sozinho

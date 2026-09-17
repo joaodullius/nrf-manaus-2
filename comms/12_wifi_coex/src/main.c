@@ -8,8 +8,8 @@
  * Para conferir se divergiu do SDK:
  *   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/wifi/ble_coex/src/main.c
  *
- * DIVERGENCIA DO CURSO (duas): 1. minha_rede.conf; 2. falha de build no
- * CMakeLists.
+ * DIVERGENCIA DO CURSO: #include "lab_rede.h" e lab_rede_ler() no inicio de main()
+ * (so com Wi-Fi), IP/porta do zperf vindos de lab_rede_ip()/lab_rede_porta() -- a rede e digitada no terminal e gravada em settings.
  */
 
 /*
@@ -55,6 +55,7 @@ LOG_MODULE_REGISTER(ble_coex, CONFIG_LOG_DEFAULT_LEVEL);
 #include <coex.h>
 
 #include "bt_throughput_test.h"
+#include "lab_rede.h"
 
 #define WIFI_MGMT_EVENTS (NET_EVENT_WIFI_CONNECT_RESULT | \
 				NET_EVENT_WIFI_DISCONNECT_RESULT)
@@ -363,6 +364,13 @@ int main(void)
 
 	memset(&context, 0, sizeof(context));
 
+	/* CURSO: rede da sala e IP/porta do zperf no PC, digitados no terminal e
+	 * gravados em settings. So o teste com Wi-Fi precisa deles.
+	 */
+	if (test_wlan) {
+		lab_rede_ler(true, CONFIG_NET_CONFIG_PEER_IPV4_PORT);
+	}
+
 	net_mgmt_init_event_callback(&wifi_sta_mgmt_cb,
 				wifi_mgmt_event_handler,
 				WIFI_MGMT_EVENTS);
@@ -449,8 +457,8 @@ int main(void)
 		params.duration_ms = CONFIG_WIFI_TEST_DURATION;
 		params.rate_kbps = CONFIG_WIFI_ZPERF_RATE;
 		params.packet_size = CONFIG_WIFI_ZPERF_PKT_SIZE;
-		parse_ipv4_addr(CONFIG_NET_CONFIG_PEER_IPV4_ADDR,
-			&in4_addr_my);
+		in4_addr_my.sin_port = htons(lab_rede_porta());
+		parse_ipv4_addr((char *)lab_rede_ip(), &in4_addr_my);
 		net_sprint_ipv4_addr(&in4_addr_my.sin_addr);
 
 		memcpy(&params.peer_addr, &in4_addr_my, sizeof(in4_addr_my));

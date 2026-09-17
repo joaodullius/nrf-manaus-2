@@ -3,17 +3,13 @@
 #
 menu "Lab: locationing por scan de Wi-Fi (nrf-manaus-2)"
 
-config LAB_SERVIDOR_IP
-	string "IP do servidor no PC"
-	default ""
-	help
-	  IPv4 do PC que roda o tools/wifi_locate.py. Vazio faz o build falhar.
-
 config LAB_PORTA
-	int "Porta do servidor no PC"
+	int "Porta do servidor no PC (padrao do prompt do boot)"
 	default 9000
 	help
-	  Porta TCP onde tools/wifi_locate.py escuta a lista de pontos de
+	  O IP do servidor e digitado no terminal no primeiro boot e gravado em
+	  settings (src/lab_rede.c); esta e a porta que o prompt propoe, e Enter
+	  aceita. Porta TCP onde tools/wifi_locate.py escuta a lista de pontos de
 	  acesso vinda do kit. Precisa bater com o --porta passado ao
 	  wifi_locate.py.
 

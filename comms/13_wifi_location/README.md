@@ -75,38 +75,62 @@ DK (scan Wi-Fi) --TCP, "AP,<bssid>,<rssi>,<freq>,<ssid>"--> PC (wifi_locate.py)
 Com o shield acoplado, `sw3` some do overlay nesta versão do SDK: o botão do lab é o
 `sw0` — cada aperto dispara uma nova varredura.
 
-## Configuração
+## Rede da sala e servidor — digitados no terminal, gravados em settings
 
-Além de `minha_rede.conf` (SSID/senha da rede da sala, mesma convenção dos labs 7 e
-9), este lab precisa saber o IP do PC que roda `tools/wifi_locate.py`:
-`CONFIG_LAB_SERVIDOR_IP`. Vazio faz o `CMakeLists.txt` falhar de propósito na
-configuração — um kit sem IP de destino não teria para onde mandar a lista de pontos
-de acesso.
+O binário não carrega credencial nem IP. No primeiro boot, o firmware pede tudo na
+console (115200 8N1; com a EB II acoplada é a **primeira** VCOM), nesta ordem:
 
-**Nunca commitar SSID, senha ou IP reais** — `minha_rede.conf` fica vazio no
-repositório; o IP do servidor vai só na linha de comando, nunca em um arquivo
-versionado.
+```
+=== Rede Wi-Fi ===
+SSID da rede:
+Senha (Enter vazio = rede aberta):
+IP do servidor no PC (ex.: 192.168.0.100):
+Porta do servidor (Enter = 9000):
+```
+
+A senha é ecoada em claro (WPA2: 8 a 63 caracteres). O IP é validado como IPv4; a
+porta padrão é `CONFIG_LAB_PORTA` (9000, a do `wifi_locate.py --porta 9000`). Uma
+entrada inválida repete só aquele campo; não há prompt periódico. Descubra o IP do PC
+na rede da sala com `ipconfig` antes de ligar o kit.
+
+SSID e senha vão para a biblioteca `wifi_credentials` (backend settings, ZMS na
+`storage_partition`); IP e porta ficam nas chaves `lab_rede/ip` e `lab_rede/porta`. A
+conexão segue por `NET_REQUEST_WIFI_CONNECT_STORED`. Nos boots seguintes o firmware
+mostra o que tem gravado e espera uma tecla:
+
+```
+Rede gravada: "<ssid>" (com senha), servidor <ip>:<porta>
+Enter (ou nada em 5 s) usa essa; qualquer outra tecla troca:
+```
+
+Um `west flash` ou `nrfutil device program` normal **não apaga** a `storage_partition`:
+rede e servidor sobrevivem à regravação. `nrfutil device recover` (ou `west flash
+--erase`) apaga tudo, e o prompt volta no boot seguinte.
+
+O código é `src/lab_rede.c` e `src/lab_rede.h` (arquivos do curso, copiados iguais nos
+labs 7, 9, 11, 12 e 13): `main()` chama `lab_rede_ler(true, CONFIG_LAB_PORTA)` antes de
+qualquer outra coisa, e o envio da lista de APs lê `lab_rede_ip()` e `lab_rede_porta()`.
 
 ## Passo 1 — compilar e gravar
 
-Com `minha_rede.conf` preenchido e o IP do PC em mãos:
-
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/13_wifi_location/build_lm20 C:/work/nrf-manaus-2/comms/13_wifi_location -- -D13_wifi_location_SHIELD="nrf7002eb2" -D13_wifi_location_SNIPPET=nrf70-wifi -D13_wifi_location_EXTRA_CONF_FILE=minha_rede.conf -D13_wifi_location_CONFIG_LAB_SERVIDOR_IP=\"<ip-do-pc>\"
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf54lm20dk/nrf54lm20b/cpuapp --sysbuild -d C:/work/nrf-manaus-2/comms/13_wifi_location/build_lm20 C:/work/nrf-manaus-2/comms/13_wifi_location -- -D13_wifi_location_SHIELD="nrf7002eb2" -D13_wifi_location_SNIPPET=nrf70-wifi
 nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/comms/13_wifi_location/build_lm20
 ```
+
+Sem compilar: `comms/hex/13_wifi_location_lm20.hex` é este build, pronto para gravar
+(não carrega credencial — a rede e o servidor entram pelo terminal, seção anterior).
 
 Se o build for morto por falta de memória nesta máquina, acrescente `-o=-j2` na
 chamada do `west build`.
 
-Resumo de memória (build real desta bancada, credencial de teste só na linha de
-comando — não gravada em `minha_rede.conf`):
+Resumo de memória:
 
 | Região | Usado | Região total | % usado |
 |---|---|---|---|
-| FLASH | 553520 B | 2036 KB | 26,55% |
-| RAM | 187256 B | 511 KB | 35,79% |
+| FLASH | 564656 B | 2036 KB | 27,08% |
+| RAM | 187512 B | 511 KB | 35,84% |
 
 ## A ferramenta de PC (`tools/wifi_locate.py`)
 
@@ -176,7 +200,8 @@ MAC local no meio do fluxo) sem precisar de hardware.
 
 1. `python wifi_locate.py --porta 9000 --org <orgSlug> --proj <projSlug>` no PC, com
    `NRFCLOUD_OAT` exportado.
-2. Gravar a DK com o IP do PC (Passo 1).
+2. Gravar a DK (Passo 1) e, no primeiro boot, digitar SSID, senha, o IP do PC e a
+   porta 9000 no terminal.
 3. Ao conectar, o kit varre automaticamente e manda o resultado — conferir no PC a
    lista de pontos de acesso vista.
 4. Conferir a posição resolvida (`lat`, `lon`, `incerteza`).
@@ -189,6 +214,10 @@ MAC local no meio do fluxo) sem precisar de hardware.
 ## Ciclo completo, validado com hardware
 
 ```
+KIT: === Rede Wi-Fi ===
+KIT: Rede gravada: "<ssid>" (com senha), servidor <ip do pc>:9000
+KIT: Enter (ou nada em 5 s) usa essa; qualquer outra tecla troca:
+KIT: Usando a rede gravada.
 KIT: Aguardando o supplicant do Wi-Fi ficar pronto...
 KIT: Conectado ao Wi-Fi
 KIT: IP obtido por DHCP: <ip do kit>
