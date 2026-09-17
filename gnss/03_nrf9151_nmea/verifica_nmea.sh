@@ -2,7 +2,7 @@
 # Uso: verifica_nmea.sh <dir de build>
 # Confere que o build entrega NMEA limpo: a sentenca ligada, e os dois
 # concorrentes do mesmo UART desligados.
-CFG="$1/01_gnss_basic/zephyr/.config"
+CFG="$1/01_nrf9151_basic/zephyr/.config"
 falhou=0
 grep -qx "CONFIG_GNSS_SAMPLE_NMEA_ONLY=y" "$CFG" || { echo "FALTA: NMEA_ONLY"; falhou=1; }
 grep -qx "CONFIG_LOG=y" "$CFG" && { echo "SOBRA: CONFIG_LOG=y, o log vai sujar o NMEA"; falhou=1; }

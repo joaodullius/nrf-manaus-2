@@ -76,7 +76,7 @@ pelos **mesmos** 10 m, e o vetor entre elas continua centimétrico.
 
 RTK entrega **vetor exato em relação à base**, não posição exata no mundo. Para
 ter as duas, é preciso uma base com coordenada conhecida (`--fixa` em
-`rtk_base.py`) ou um serviço de correção.
+`rtk_base_rover.py`) ou um serviço de correção.
 
 ## A grade de 1,85 cm na figura
 
@@ -85,6 +85,6 @@ com 5 casas decimais de minuto quantiza a posição em **1,85 cm**. Para 10 cm d
 5 níveis; para os 5 cm originalmente planejados seriam menos de 3, e o teste
 nasceria com erro de quantização grande só por causa do formato.
 
-`rtk_base.py --highprec` liga `CFG-NMEA-HIGHPREC`, que leva a GGA a 7 casas de
+`rtk_base_rover.py --highprec` liga `CFG-NMEA-HIGHPREC`, que leva a GGA a 7 casas de
 minuto — **0,185 mm**, cem vezes melhor. Trabalho de centímetro deve usá-lo
 sempre. O parser do curso (`nmea.py`) já lê os dois formatos.

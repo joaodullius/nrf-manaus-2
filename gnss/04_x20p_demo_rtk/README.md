@@ -4,7 +4,7 @@
 minutos de demonstração com os dois **u-blox EVK-X20P**, e é onde a taxonomia de correção do
 bloco teórico encontra número medido.
 
-O primeiro degrau da escada usa o firmware do [`../03_nmea/`](../03_nmea/), gravado numa
+O primeiro degrau da escada usa o firmware do [`../03_nrf9151_nmea/`](../03_nrf9151_nmea/), gravado numa
 nRF9151-SMA-DK.
 
 > **O que é feito na montagem e o que é feito em aula.** O Survey-In da base roda **uma vez, na
@@ -113,9 +113,9 @@ simultaneamente.
 | 2 | EVK-X20P, multibanda | nenhuma | dispersão **decimétrica** |
 | 3 | EVK-X20P, multibanda | **RTK da base local** | dispersão **centimétrica**, e `carrSoln` = 2 |
 
-- **Degrau 1** — a SMA-DK com o firmware de [`../03_nmea/`](../03_nmea/), aberta no **u-center
+- **Degrau 1** — a SMA-DK com o firmware de [`../03_nrf9151_nmea/`](../03_nrf9151_nmea/), aberta no **u-center
   2**, que monta o Deviation Map com CEP50/CEP95 a partir do NMEA puro (verificado na bancada).
-  Alternativa sem u-center: `gnss/tools/nmea_captura.py` grava o fluxo e `desvio.py` calcula o
+  Alternativa sem u-center: `gnss/tools/nmea_captura.py` grava o fluxo e o `desvio.py` do repo de docs (`doc-source/gnss/tools/`) calcula o
   mesmo painel.
 - **Degrau 2** — o rover sozinho, sem correção. É o degrau que mostra o que a **multibanda** faz
   sozinha, antes de qualquer correção entrar na conta.
@@ -265,6 +265,11 @@ Como as **duas baselines são curtas**, a distância deixa de ser a variável e 
 **número de constelações** disponíveis para resolver ambiguidade. O aluno vê o efeito de duas
 contra quatro constelações **isolado**, sem confundir com o efeito da distância.
 
+**O terceiro caminho, PointPerfect (PPP-RTK por NTRIP, base virtual, via Nordian), não entra
+nesta demo:** não há cobertura em Manaus na data do curso. Ele foi medido em Porto Alegre (céu
+aberto: RTK fixo em 197 s num bloco, dois de três sem fixar, CEP50 de 2 cm no bloco fixo; cânion:
+CEP50 de 12 cm) e esses dados ficam no material como a comparação PPP-RTK × RTK de base própria.
+
 Detalhe que fecha o caso: a AMUA0 satisfaz o requisito de viés de GLONASS por **1033**, não por
 1230 — o manual aceita uma **ou** outra. As demais mensagens que ela emite (1008, 1013, 1019,
 1020) não estão na tabela de entrada do X20P e serão ignoradas; isso não atrapalha, e ainda rende
@@ -273,18 +278,7 @@ demonstração — elas aparecem no status de correção **sem suporte de entrad
 
 ---
 
-## `verifica_roteiro.sh`
-
-```
-sh gnss/04_demo_rtk/verifica_roteiro.sh
-```
-
-Esperado: `OK: roteiro cobre os itens obrigatorios`. O script não julga o texto — confere que
-este roteiro não perdeu nenhum dos quinze itens obrigatórios: as sete mensagens RTCM da lista
-recomendada, as cinco falhas rotuladas, e os três diagnósticos. É a rede de segurança contra uma
-reescrita que apague um item sem querer.
-
 ## Fontes
 
-- [`../03_nmea/`](../03_nmea/) — o firmware do primeiro degrau
+- [`../03_nrf9151_nmea/`](../03_nrf9151_nmea/) — o firmware do primeiro degrau
 - Checklist de bancada do módulo (não versionado) — a ordem em que montar e o que anotar

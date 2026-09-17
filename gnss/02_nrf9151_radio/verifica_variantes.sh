@@ -1,6 +1,6 @@
 #!/bin/sh
 # Uso: verifica_variantes.sh <dir de build> <sem|minima|nuvem|periodico>
-CFG="$1/01_gnss_basic/zephyr/.config"
+CFG="$1/01_nrf9151_basic/zephyr/.config"
 case "$2" in
   sem)        esperado="CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST=y CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=y" ;;
   minima)     esperado="CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST=y CONFIG_GNSS_SAMPLE_ASSISTANCE_MINIMAL=y" ;;

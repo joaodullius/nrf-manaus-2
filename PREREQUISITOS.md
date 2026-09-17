@@ -410,6 +410,12 @@ Documentado pela Nordic em *nRF7002 EB II → Requirements → Prerequisites*.
 - **Cadastro no caster NTRIP do IBGE** — **opcional, não essencial**. Serve só ao bônus de RTK
   contra a estação pública **AMUA0** (UEA), que exige internet na sala. O módulo roda inteiro sem
   ele, com a base própria e o caster local.
+- **PointPerfect (u-blox, via Nordian)** — **opcional; não usado em Manaus.** É o PPP-RTK que o
+  material compara com o RTK de base própria, acessado por NTRIP com base virtual
+  (`services.nordian.com`, mountpoint `NEAR-RTCM-VRS`). Exige assinatura ou credencial de teste
+  da Nordian e internet. **Sem cobertura em Manaus na data do curso**: os números do material
+  vêm das medidas de Porto Alegre. A entrega por L-band (receptor NEO-D9S) aparece só como
+  conceito.
 - **As três nRF9151-SMA-DK integradas à nRF Cloud, com certificado** — **tarefa do instrutor,
   antes da aula**. Sem isso o terceiro degrau de assistência do lab 2 (A-GNSS por nuvem) não roda;
   os dois primeiros degraus (nenhuma e mínima) não dependem de nuvem.

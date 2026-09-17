@@ -1,6 +1,6 @@
 # GNSS · Lab 3 — NMEA limpo
 
-**Esta pasta não tem código.** É uma receita de build sobre `gnss/01_gnss_basic`, no mesmo
+**Esta pasta não tem código.** É uma receita de build sobre `gnss/01_nrf9151_basic`, no mesmo
 molde de `comms/10_wifi_http_mqtt/`: mesmo código-fonte, outra configuração. O que muda aqui
 não é o que o firmware faz, é **quem tem direito de escrever no console**.
 
@@ -23,18 +23,21 @@ As duas últimas vêm ligadas do `prj.conf` do SDK. Desligar as três é o lab i
 
 ## Passo 1 — compilar e gravar
 
+O `build.cmd` desta pasta faz o build em `build/` daqui e roda o `verifica_nmea.sh` no fim
+(`build.cmd flash` também grava). A linha que ele executa:
+
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/01_gnss_basic/build_03_nmea C:/work/nrf-manaus-2/gnss/01_gnss_basic -- -D01_gnss_basic_CONFIG_GNSS_SAMPLE_NMEA_ONLY=y -D01_gnss_basic_CONFIG_LOG=n -D01_gnss_basic_CONFIG_AT_HOST_LIBRARY=n
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/gnss/01_gnss_basic/build_03_nmea
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/03_nrf9151_nmea/build C:/work/nrf-manaus-2/gnss/01_nrf9151_basic -- -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_NMEA_ONLY=y -D01_nrf9151_basic_CONFIG_LOG=n -D01_nrf9151_basic_CONFIG_AT_HOST_LIBRARY=n
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/gnss/03_nrf9151_nmea/build
 ```
 
-O prefixo `01_gnss_basic_` nas três opções é o nome da imagem de aplicação no sysbuild, igual
+O prefixo `01_nrf9151_basic_` nas três opções é o nome da imagem de aplicação no sysbuild, igual
 ao nome da pasta do lab 1 — sem ele o `-D` cairia no sysbuild e não na aplicação.
 
 ### FLASH e RAM medidos
 
-Imagem de aplicação (`01_gnss_basic`), comparada com o lab 1, que é o mesmo código com as
+Imagem de aplicação (`01_nrf9151_basic`), comparada com o lab 1, que é o mesmo código com as
 três opções na outra posição:
 
 | Build | FLASH | RAM |
@@ -96,7 +99,7 @@ falhou. Grave o lab 1 para investigar, e o lab 3 para colher.
 ## `verifica_nmea.sh`
 
 ```
-sh gnss/03_nmea/verifica_nmea.sh gnss/01_gnss_basic/build_03_nmea
+sh gnss/03_nrf9151_nmea/verifica_nmea.sh gnss/03_nrf9151_nmea/build
 ```
 
 Esperado: `OK: build de NMEA limpo`. O script confere as três opções no `.config` da imagem
@@ -121,4 +124,4 @@ três, que é exatamente a diferença entre os dois labs.
 ## Fontes
 
 - nRF Connect SDK v3.4.0 — `nrf/samples/cellular/gnss` (`Kconfig`, `src/main.c`)
-- `gnss/01_gnss_basic/` — o código que este lab recompila
+- `gnss/01_nrf9151_basic/` — o código que este lab recompila

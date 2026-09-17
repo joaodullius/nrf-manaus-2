@@ -18,10 +18,11 @@ Uso (de qualquer pasta):
     python gnss/hex/build_all.py 02             # so as que comecam com 02
     python gnss/hex/build_all.py --list
 
-Um unico codigo fonte (gnss/01_gnss_basic) em cinco configuracoes: e o mesmo
+Um unico codigo fonte (gnss/01_nrf9151_basic) em cinco configuracoes: e o mesmo
 desenho dos labs 2 e 3, que sao pastas de receita sem codigo.
 
-O hex publicado e o tfm_merged.hex — o alvo /ns tem TF-M, e o que o `west flash`
+O hex publicado e o merged_<board>.hex do sysbuild (SB_CONFIG_MERGED_HEX_FILES=y),
+com o mesmo conteudo do tfm_merged.hex — o alvo /ns tem TF-M, e o que o `west flash`
 grava e a imagem segura e a nao segura ja fundidas. O zephyr.hex sozinho e so a
 aplicacao, e nao roda.
 
@@ -42,7 +43,7 @@ NCS_WS = Path(r"C:/ncs/v3.4.0")
 NCS_VER = "v3.4.0"
 
 BOARD = "nrf9151dk/nrf9151/ns"
-APP = "01_gnss_basic"          # a unica pasta com codigo; tambem o nome da imagem
+APP = "01_nrf9151_basic"          # a unica pasta com codigo; tambem o nome da imagem
 
 
 def d(*opts):
@@ -57,27 +58,27 @@ TTFF = ("CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=n",
 # nome do hex, extras do west, o que o .config gerado tem que dizer.
 # Uma entrada com "!" na frente e o contrario: essa linha NAO pode estar la.
 VARIANTES = [
-    ("01_gnss_basic_9151", [],
+    ("01_nrf9151_basic", [],
      ["CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=y",
       "CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=y"]),
 
-    ("02_gnss_ttff_sem_9151", d(*TTFF),
+    ("02_nrf9151_ttff_sem", d(*TTFF),
      ["CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST=y",
       "CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=y"]),
 
-    ("02_gnss_ttff_minima_9151",
+    ("02_nrf9151_ttff_minima",
      d(*TTFF, "CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=n",
        "CONFIG_GNSS_SAMPLE_ASSISTANCE_MINIMAL=y"),
      ["CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST=y",
       "CONFIG_GNSS_SAMPLE_ASSISTANCE_MINIMAL=y"]),
 
-    ("02_gnss_ttff_nuvem_9151",
+    ("02_nrf9151_ttff_nuvem",
      d(*TTFF, "CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=n",
        "CONFIG_GNSS_SAMPLE_ASSISTANCE_NRF_CLOUD=y"),
      ["CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST=y",
       "CONFIG_GNSS_SAMPLE_ASSISTANCE_NRF_CLOUD=y"]),
 
-    ("03_gnss_nmea_9151",
+    ("03_nrf9151_nmea",
      d("CONFIG_GNSS_SAMPLE_NMEA_ONLY=y", "CONFIG_LOG=n",
        "CONFIG_AT_HOST_LIBRARY=n"),
      ["CONFIG_GNSS_SAMPLE_NMEA_ONLY=y",
@@ -93,10 +94,12 @@ def west(args):
 
 
 def acha_hex(build_dir):
-    """O tfm_merged.hex e o que o west flash grava no alvo /ns."""
-    # merged_<board>.hex vem do SB_CONFIG_MERGED_HEX_FILES (sysbuild.conf) no NCS 3.4
-    for cand in (build_dir / APP / "zephyr" / "tfm_merged.hex",
-                 *sorted(build_dir.glob("merged*.hex")),
+    """Prefere o merged_<board>.hex do sysbuild (SB_CONFIG_MERGED_HEX_FILES=y no
+    sysbuild.conf do lab): TF-M + aplicacao num arquivo so, o mesmo conteudo do
+    tfm_merged.hex que o west flash grava no alvo /ns. Os dois seguintes sao
+    fallback para um build sem essa opcao."""
+    for cand in (*sorted(build_dir.glob("merged*.hex")),
+                 build_dir / APP / "zephyr" / "tfm_merged.hex",
                  build_dir / APP / "zephyr" / "zephyr.hex"):
         if cand.exists():
             return cand

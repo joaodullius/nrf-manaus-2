@@ -13,9 +13,9 @@ material dizem isso.
 
 | arquivo | firmware | o que é |
 |---|---|---|
-| `periodico_console.csv` + `.log` | `build_02_per` (periódico 120 s, assistência mínima, LTE sob demanda) | 720 s em bins de 100 ms, com o console ligado |
+| `periodico_console.csv` + `.log` | `build_periodico` (periódico 120 s, assistência mínima, LTE sob demanda) | 720 s em bins de 100 ms, com o console ligado |
 | `periodico_mudo.csv` | o mesmo, com `CONFIG_LOG=n` e `AT_HOST_LIBRARY=n` | 720 s em bins de 20 ms, sem console |
-| `nuvem_ciclos.csv` + `.log` | `build_02_nuvem` (TTFF a frio, A-GNSS pela nRF Cloud, LTE-M) | 25 min em bins de 1 s, seis ciclos de partida a frio |
+| `nuvem_ciclos.csv` + `.log` | `build_nuvem` (TTFF a frio, A-GNSS pela nRF Cloud, LTE-M) | 25 min em bins de 1 s, seis ciclos de partida a frio |
 
 Colunas dos CSV: `t_s, media_mA, min_mA, max_mA, n` — média, mínimo e máximo
 dentro de cada bin, e o número de amostras do PPK2 que caíram nele.
@@ -32,7 +32,7 @@ dentro de cada bin, e o número de amostras do PPK2 que caíram nele.
 - **Ciclo de A-GNSS:** a janela `+CSCON: 1` → `+CSCON: 0` dura ~30 s, o dado de
   assistência chega em menos de 1 s, e o GNSS só começa a rastrear quando a rede
   libera a conexão. Figura em `doc/gnss/img/rrc_release_agnss.png`, gerada por
-  `gnss/tools/rrc_corrente.py nuvem_ciclos.log nuvem_ciclos.csv <png>`.
+  `doc-source/gnss/tools/rrc_corrente.py nuvem_ciclos.log nuvem_ciclos.csv <png>` (repo de docs).
 
 Figuras do material: `doc/_template/fig_m2_07_periodico.py` e
 `fig_m2_07_consumo.py` leem estes arquivos e escrevem `doc/gnss/data/energia_gnss.json`.

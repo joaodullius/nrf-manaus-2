@@ -9,13 +9,15 @@ ANN-MB2 sobre plano de terra, lado a lado.
 Quatro condições no X20P, em blocos de **300 s cada — todos com a mesma
 duração**, e o nRF9151 gravando contínuo em paralelo:
 
-| | sem NTRIP | com NTRIP |
+| | sem correção | com PointPerfect (NTRIP) |
 |---|---|---|
 | **sem GLONASS** | A | C |
 | **com GLONASS** | B | D |
 
 Três rodadas com a ordem girada (`ABCD` → `DCBA` → `BDAC`). SBAS desligado do
-começo ao fim.
+começo ao fim. A correção das condições C e D é o **PointPerfect via Nordian**
+(PPP-RTK por NTRIP, `services.nordian.com`, mountpoint `NEAR-RTCM-VRS`): base
+virtual gerada na posição do GGA do rover, baseline efetiva ~0.
 
 Cada decisão acima existe para tapar um buraco que já produziu conclusão errada
 nesta bancada:
@@ -53,8 +55,8 @@ Todas as constelações ligadas, mediana dos blocos:
 |---|---|---|---|
 | nRF9151 (GPS L1) | 2,49 m | 5,54 m | 8,5 |
 | X20P autônomo | 0,24 m | 0,55 m | 27,1 |
-| X20P + NTRIP, bloco inteiro | 0,24 m | 0,48 m | 27,1 |
-| X20P + NTRIP, **só épocas em RTK fixo** | **0,06 m** | **0,10 m** | 27,1 |
+| X20P + PointPerfect (PPP-RTK por NTRIP), bloco inteiro | 0,24 m | 0,48 m | 27,1 |
+| X20P + PointPerfect, **só épocas em RTK fixo** | **0,06 m** | **0,10 m** | 27,1 |
 
 **O degrau entre receptores é de ~10×**, com as faixas bem separadas: o pior
 bloco do X20P (0,32 m) está seis vezes abaixo do melhor bloco do nRF9151

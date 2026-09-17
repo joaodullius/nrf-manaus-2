@@ -3,7 +3,7 @@
  *   SDK     : nRF Connect SDK v3.4.0
  *   Upstream: nrf/samples/cellular/gnss/src/factory_almanac_v3.h
  *   Local   : C:/ncs/v3.4.0/nrf/samples/cellular/gnss/src/factory_almanac_v3.h
- *   Copiado : 2026-09-08 — curso nrf-manaus-2, modulo gnss/01_gnss_basic
+ *   Copiado : 2026-09-08 — curso nrf-manaus-2, modulo gnss/01_nrf9151_basic
  *
  * Para conferir se divergiu do SDK:
  *   diff <este arquivo> C:/ncs/v3.4.0/nrf/samples/cellular/gnss/src/factory_almanac_v3.h

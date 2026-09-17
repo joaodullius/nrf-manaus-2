@@ -1,12 +1,12 @@
 # GNSS · Lab 2 — o rádio compartilhado
 
 Este lab não tem firmware próprio: ele **recompila o firmware do lab 1**
-(`gnss/01_gnss_basic/`) escolhendo outras opções das duas *choices* do `Kconfig` do
+(`gnss/01_nrf9151_basic/`) escolhendo outras opções das duas *choices* do `Kconfig` do
 sample — o modo de operação do GNSS e o grau de assistência. O `src/` não muda uma
-linha; o nome da imagem no sysbuild continua `01_gnss_basic`, igual ao nome da pasta
+linha; o nome da imagem no sysbuild continua `01_nrf9151_basic`, igual ao nome da pasta
 do lab 1, e é esse prefixo que toda receita de build abaixo reaproveita
-(`-D01_gnss_basic_CONFIG_...`). Cada build sai em um diretório próprio **dentro de
-`gnss/01_gnss_basic/`** (o `.gitignore` daquele lab, `build*/`, já cobre todos eles);
+(`-D01_nrf9151_basic_CONFIG_...`). Cada build sai em um diretório próprio **dentro de
+`gnss/01_nrf9151_basic/`** (o `.gitignore` daquele lab, `build*/`, já cobre todos eles);
 esta pasta só documenta as receitas e a asserção que confere cada uma.
 
 Duas perguntas, quatro receitas:
@@ -28,9 +28,9 @@ Specification do nRF9151 mede TTFF, ver a tabela abaixo).
 
 | Grau | Receita | O que o receptor usa | Chamada de rede? |
 |---|---|---|---|
-| **sem** | `build_02_sem` | nada — parte do zero, igual ao lab 1 | não |
-| **mínima** | `build_02_min` | almanaque de fábrica embutido no firmware + hora da rede LTE + posição aproximada pelo código do país (MCC) | LTE já precisa estar registrado (para a hora e o MCC), mas **nenhuma chamada de A-GNSS** |
-| **nuvem** | `build_02_nuvem` | A-GNSS completo (efemérides, almanaque, hora, posição, dados ionosféricos) baixado da nRF Cloud por CoAP | sim — e exige o dispositivo provisionado com certificado na nRF Cloud |
+| **sem** | `build_sem` | nada — parte do zero, igual ao lab 1 | não |
+| **mínima** | `build_minima` | almanaque de fábrica embutido no firmware + hora da rede LTE + posição aproximada pelo código do país (MCC) | LTE já precisa estar registrado (para a hora e o MCC), mas **nenhuma chamada de A-GNSS** |
+| **nuvem** | `build_nuvem` | A-GNSS completo (efemérides, almanaque, hora, posição, dados ionosféricos) baixado da nRF Cloud por CoAP | sim — e exige o dispositivo provisionado com certificado na nRF Cloud |
 
 O grau **mínimo** é o que rende mais aula: ele reduz o TTFF sem custar uma única
 chamada de rede além da própria conexão LTE que o lab já precisa para funcionar, e
@@ -41,22 +41,27 @@ ele oferece, e o ganho de TTFF encolhe.
 
 ### Receitas
 
+Cada variante é uma linha de `west build` sobre o fonte do lab 1, com o binário saindo em
+`build_<variante>/` **desta pasta**. O `build.cmd` daqui digita a linha e roda a conferência:
+`build.cmd sem`, `build.cmd minima`, `build.cmd nuvem`, `build.cmd periodico` (acrescente
+`flash` para gravar em seguida). A linha completa, para quem quer ver o que ele faz:
+
 ```bash
 cd C:\ncs\v3.4.0
 
 # sem assistencia
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/01_gnss_basic/build_02_sem C:/work/nrf-manaus-2/gnss/01_gnss_basic -- -D01_gnss_basic_CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=n -D01_gnss_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST=y -D01_gnss_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST_COLD_START=y
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_sem C:/work/nrf-manaus-2/gnss/01_nrf9151_basic -- -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=n -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST=y -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST_COLD_START=y
 
 # assistencia minima (almanaque de fabrica + hora LTE + posicao por MCC)
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/01_gnss_basic/build_02_min C:/work/nrf-manaus-2/gnss/01_gnss_basic -- -D01_gnss_basic_CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=n -D01_gnss_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST=y -D01_gnss_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST_COLD_START=y -D01_gnss_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=n -D01_gnss_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_MINIMAL=y
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_minima C:/work/nrf-manaus-2/gnss/01_nrf9151_basic -- -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=n -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST=y -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST_COLD_START=y -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=n -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_MINIMAL=y
 
 # assistencia de nuvem (A-GNSS via nRF Cloud)
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/01_gnss_basic/build_02_nuvem C:/work/nrf-manaus-2/gnss/01_gnss_basic -- -D01_gnss_basic_CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=n -D01_gnss_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST=y -D01_gnss_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST_COLD_START=y -D01_gnss_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=n -D01_gnss_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_NRF_CLOUD=y
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_nuvem C:/work/nrf-manaus-2/gnss/01_nrf9151_basic -- -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=n -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST=y -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST_COLD_START=y -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=n -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_NRF_CLOUD=y
 
 cd C:/work/nrf-manaus-2
-sh gnss/02_gnss_radio/verifica_variantes.sh gnss/01_gnss_basic/build_02_sem sem
-sh gnss/02_gnss_radio/verifica_variantes.sh gnss/01_gnss_basic/build_02_min minima
-sh gnss/02_gnss_radio/verifica_variantes.sh gnss/01_gnss_basic/build_02_nuvem nuvem
+sh gnss/02_nrf9151_radio/verifica_variantes.sh gnss/02_nrf9151_radio/build_sem sem
+sh gnss/02_nrf9151_radio/verifica_variantes.sh gnss/02_nrf9151_radio/build_minima minima
+sh gnss/02_nrf9151_radio/verifica_variantes.sh gnss/02_nrf9151_radio/build_nuvem nuvem
 ```
 
 `CONFIG_AT_HOST_LIBRARY` continua ligado nas três, como no lab 1 — não é opção deste
@@ -165,9 +170,9 @@ cada janela que ele ganha (ou perde) para o LTE fica registrada.
 
 ```bash
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/01_gnss_basic/build_02_per C:/work/nrf-manaus-2/gnss/01_gnss_basic -- -D01_gnss_basic_CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=n -D01_gnss_basic_CONFIG_GNSS_SAMPLE_MODE_PERIODIC=y -D01_gnss_basic_CONFIG_GNSS_SAMPLE_LTE_ON_DEMAND=y -D01_gnss_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=n -D01_gnss_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_MINIMAL=y
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_periodico C:/work/nrf-manaus-2/gnss/01_nrf9151_basic -- -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=n -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_PERIODIC=y -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_LTE_ON_DEMAND=y -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=n -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_MINIMAL=y
 cd C:/work/nrf-manaus-2
-sh gnss/02_gnss_radio/verifica_variantes.sh gnss/01_gnss_basic/build_02_per periodico
+sh gnss/02_nrf9151_radio/verifica_variantes.sh gnss/02_nrf9151_radio/build_periodico periodico
 ```
 
 Esta variante liga o mesmo grau de assistência **mínima** da Parte A
@@ -181,12 +186,12 @@ FLASH e RAM desta variante ficam próximos da variante **mínima** da Parte A
 (106544 B / 10,84% de FLASH, 36060 B / 17,04% de RAM contra 107092 B / 10,89% e
 36188 B / 17,10%) — a diferença é só o modo (periódico em vez de TTFF) e o
 `GNSS_SAMPLE_LTE_ON_DEMAND`, que não puxa biblioteca nova, só muda a lógica de
-`gnss/01_gnss_basic/src/main.c` que liga e desliga o LTE.
+`gnss/01_nrf9151_basic/src/main.c` que liga e desliga o LTE.
 
 ### As quatro mensagens, evidência do rádio dividido
 
 A cada PVT, o firmware examina as *flags* que o modem devolve
-(`print_flags()`, `gnss/01_gnss_basic/src/main.c`) e imprime uma linha para cada
+(`print_flags()`, `gnss/01_nrf9151_basic/src/main.c`) e imprime uma linha para cada
 uma que estiver setada:
 
 | Flag do modem | Linha impressa | O que significa |
@@ -246,7 +251,7 @@ roda GNSS continuamente até terminar o download. É o que a *flag*
 
 Existe um bit que desliga esse comportamento —
 `NRF_MODEM_GNSS_USE_CASE_SCHED_DOWNLOAD_DISABLE`, setado em
-`gnss/01_gnss_basic/src/main.c` sempre que o modo é periódico **e** algum grau de
+`gnss/01_nrf9151_basic/src/main.c` sempre que o modo é periódico **e** algum grau de
 assistência está ligado:
 
 ```c
@@ -290,12 +295,10 @@ disputar espaço com o GNSS.
 Uso: verifica_variantes.sh <dir de build> <sem|minima|nuvem|periodico>
 ```
 
-Recebe o **diretório de build** (`gnss/01_gnss_basic/build_02_sem`, por exemplo),
-não o caminho do `.config` — o script monta `<dir>/01_gnss_basic/zephyr/.config`
-sozinho. É a convenção oposta à de `gnss/01_gnss_basic/verifica_config.sh`, que
-recebe o `.config` diretamente: aqui há quatro variantes para conferir com o mesmo
-script, então receber só o diretório (e escolher a variante pelo segundo argumento)
-evita repetir o caminho completo do `.config` em cada chamada.
+Recebe o **diretório de build** (`gnss/02_nrf9151_radio/build_sem`, por exemplo), não o
+caminho do `.config`: o script monta `<dir>/01_nrf9151_basic/zephyr/.config` sozinho, como
+os outros dois `verifica_*.sh` do módulo. O segundo argumento escolhe qual par de opções
+conferir. O `build.cmd` chama este script no fim de cada build.
 
 ## Pegadinhas
 
@@ -315,7 +318,7 @@ evita repetir o caminho completo do `.config` em cada chamada.
   nenhuma assistência configurada, não há o que buscar, e "LTE sob demanda" não
   significa nada. Correção: a receita deste lab (acima) já liga
   `CONFIG_GNSS_SAMPLE_ASSISTANCE_MINIMAL=y` junto com `LTE_ON_DEMAND=y`, e
-  `verifica_variantes.sh gnss/01_gnss_basic/build_02_per periodico` confere limpo,
+  `verifica_variantes.sh gnss/02_nrf9151_radio/build_periodico periodico` confere limpo,
   sem aviso do CMake e com `.config` trazendo as três linhas esperadas.
 - **`CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=y`, na variante "sem", já é o padrão do
   Kconfig do SDK — a asserção não está testando essa linha da linha de comando,
@@ -332,4 +335,4 @@ evita repetir o caminho completo do `.config` em cada chamada.
   specification" e a frase sobre *time multiplexing* com o LTE)
 - nRF Connect SDK — documentação do `nrf_modem`, seção GNSS ("Periodic
   navigation" e o glossário de *Scheduled downloads*)
-- `gnss/01_gnss_basic/` (Task 1 deste módulo) — o firmware que este lab recompila
+- `gnss/01_nrf9151_basic/` (Task 1 deste módulo) — o firmware que este lab recompila

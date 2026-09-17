@@ -1,0 +1,80 @@
+GNSS - linhas de comando de cada build (curso nrf-manaus-2, NCS v3.4.0)
+=========================================================================
+
+Um fonte (gnss/01_nrf9151_basic), um alvo (nrf9151dk/nrf9151/ns, sysbuild), seis builds.
+As opcoes de cada variante levam o prefixo 01_nrf9151_basic_ (o nome da imagem no sysbuild).
+O hex que sai e o merged_nrf9151dk_nrf9151_ns.hex (TF-M + aplicacao); o west flash grava o
+equivalente tfm_merged.hex. Cada pasta de lab tem um build.cmd que executa a linha abaixo.
+
+Todos os comandos rodam de dentro do workspace do NCS:
+
+    cd C:\ncs\v3.4.0
+
+Prefixo comum, abreviado abaixo como <WEST>:
+
+    nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west
+
+
+-------------------------------------------------------------------------
+1. Lab 1 - fix a frio (continuo, sem assistencia, log + AT host)
+   Exige: antena ativa no J2 + ceu. Nao usa LTE.
+-------------------------------------------------------------------------
+<WEST> build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/01_nrf9151_basic/build_9151 C:/work/nrf-manaus-2/gnss/01_nrf9151_basic
+<WEST> flash -d C:/work/nrf-manaus-2/gnss/01_nrf9151_basic/build_9151
+sh C:/work/nrf-manaus-2/gnss/01_nrf9151_basic/verifica_config.sh C:/work/nrf-manaus-2/gnss/01_nrf9151_basic/build_9151
+
+-------------------------------------------------------------------------
+2. Lab 2 - sem assistencia (modo de teste de TTFF, partida a frio forcada)
+   Exige: antena + ceu. Nao usa LTE.
+-------------------------------------------------------------------------
+<WEST> build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_sem C:/work/nrf-manaus-2/gnss/01_nrf9151_basic -- -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=n -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST=y -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST_COLD_START=y
+<WEST> flash -d C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_sem
+sh C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/verifica_variantes.sh C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_sem sem
+
+-------------------------------------------------------------------------
+3. Lab 2 - assistencia minima (almanaque de fabrica + hora da rede + MCC)
+   Exige: antena + SIM com cobertura LTE-M. Seleciona LTE_ON_DEMAND.
+-------------------------------------------------------------------------
+<WEST> build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_minima C:/work/nrf-manaus-2/gnss/01_nrf9151_basic -- -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=n -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST=y -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST_COLD_START=y -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=n -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_MINIMAL=y
+<WEST> flash -d C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_minima
+sh C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/verifica_variantes.sh C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_minima minima
+
+-------------------------------------------------------------------------
+4. Lab 2 - assistencia de nuvem (A-GNSS pela nRF Cloud, CoAP)
+   Exige: antena + SIM LTE-M + DK provisionada na nRF Cloud (certificado).
+-------------------------------------------------------------------------
+<WEST> build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_nuvem C:/work/nrf-manaus-2/gnss/01_nrf9151_basic -- -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=n -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST=y -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_TTFF_TEST_COLD_START=y -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=n -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_NRF_CLOUD=y
+<WEST> flash -d C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_nuvem
+sh C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/verifica_variantes.sh C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_nuvem nuvem
+
+-------------------------------------------------------------------------
+5. Lab 2 - periodica (fix a cada 120 s, LTE sob demanda, assistencia minima)
+   Exige: antena + SIM LTE-M. Sem hex pronto: so por esta receita.
+-------------------------------------------------------------------------
+<WEST> build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_periodico C:/work/nrf-manaus-2/gnss/01_nrf9151_basic -- -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_CONTINUOUS=n -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_MODE_PERIODIC=y -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_LTE_ON_DEMAND=y -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_NONE=n -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_ASSISTANCE_MINIMAL=y
+<WEST> flash -d C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_periodico
+sh C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/verifica_variantes.sh C:/work/nrf-manaus-2/gnss/02_nrf9151_radio/build_periodico periodico
+
+-------------------------------------------------------------------------
+6. Lab 3 - NMEA limpo (so sentencas na porta; log e AT host desligados)
+   Exige: antena + ceu. Nao usa LTE. No PC: u-center 2 ou tools/nmea_captura.py.
+   E tambem o firmware do nRF9151 na demo da escada (04_x20p_demo_rtk).
+-------------------------------------------------------------------------
+<WEST> build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/03_nrf9151_nmea/build C:/work/nrf-manaus-2/gnss/01_nrf9151_basic -- -D01_nrf9151_basic_CONFIG_GNSS_SAMPLE_NMEA_ONLY=y -D01_nrf9151_basic_CONFIG_LOG=n -D01_nrf9151_basic_CONFIG_AT_HOST_LIBRARY=n
+<WEST> flash -d C:/work/nrf-manaus-2/gnss/03_nrf9151_nmea/build
+sh C:/work/nrf-manaus-2/gnss/03_nrf9151_nmea/verifica_nmea.sh C:/work/nrf-manaus-2/gnss/03_nrf9151_nmea/build
+
+
+-------------------------------------------------------------------------
+Sem compilar: os hex prontos (gnss/hex/), um por build exceto a periodica
+-------------------------------------------------------------------------
+nrfutil device list
+nrfutil device program --firmware C:\work\nrf-manaus-2\gnss\hex\01_nrf9151_basic.hex      --options chip_erase_mode=ERASE_ALL --serial-number <serial>
+nrfutil device program --firmware C:\work\nrf-manaus-2\gnss\hex\02_nrf9151_ttff_sem.hex   --options chip_erase_mode=ERASE_ALL --serial-number <serial>
+nrfutil device program --firmware C:\work\nrf-manaus-2\gnss\hex\02_nrf9151_ttff_minima.hex --options chip_erase_mode=ERASE_ALL --serial-number <serial>
+nrfutil device program --firmware C:\work\nrf-manaus-2\gnss\hex\02_nrf9151_ttff_nuvem.hex --options chip_erase_mode=ERASE_ALL --serial-number <serial>
+nrfutil device program --firmware C:\work\nrf-manaus-2\gnss\hex\03_nrf9151_nmea.hex       --options chip_erase_mode=ERASE_ALL --serial-number <serial>
+nrfutil device reset --serial-number <serial>
+
+Console: VCOM da DK, 115200 8N1. Firmware do modem: mfw_nrf91x1_2.0.4 (AT+CGMR no console do lab 1).
+Regenerar os cinco hex: python gnss\hex\build_all.py

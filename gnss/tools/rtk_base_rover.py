@@ -7,7 +7,7 @@ publicar o que observa em RTCM. O outro vira rover: recebe esse RTCM e resolve a
 propria posicao em relacao a base. Este script cuida das duas pontas e da ponte
 entre elas.
 
-    python rtk_base.py --base COM20 --rover COM18 --rover-nmea COM17
+    python rtk_base_rover.py --base COM20 --rover COM18 --rover-nmea COM17
 
 A distincao que o RTK exige e que quase todo mundo confunde:
 
@@ -433,8 +433,8 @@ def main(argv=None) -> int:
         description=__doc__.splitlines()[0],
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="exemplo:\n"
-               "  python rtk_base.py --base COM20 --rover COM18 --rover-nmea COM17\n"
-               "  python rtk_base.py --listar")
+               "  python rtk_base_rover.py --base COM20 --rover COM18 --rover-nmea COM17\n"
+               "  python rtk_base_rover.py --listar")
     p.add_argument("--listar", action="store_true",
                    help="mostra as portas de EVK-X20P vistas e sai")
     p.add_argument("--base", help="COM do receptor que vira base (por onde sai o RTCM)")

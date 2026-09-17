@@ -1,15 +1,15 @@
 # Tempo até o primeiro fix — as três variantes de assistência
 
-Logs da serial do `build_02_*` (modo de teste de TTFF, partida a frio forçada a
+Logs da serial das variantes de TTFF do lab 2 (`build_sem`, `build_minima`, `build_nuvem`) (modo de teste de TTFF, partida a frio forçada a
 cada ciclo, 120 s de sono entre ciclos), colhidos em 09/09/2026 na bancada de
 Porto Alegre, antena ANN-MB2 no J2 sobre plano de terra, janela entre dois
 prédios. SIM Claro, LTE-M forçado (`CONFIG_LTE_NETWORK_MODE_LTE_M_GPS=y`).
 
 | arquivo | variante | bloco |
 |---|---|---|
-| `r1_sem.log`, `r2_sem.log` | sem assistência (`build_02_sem`) | 20 min cada |
-| `r1_min.log`, `r2_min.log` | assistência mínima (`build_02_min`) | 20 min cada |
-| `r1_nuvem.log`, `r2_nuvem.log` | A-GNSS pela nRF Cloud (`build_02_nuvem`) | 20 min cada |
+| `r1_sem.log`, `r2_sem.log` | sem assistência (`build_sem`) | 20 min cada |
+| `r1_min.log`, `r2_min.log` | assistência mínima (`build_minima`) | 20 min cada |
+| `r1_nuvem.log`, `r2_nuvem.log` | A-GNSS pela nRF Cloud (`build_nuvem`) | 20 min cada |
 | `noite_min.log` | assistência mínima, sessão da madrugada | 25 min |
 
 As duas rodadas têm a **ordem invertida** (`sem → min → nuvem`, depois

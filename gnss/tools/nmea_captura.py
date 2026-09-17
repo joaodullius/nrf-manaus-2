@@ -6,7 +6,7 @@
 
 Saem dois arquivos com o mesmo nome base:
 
-    <out>.nmea   o fluxo cru, byte a byte, para o desvio.py e para qualquer
+    <out>.nmea   o fluxo cru, byte a byte, para o desvio.py (repo de docs) e para qualquer
                  ferramenta que leia NMEA
     <out>.uc2    o mesmo fluxo com carimbo de tempo, que abre no u-center 2 e
                  reproduz a sessao — inclusive o mapa de desvio com CEP50/CEP95

@@ -5,7 +5,7 @@ Este é o lab base do módulo de GNSS: cópia do sample `nrf/samples/cellular/gn
 sem nenhuma assistência (nem nRF Cloud A-GNSS, nem SUPL, nem almanaque de fábrica). É
 o firmware que os labs 2 e 3 deste módulo recompilam com outras opções — aqui está o
 código-fonte; lá são só receitas de build diferentes sobre este mesmo `gnss/
-01_gnss_basic`.
+01_nrf9151_basic`.
 
 > **Origem.** Cópia de `nrf/samples/cellular/gnss` do **nRF Connect SDK v3.4.0**
 > (`src/`, `Kconfig`, `prj.conf`, `CMakeLists.txt` e o overlay de placa). Cada arquivo
@@ -28,16 +28,17 @@ de ligar a placa; sem ela o receptor não recebe nada.
 
 ```
 cd C:\ncs\v3.4.0
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/01_gnss_basic/build_9151 C:/work/nrf-manaus-2/gnss/01_gnss_basic
-nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/gnss/01_gnss_basic/build_9151
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west build -p -b nrf9151dk/nrf9151/ns --sysbuild -d C:/work/nrf-manaus-2/gnss/01_nrf9151_basic/build_9151 C:/work/nrf-manaus-2/gnss/01_nrf9151_basic
+nrfutil sdk-manager toolchain launch --ncs-version v3.4.0 -- west flash -d C:/work/nrf-manaus-2/gnss/01_nrf9151_basic/build_9151
 ```
 
-O nome da imagem no sysbuild é `01_gnss_basic`, igual ao nome da pasta — é o prefixo
+O `build.cmd` desta pasta executa as duas linhas (`build.cmd flash`) e roda o
+`verifica_config.sh` no fim. O nome da imagem no sysbuild é `01_nrf9151_basic`, igual ao nome da pasta — é o prefixo
 que as receitas de build dos labs 2 e 3 reaproveitam. O `.config` da imagem de
-aplicação sai em `build_9151/01_gnss_basic/zephyr/.config`.
+aplicação sai em `build_9151/01_nrf9151_basic/zephyr/.config`.
 
 Build limpo. O alvo `/ns` traz TF-M: o sysbuild gera a imagem segura (`tfm`) e a
-imagem de aplicação não seguro (`01_gnss_basic`) — a tabela abaixo é da **imagem de
+imagem de aplicação não seguro (`01_nrf9151_basic`) — a tabela abaixo é da **imagem de
 aplicação**, a que importa para este lab:
 
 | Região | Usado | Região total | % usado |
@@ -48,7 +49,7 @@ aplicação**, a que importa para este lab:
 ## `verifica_config.sh`
 
 ```
-sh gnss/01_gnss_basic/verifica_config.sh gnss/01_gnss_basic/build_9151
+sh gnss/01_nrf9151_basic/verifica_config.sh gnss/01_nrf9151_basic/build_9151
 ```
 
 Esperado: `OK: configuracao do lab 1 confere`. O script confere as três opções que definem
